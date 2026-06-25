@@ -1,0 +1,21 @@
+:root {
+  --blauw: #003366;
+  --blauw-mid: #1a4d80;
+  --blauw-licht: #e8f0f8;
+  --blauw-accent: #0066cc;
+  --oranje: #e87722;
+  --oranje-licht: #fef3ea;
+  --grijs: #4a4a4a;
+  --grijs-licht: #9a9a9a;
+  --grijs-lijn: #dde3ea;
+  --grijs-bg: #f4f6f9;
+  --wit: #fff;
+  --groen: #1a6b3a;
+  --groen-licht: #e8f5ed;
+  --rood: #cc2222;
+
+  --pad-vakexpert: #7b1d2a;
+  --pad-adviseur: #1d6b3a;
+  --pad-leider: #1a3a6b;
+  --pad-trainer: #6b4a1a;
+}

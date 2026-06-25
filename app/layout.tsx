@@ -3,8 +3,8 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "Trainingslijnen",
-  description: "Precon trainingslijnen beheer",
+  title: "Précon – Persoonlijke Ontwikkelpaden",
+  description: "Précon persoonlijke ontwikkelpaden tool",
 };
 
 export default function RootLayout({

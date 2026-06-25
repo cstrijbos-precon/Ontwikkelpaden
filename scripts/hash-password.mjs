@@ -7,6 +7,9 @@ if (!password) {
 }
 
 const hash = await bcrypt.hash(password, 12);
+const escaped = hash.replace(/\$/g, "\\$");
 console.log(hash);
-console.log("\nZet in .env.local als:");
+console.log("\nZet in .env.local (escape elke $ met backslash):");
+console.log(`APP_USERS=jouw@email.nl:${escaped}`);
+console.log("\nOp Vercel (geen escaping nodig in het dashboard):");
 console.log(`APP_USERS=jouw@email.nl:${hash}`);

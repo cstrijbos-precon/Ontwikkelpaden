@@ -39,13 +39,15 @@ Genereer een bcrypt-hash voor je wachtwoord:
 npm run hash-password -- jouw-sterk-wachtwoord
 ```
 
-Plak het resultaat in `.env.local`:
+Plak het resultaat in `.env.local`. **Let op:** bcrypt-hashes bevatten `$` tekens. Next.js expandeert die in `.env.local` — escape elke `$` met een backslash (`\$`). Het script `npm run hash-password` print de juiste regel automatisch.
 
 ```env
 AUTH_SECRET=<openssl-output>
-APP_USERS=jouw@precon.nl:$2b$12$...
-APP_ADMINS=jouw@precon.nl
+APP_USERS=klammers@precon.nl:\$2b\$12\$...
+APP_ADMINS=klammers@precon.nl
 ```
+
+Op **Vercel** hoef je niet te escapen — plak de hash daar gewoon in het Environment Variables veld.
 
 Meerdere gebruikers (komma-gescheiden):
 
@@ -53,7 +55,45 @@ Meerdere gebruikers (komma-gescheiden):
 APP_USERS=kim@precon.nl:$2b$12$...,jan@precon.nl:$2b$12$...
 ```
 
-### 3. Development server
+### 3. Neon database (optioneel lokaal)
+
+De app gebruikt **Neon Postgres** via de Vercel-integratie. `@neondatabase/serverless` is al geïnstalleerd; de client staat in `lib/db.ts`.
+
+**Environment variables ophalen:**
+
+```bash
+vercel link
+vercel env pull .env.development.local
+```
+
+Next.js laadt `.env.local` en `.env.development.local` samen. Zorg dat `DATABASE_URL` in één van die bestanden staat (gebruik de **pooled** URL met `-pooler` in de hostname).
+
+**Tabellen aanmaken** — open de [Neon SQL Editor](https://console.neon.tech) en voer het script uit:
+
+```
+migrations/001_gesprekken.sql
+```
+
+Dit maakt `gesprekken` (hoofdtabel + JSONB state), `gesprek_competenties` en `gesprek_paden` (rapportage-extract) aan.
+
+**Verbinding testen** — na `npm run dev`, ingelogd als gebruiker:
+
+```
+GET /api/health
+```
+
+Verwacht: `"database": { "configured": true, "connected": true }`.
+
+**API (gesprekken):**
+
+| Methode | Pad | Beschrijving |
+|---------|-----|--------------|
+| `GET` | `/api/gesprekken` | Lijst gesprekken (eigen + admin ziet alles) |
+| `POST` | `/api/gesprekken` | Nieuw concept-gesprek aanmaken |
+| `GET` | `/api/gesprekken/:id` | Volledig gesprek laden |
+| `PUT` | `/api/gesprekken/:id` | State opslaan (autosave) |
+
+### 4. Development server
 
 ```bash
 npm run dev

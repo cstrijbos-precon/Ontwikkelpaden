@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Précon – Persoonlijke Ontwikkelpaden</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blauw:#003366;--blauw-mid:#1a4d80;--blauw-licht:#e8f0f8;--blauw-accent:#0066cc;
+  --oranje:#E87722;--oranje-licht:#fef3ea;
+  --grijs:#4a4a4a;--grijs-licht:#9a9a9a;--grijs-lijn:#dde3ea;--grijs-bg:#f4f6f9;
+  --wit:#fff;--groen:#1a6b3a;--groen-licht:#e8f5ed;--rood:#cc2222;
+}
+body{background:var(--grijs-bg);font-family:Arial,Helvetica,sans-serif;color:var(--grijs);font-size:14px;min-height:100vh}
+.header{background:var(--blauw)}
+.header-top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px}
+.logo-box{background:var(--oranje);color:#fff;font-weight:900;font-size:22px;padding:6px 14px;border-radius:4px;letter-spacing:1px}
+.header-logo{display:flex;align-items:center;gap:14px}
+.header-bottom{background:var(--oranje);padding:8px 28px}
+.header-bottom h1{font-size:16px;font-weight:bold;color:#fff}
+.save-area{display:flex;align-items:center;gap:10px}
+.save-status{font-size:11px;color:rgba(255,255,255,.7);font-style:italic}
+.tabs-bar{background:var(--blauw-mid);display:flex;overflow-x:auto;border-bottom:3px solid var(--oranje)}
+.tab{padding:11px 16px;font-size:12px;color:rgba(255,255,255,.65);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-3px;white-space:nowrap;transition:all .15s;font-family:Arial}
+.tab:hover{color:#fff;background:rgba(255,255,255,.08)}
+.tab.active{color:#fff;border-bottom-color:var(--oranje);background:rgba(255,255,255,.12);font-weight:bold}
+.vp-bar{display:flex}
+.vp-stap{height:3px;flex:1;background:rgba(255,255,255,.2)}
+.vp-stap.gedaan{background:var(--oranje)}.vp-stap.actief{background:#fff}
+.scherm{display:none;padding:24px 28px;max-width:900px;margin:0 auto}
+.scherm.active{display:block}
+.scherm-titel{font-size:20px;font-weight:bold;color:var(--blauw);margin-bottom:3px}
+.scherm-sub{font-size:12px;color:var(--grijs-licht);margin-bottom:20px}
+.form-rij{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:11px;color:var(--grijs-licht);margin-bottom:4px;font-weight:bold;text-transform:uppercase;letter-spacing:.3px}
+.fg input,.fg textarea,.fg select{width:100%;font-family:Arial;font-size:13px;color:var(--grijs);border:1.5px solid var(--grijs-lijn);border-radius:5px;padding:8px 10px;background:#fff;outline:none;transition:border .15s}
+.fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--blauw-accent)}
+.fg textarea{resize:vertical;min-height:80px}
+.sk{font-size:13px;font-weight:bold;color:var(--blauw);margin:20px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--oranje)}
+.info-box{background:var(--blauw-licht);border-left:4px solid var(--blauw-accent);border-radius:0 6px 6px 0;padding:11px 14px;margin-bottom:16px;font-size:12.5px;line-height:1.7;color:var(--grijs)}
+.info-box strong{color:var(--blauw)}
+.tip-box{background:var(--oranje-licht);border-left:4px solid var(--oranje);border-radius:0 6px 6px 0;padding:11px 14px;margin-bottom:16px;font-size:12.5px;line-height:1.7}
+
+/* COMPETENTIE */
+.comp-card{background:#fff;border:1.5px solid var(--grijs-lijn);border-radius:8px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.comp-header{background:var(--blauw);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.comp-header h3{font-size:13px;font-weight:bold;color:#fff}
+.comp-header-right{display:flex;align-items:center;gap:10px}
+.comp-body{padding:16px;display:none}
+.comp-body.open{display:block}
+.ster-blok{border:1.5px solid var(--grijs-lijn);border-radius:7px;margin-bottom:12px;overflow:hidden}
+.ster-header{padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--grijs-bg)}
+.ster-header:hover{background:#edf2f7}
+.ster-header.geselecteerd{background:var(--oranje-licht);border-left:4px solid var(--oranje)}
+.ster-nr{font-weight:bold;color:var(--oranje);font-size:12px;min-width:55px}
+.ster-sym{color:var(--oranje);font-size:13px}
+.ster-body{padding:14px 16px;background:#fff;display:none}
+.ster-body.open{display:block}
+.ster-intro{font-size:12.5px;color:var(--grijs);line-height:1.7;margin-bottom:12px}
+/* GEDRAGSKADER - no checkboxes, just styled box like in the document */
+.gedragskader{border:1.5px solid var(--blauw);border-radius:6px;padding:12px 16px;margin:10px 0;background:#fff}
+.gedragskader-titel{font-size:12px;font-weight:bold;color:var(--blauw);margin-bottom:8px;font-style:italic}
+.gedragskader ul{list-style:none;padding:0}
+.gedragskader li{font-size:12px;color:var(--grijs);padding:4px 0 4px 18px;position:relative;line-height:1.5;border-bottom:1px solid #f0f3f6}
+.gedragskader li:last-child{border:none}
+.gedragskader li::before{content:'•';position:absolute;left:4px;color:var(--blauw)}
+.selecteer-btn{font-family:Arial;font-size:11px;padding:6px 14px;border-radius:4px;cursor:pointer;border:1.5px solid var(--oranje);background:#fff;color:var(--oranje);margin-top:10px;transition:all .15s;font-weight:bold}
+.selecteer-btn:hover,.selecteer-btn.actief{background:var(--oranje);color:#fff}
+.opm-veld{margin-top:12px}
+.opm-veld label{font-size:11px;color:var(--grijs-licht);display:block;margin-bottom:3px;font-weight:bold}
+.opm-veld textarea{width:100%;font-family:Arial;font-size:12px;border:1.5px solid var(--grijs-lijn);border-radius:5px;padding:7px 10px;min-height:56px;resize:vertical;outline:none}
+.opm-veld textarea:focus{border-color:var(--blauw-accent)}
+
+/* SCORE BOX */
+.score-box{background:var(--blauw-licht);border-radius:8px;padding:14px 16px;margin-bottom:16px;border:1px solid #c8d8e8}
+.score-box h4{font-size:13px;font-weight:bold;color:var(--blauw);margin-bottom:10px}
+.score-rij{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #d0dceb;font-size:12.5px}
+.score-rij:last-child{border:none}
+.sc-ster{color:var(--oranje);font-size:14px}
+
+/* PADEN */
+.paden-grid{display:grid;grid-template-columns:36px repeat(4,1fr);gap:0;min-width:580px;background:#fff;border-radius:8px;border:1px solid var(--grijs-lijn);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.niv-col{display:flex;flex-direction:column;padding-top:52px}
+.niv-lbl{height:110px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:15px;font-weight:bold;color:var(--grijs-licht)}
+.pad-col{display:flex;flex-direction:column;align-items:center;position:relative}
+.pad-kop{width:90%;text-align:center;padding:6px 8px;border-radius:5px;font-size:12px;font-weight:bold;border:2px solid;margin-bottom:4px}
+.pad-kop.vakexpert{border-color:#7B1D2A;color:#7B1D2A;background:#fdf3f4}
+.pad-kop.adviseur{border-color:#1D6B3A;color:#1D6B3A;background:#f0faf4}
+.pad-kop.leider{border-color:#1A3A6B;color:#1A3A6B;background:#f0f4fa}
+.pad-kop.trainer{border-color:#6B4A1A;color:#6B4A1A;background:#faf5f0}
+.pad-as{position:absolute;top:48px;bottom:44px;width:3px;border-radius:2px;z-index:0}
+.pad-as.vakexpert{background:#7B1D2A}.pad-as.adviseur{background:#1D6B3A}
+.pad-as.leider{background:#1A3A6B}.pad-as.trainer{background:#6B4A1A}
+.niv-cel{width:100%;height:110px;position:relative;display:flex;align-items:center;justify-content:center}
+.niv-cel::before{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px dashed var(--grijs-lijn)}
+.rol-naam{font-size:10px;color:var(--grijs);text-align:center;line-height:1.3;max-width:78%;position:relative;z-index:1;pointer-events:none;margin-left:36px}
+.bol-wrap{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:2px;z-index:10;align-items:center}
+.bol{width:26px;height:26px;border-radius:50%;flex-shrink:0}
+.bol.vorig{background:radial-gradient(circle at 35% 35%,#CCC,#888);border:2px solid #999}
+.bol.huidig{background:radial-gradient(circle at 35% 35%,#f5a55a,var(--oranje));border:2px solid #c05e10}
+.bol.ambitie-bol{background:transparent;border:2.5px solid var(--oranje)}
+/* PIJL VAN HUIDIG NAAR AMBITIE als lijn op de as */
+.ambitie-pijl-lijn{position:absolute;left:50%;transform:translateX(-50%);z-index:9;pointer-events:none}
+
+/* AMBITIE */
+.ambitie-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.ambitie-card{border:2px solid var(--grijs-lijn);border-radius:8px;padding:14px;background:#fff;transition:border .15s}
+.ambitie-card.actief{border-color:var(--oranje);background:var(--oranje-licht)}
+.ambitie-toggle{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ambitie-toggle input[type=checkbox]{width:16px;height:16px;accent-color:var(--oranje)}
+.ambitie-niv-info{font-size:12px;color:var(--grijs);padding:8px;background:var(--grijs-bg);border-radius:5px;line-height:1.6}
+
+/* T-PROFIEL */
+.t-grid{display:grid;grid-template-columns:repeat(10,34px);gap:3px;margin:10px 0}
+.t-rij{display:contents}
+.t-cel{width:34px;height:34px;border:1.5px solid var(--grijs-lijn);border-radius:4px;cursor:pointer;background:#fff;transition:all .15s}
+.t-cel.aan{background:var(--oranje);border-color:#c05e10}
+.t-cel:hover{background:var(--oranje-licht);border-color:var(--oranje)}
+/* T shape: col 4-5 are the vertical bar, row 0 is full top */
+
+/* POP TOOLBOX */
+.pop-pad{background:#fff;border:1.5px solid var(--grijs-lijn);border-radius:8px;margin-bottom:12px;overflow:hidden}
+.pop-pad-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--grijs-bg)}
+.pop-pad-header:hover{background:#e8edf4}
+.pop-pad-header h4{font-size:13px;font-weight:bold}
+.pop-pad-header h4.vakexpert{color:#7B1D2A}.pop-pad-header h4.adviseur{color:#1D6B3A}
+.pop-pad-header h4.leider{color:#1A3A6B}.pop-pad-header h4.trainer{color:#6B4A1A}
+.pop-pad-body{padding:14px 16px;display:none;border-top:1px solid var(--grijs-lijn)}
+.pop-pad-body.open{display:block}
+.comp-status{font-size:12px;padding:3px 0;display:flex;align-items:center;gap:6px}
+.comp-status.ok{color:var(--groen)}.comp-status.nog{color:var(--rood)}
+.cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cdot.ok{background:var(--groen)}.cdot.nog{background:var(--rood)}
+.toolbox-wrap{margin-top:14px;border:1px solid var(--grijs-lijn);border-radius:7px;overflow:hidden}
+.toolbox-hdr{background:var(--blauw);color:#fff;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:12.5px;font-weight:bold}
+.toolbox-hdr:hover{background:var(--blauw-mid)}
+.toolbox-body{padding:14px;display:none;background:var(--oranje-licht)}
+.toolbox-body.open{display:block}
+.tb-cat{margin-bottom:12px}
+.tb-cat h5{font-size:11px;font-weight:bold;color:var(--blauw);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+.tb-items{list-style:none}
+.tb-item{font-size:12px;color:var(--grijs);padding:3px 0 3px 14px;position:relative;line-height:1.5}
+.tb-item::before{content:'→';position:absolute;left:0;color:var(--oranje);font-size:11px}
+
+/* NAV */
+.nav-knoppen{display:flex;justify-content:space-between;margin-top:28px;padding-top:14px;border-top:1px solid var(--grijs-lijn)}
+.btn{font-family:Arial;font-size:13px;padding:9px 20px;border-radius:5px;cursor:pointer;border:none;transition:all .15s;font-weight:bold}
+.btn-t{background:#fff;border:1.5px solid var(--grijs-lijn);color:var(--grijs)}.btn-t:hover{background:var(--grijs-lijn)}
+.btn-v{background:var(--oranje);color:#fff}.btn-v:hover{background:#c85e10}
+.btn-s{background:var(--blauw);color:#fff;font-size:11px;padding:7px 14px}.btn-s:hover{background:var(--blauw-mid)}
+.btn-w{background:var(--groen);color:#fff;font-size:11px;padding:7px 14px}.btn-w:hover{background:#145230}
+
+@media print{.tabs-bar,.nav-knoppen,.save-area,.vp-bar{display:none!important}.scherm{display:block!important;padding:8px}.comp-body,.ster-body,.pop-pad-body,.toolbox-body{display:block!important}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-top">
+    <div class="header-logo">
+      <div class="logo-box">P</div>
+      <div>
+        <div style="font-size:16px;font-weight:bold;color:#fff;letter-spacing:.5px">Précon Consulting Group</div>
+        <div style="font-size:11px;opacity:.7;color:#fff;font-style:italic">Kwaliteitsmanagementsysteem · F-04</div>
+      </div>
+    </div>
+    <div class="save-area">
+      <span class="save-status" id="ss"></span>
+      <button class="btn btn-w" onclick="exportWord()">📄 Word export</button>
+      <button class="btn btn-s" onclick="slaOp()">💾 Opslaan</button>
+    </div>
+  </div>
+  <div class="header-bottom"><h1>Précon persoonlijke ontwikkelpaden</h1></div>
+</div>
+<div class="vp-bar" id="vp-bar"></div>
+<div class="tabs-bar" id="tabs-bar"></div>
+<div id="schermen"></div>
+
+<script>
+// ══ DATA ══
+const SCHERMEN=[{id:'s1',label:'1. Gegevens'},{id:'s2',label:'2. Hoe gaat het?'},{id:'s3',label:'3. Praktijksituaties'},{id:'s4',label:'4. Jouw profiel'},{id:'s5',label:'5. Competenties'},{id:'s6',label:'6. Ontwikkelpaden'},{id:'s7',label:'7. Ambitie'},{id:'s8',label:'8. POP & Toolbox'},{id:'s9',label:'9. Afsluiting'}];
+
+const PADEN={
+  vakexpert:{label:'Vakexpert',kleur:'vakexpert',
+    rollen:['Consultant','Deskundige','Vakdeskundige','Inhoudsdeskundige','Visionair'],
+    vereisten:[{b:1,k:1,o:1,org:1},{b:1,k:1,o:2,org:1},{b:2,k:2,o:2,org:1},{b:3,k:3,o:3,org:2},{b:3,k:4,o:3,org:3}],
+    toolboxen:{
+      2:{vereist:['Kerncompetenties behalen','Verdieping T-profiel','Talk of presentatie geven op ontwikkeldag','Vakgroep activiteiten ontplooien'],zelfDoen:['Inhoudelijk werk uitvoeren en ervaring opdoen','Vakliteratuur bijhouden','Website tekst/LinkedIn bericht voor Précon schrijven (onder toezicht van inhoudsdeskundige)'],systemen:['Elzi','AFAS basis'],collega:['Feedback vragen van collega\'s over inhoudelijk werk'],trainingen:['Training over inhoudelijk onderwerp volgen','Trainingslijn \'Vakexpert 1\' volgen']},
+      3:{vereist:['Kerncompetenties behalen','Verdieping T-profiel','Vakliteratuur bijhouden op eigen vakgebied','Vakgroep activiteiten ontplooien'],zelfDoen:['Inhoudelijk werk uitvoeren, wees kritisch op methodieken','Meehelpen met organiseren kennismiddagen','Website teksten/artikelen schrijven voor Précon','In gesprek met klanten over ontwikkelingen','Wijzigingen/wetgeving bijhouden in vakgebied'],systemen:[],collega:['Feedback vragen over inhoudelijk werk','Sparren met collega\'s over ontwikkelingen'],trainingen:['Training over inhoudelijk onderwerp volgen','Trainingslijn \'Vakexpert 2\' volgen']},
+      4:{vereist:['Kerncompetenties behalen','Verdieping T-profiel','Als inhoudsdeskundige samen met accountmanager klanten bezoeken','Artikelen schrijven in vakbladen/websites','Symposia/congressen/beurzen bezoeken'],zelfDoen:['Vakinhoudelijk uitdagend werk uitvoeren','Programma voor kennismiddagen opzetten','Lid van netwerkgroepen/commissies','Meewerken aan innovaties'],systemen:[],collega:['Feedback vragen over inhoudelijk werk','Sparren over inhoudelijk werk en innovaties'],trainingen:['Training over inhoudelijk onderwerp ontwikkelen en geven','Vakinhoudelijke trainingen volgen','Trainingslijn \'Vakexpert 3\' volgen']},
+      5:{vereist:['Kerncompetenties behalen','Innovaties initiëren op toekomstanticipatie','Lezingen/workshops geven op congressen','Kennismiddagen initiëren'],zelfDoen:['Boek(en) schrijven of inhoudelijke video\'s maken','Lid van netwerkgroepen/commissies','Creatieve oplossingen bedenken voor inhoudelijke problemen','Sparren met externe deskundigen'],systemen:[],collega:['Feedback vragen over inhoudelijk werk','Sparren over ideeën en oplossingen'],trainingen:['Training over inhoudelijk onderwerp geven','Trainingen over inspireren van anderen','Trainingslijn \'Vakexpert 4\' volgen']}}},
+  adviseur:{label:'Adviseur',kleur:'adviseur',
+    rollen:['Consultant','Commercieel onverdachte consultant','Consultant & hunter','Accountmanager','Strategisch accountmanager'],
+    vereisten:[{b:1,k:1,o:1,org:1},{b:1,k:2,o:2,org:1},{b:2,k:3,o:2,org:1},{b:3,k:3,o:3,org:2},{b:4,k:4,o:4,org:3}],
+    toolboxen:{
+      2:{vereist:['Kerncompetenties behalen','T-profiel verbreden'],zelfDoen:['Meer leren over Précon aanbod door gesprekken met collega\'s','Verdiepen in Précon storyboard','Gesprekken voeren met salesmanager over klant'],systemen:['AFAS: offertes vinden, klant historie vinden'],collega:['Samenwerken met medior/senior collega en sparren over latente behoeften','Gesprek voeren met business manager over haakjes bij klant'],trainingen:['Trainingslijn \'Adviseur 1\' volgen']},
+      3:{vereist:['Kerncompetenties behalen','T-profiel verbreden'],zelfDoen:['Verdiepen in Précon storyboard','Gesprekken voeren met contactpersoon bij klant'],systemen:['AFAS: offertes koppelen, klantbeheer: workflow rondom sales'],collega:['Meekijken met ervaren salesmanager','Overtuigingskracht oefenen en feedback vragen'],trainingen:['Trainingslijn \'Adviseur 2\' volgen']},
+      4:{vereist:['Kerncompetenties behalen','T-profiel verbreden','Eigen maken van de rol van accountmanager','Proactief klantcontact onderhouden'],zelfDoen:['Proactief op de hoogte blijven van markt bij klanten','Proactief volgen van Précon dienstenontwikkelingen'],systemen:['AFAS: Accountmanagement: klantsegmentatiecriteria, contactstructuurstrategie, CRM strategie'],collega:['Actief meedraaien met gesprekken onder leiding van accountmanager','Overtuigingskracht oefenen en feedback vragen'],trainingen:['Trainingslijn \'Adviseur 3\' volgen']},
+      5:{vereist:['Kerncompetenties behalen','T-profiel verbreden','Proactief klantcontact onderhouden op strategisch niveau'],zelfDoen:['Proactief op de hoogte van markt en klanten','Proactief volgen van Précon dienstenontwikkelingen'],systemen:['AFAS: Accountmanagement: klantsegmentatiecriteria, contactstructuurstrategie, CRM strategie'],collega:['Actief meedraaien met strategische gesprekken onder strategisch accountmanager'],trainingen:['Trainingslijn \'Adviseur 4\' volgen']}}},
+  leider:{label:'Leider',kleur:'leider',
+    rollen:['Consultant','Buddy/Sparringspartner','Projectleider','Business manager','MT-lid'],
+    vereisten:[{b:1,k:1,o:1,org:1},{b:2,k:1,o:1,org:2},{b:3,k:2,o:2,org:3},{b:4,k:3,o:3,org:3},{b:4,k:4,o:4,org:3}],
+    toolboxen:{
+      2:{vereist:['Kerncompetenties behalen','Goed luisteren, nieuwsgierig zijn en oprechte interesse tonen in de ander'],zelfDoen:['Bewustzijn van jezelf en je invloed op anderen','Oefenen met zelf leiding nemen en grip houden op gesprek','Oefenen met \'geven van de hengel in plaats van de vis\''],systemen:['Documenten in Quasydoc kennen zodat je collega\'s kan inwerken'],collega:['Feedback vragen','Sparren met medior en senior collega\'s over jouw rol'],trainingen:['Trainingslijn \'Leider 1\' volgen']},
+      3:{vereist:['Kerncompetenties behalen','T-profiel verbreden en verdiepen'],zelfDoen:['3 ankers van Précon bewust balanceren (klant/medewerker/Précon)','Overleg voorzitten','Gesprek met klant voeren','Welzijn teamleden monitoren','Kwaliteit van werk borgen','Leiderschapsstijl van Précon begrijpen en naleven'],systemen:['AFAS: projectinformatie, uren uitdraaien'],collega:['Afstemming met business manager','Afstemming met andere projectleiders','Feedback vragen over leiderschapsstijl'],trainingen:['Trainingslijn \'Leider 2\' volgen','Project planning/time management cursus']},
+      4:{vereist:['Kerncompetenties behalen','T-profiel verbreden en verdiepen','Leiderschapsstijl Précon begrijpen en naleven','Kwetsbaar durven opstellen'],zelfDoen:['3 ankers bewust balanceren','Gesprekken met klant voeren als business manager','Welzijn en ontwikkeling van teamleden begeleiden','Business plan en doelstellingen doornemen'],systemen:['AFAS: HRM portal, klantkaart, offertes, geschreven uren','Declarabiliteit en omzetcijfers begrijpen en monitoren'],collega:['Afstemming met MT-lid (1:1 begeleiding of coaching)','Introductie door mede business manager in nieuwe medewerker begeleiden'],trainingen:['Trainingslijn \'Leider 3\' volgen']},
+      5:{vereist:['Kerncompetenties behalen','Strategisch leiderschap tonen','Organisatiebrede vraagstukken aansturen'],zelfDoen:['Strategische klantrelaties onderhouden','Innovaties in de organisatie aanjagen','Anderen inspireren en ontwikkelen'],systemen:[],collega:['Sparren met andere MT-leden','Coaching ontvangen op strategisch niveau'],trainingen:['Leiderschapstrainingen op strategisch niveau']}}},
+  trainer:{label:'Trainer',kleur:'trainer',
+    rollen:['Consultant','Trainer vakkennis','Coachende trainer','Begeleider groepsprocessen','Begeleider ontwikkel- en cultuurtrajecten'],
+    vereisten:[{b:1,k:1,o:1,org:1,t:1},{b:2,k:2,o:1,org:2,t:2},{b:3,k:3,o:2,org:3,t:3},{b:4,k:3,o:3,org:3,t:4},{b:4,k:4,o:4,org:4,t:4}],
+    toolboxen:{
+      2:{vereist:['Kerncompetenties behalen','Ervaren in vakgebied óf ervaren trainer','Selectiegesprek met interne trainersopleider (beoordeling trainerscompetenties 1 ster)','Getraind zijn in 1 Précon training (3-stappen-opleiding)'],zelfDoen:['Interesse in trainerschap kenbaar maken en selectiegesprek inplannen','Meelopen om te leren van ervaren trainers','Starten met co-trainen'],systemen:['Kennis van online omgevingen in Elzi','Kennis van processen rond OI en IC trainingen'],collega:['3-stappen-opleiding: meekijken → co-training → zelf geven onder supervisie','Leren van ervaren trainer, Training Support en Planning: afspraken rond voorbereiding-trainen-afronding'],trainingen:['Karin de Galan introductie (1 dagdeel)','Trainingslijn \'Leider 1\' volgen']},
+      3:{vereist:['Kerncompetenties behalen','Meerdere Précon trainingen kunnen geven'],zelfDoen:['Zelf trainingen ontwerpen','Draaiboeken maken met logische opbouw','Flexibel inspelen op deelnemersbehoeften terwijl je de regie houdt'],systemen:[],collega:['Feedback vragen van ervaren trainers','Intervisie met andere trainers'],trainingen:['Karin de Galan verdieping','Trainingslijn \'Trainer 2\' volgen']},
+      4:{vereist:['Kerncompetenties behalen','Groepsprocessen kunnen begeleiden'],zelfDoen:['Kennis van groepsdynamica inzetten','Maatwerk trajecten ontwikkelen voor klanten','Opdrachtgevers betrekken bij ontwerp trainingstraject'],systemen:[],collega:['Sparren met senior trainers over complexe groepssituaties'],trainingen:['Verdiepingstraining groepsdynamica','Trainingslijn \'Trainer 3\' volgen']},
+      5:{vereist:['Kerncompetenties behalen','Organisatiebrede ontwikkeltrajecten begeleiden'],zelfDoen:['Cultuurveranderingstrajecten begeleiden','McClelland/Bateson en Lencioni toepassen','Klanten inzicht geven in bovenstroom en onderstroom'],systemen:[],collega:['Sparren met MT over organisatiebrede vraagstukken'],trainingen:['Opleiding organisatieontwikkeling','Trainingslijn \'Trainer 4\' volgen']}}}
+};
+
+const TRAININGSGROEPEN={};
+Object.keys(PADEN).forEach(pad=>{
+  TRAININGSGROEPEN[pad]=[];
+  for(let v=1;v<=4;v++)TRAININGSGROEPEN[pad].push({id:`${pad}-${v}-${v+1}`,label:`${PADEN[pad].label} ${v}→${v+1}: ${PADEN[pad].rollen[v-1]} naar ${PADEN[pad].rollen[v]}`});
+});
+
+// COMPETENTIES met EXACTE teksten en gedragskaders uit de gids (afbeeldingen)
+const COMPS=[
+  {id:'b',label:'Beïnvloedingskracht',
+   definitie:'Invloed uitoefenen op anderen zodat zij overtuigd worden of hun mening of houding aanpassen',
+   kernwoorden:['Enthousiasmeren','Inspireren','Overtuigingskracht','Uitstraling','Aansprekende argumenten','Communicatiekracht'],
+   sterren:[
+    {label:'1e ster',sym:'★☆☆☆',
+     intro:'Om te groeien naar de eerste ster is vooral inzicht nodig in eigen kunnen. Stel jezelf eens vragen zoals:\n• Waar onderscheid ik me van anderen?\n• Wat kan ik bijdragen in mijn werk?\n• Waar waarderen collega\'s mij voor?\n\nDoor veel feedback te vragen en ontvangen en te reflecteren krijg je hier meer inzicht in. Beïnvloedingskracht gaat eigenlijk over het inzetten van die zaken die jou uniek maken. Durf je mening te delen, durf anderen hierin mee te nemen en overtuig hen.\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze eerste ster.',
+     kaderTitel:'Kan bewust de mening van anderen beïnvloeden',
+     gedrag:['Heeft een eigen mening en legt deze uit aan gesprekspartners;','Onderbouwt de eigen mening om anderen te overtuigen met heldere, aansprekende argumenten;','Brengt standpunten en ideeën stellig en laat duidelijk merken er zelf in te geloven;','Weet een boodschap enthousiast over te brengen;','Kan schriftelijk foutloos en helder communiceren, waarbij een duidelijke lijn wordt gevolgd en een bewering (oordeel / advies) met goede argumenten wordt onderbouwd.']},
+    {label:'2e ster',sym:'★★☆☆',
+     intro:'In deze stap is het belangrijk om goed naar je gesprekspartner te luisteren. Om iemand te overtuigen of meekrijgen moet je vooral de zienswijze van de ander begrijpen. Denk in de voorbereiding op een gesprek of in reflectie van een gesprek dat je hebt gevoerd eens na over de volgende vragen:\n• Met wie voer je het gesprek, wie probeer je mee te krijgen?\n• Wat is jouw eigen houding en hoe beïnvloed dit de gesprekspartner?\n• Probeer je te overtuigen met argumenten of probeer je de ander ook echt te begrijpen?\n• Wat kan je doen om de ander te enthousiasmeren voor jouw idee?\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze tweede ster.',
+     kaderTitel:'Weet in wisselende situaties en bij wisselende doelgroepen de meningen van anderen te beïnvloeden',
+     gedrag:['Heeft begrip en acceptatie voor standpunten en meningen van anderen en benut dit om begrip en enthousiasme voor eigen standpunten te verkrijgen;','Past per situatie de argumenten en stijl van handelen aan en hanteert een aansprekende stijl om anderen enthousiast te maken voor eigen ideeën;','Gaat in op wat gesprekspartners zeggen;','Is een serieuze gesprekspartner en heeft oog voor de relatie met de ander;','Brengt mening en verwachtingen duidelijk en beargumenteerd aan anderen over;','Geeft inspirerende presentaties buiten de organisatie, via welke \'de markt\' wordt beïnvloed.']},
+    {label:'3e ster',sym:'★★★☆',
+     intro:'Om deze stap te maken moet je een natuurlijke omgang met anderen hebben waardoor je hen mee krijgt. Dit heeft te maken met zelfvertrouwen, vastberadenheid en het durven innemen van een standpunt. Ook gaat het om stakeholder management en het kunnen belichten van zaken vanuit meerdere kanten. Het krijgen van commitment is belangrijk.\n\nStel jezelf vragen zoals:\n• In welke situaties was ik succesvol en in welke minder goed? Wat kan ik daarvan leren?\n• Welke belangen spelen hier allemaal?\n• Wat zijn de standpunten van anderen en waarom?\n• Waar zit weerstand rondom het onderwerp?\n• Hoe kan je op die weerstand inspelen?\n• Hoe en wanneer kan ik anderen het beste meekrijgen?\n• Hoe realiseer ik commitment?\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze derde ster.',
+     kaderTitel:'Weet met weerstanden om te gaan en verkrijgt draagvlak',
+     gedrag:['Sluit bij het formuleren van een standpunt aan bij de verschillende belangen en onderlinge verhoudingen in de organisatie;','Geeft door gedrag en houding blijk van interesse voor wat gesprekspartners inbrengen;','Anticipeert op weerstand in de organisatie, door bij het presenteren van ideeën die weerstanden te benoemen;','Treedt krachtig en vastberaden op bij tegenstellingen in verwachtingen en belangen en gebruikt invloed op beslissende momenten;','Hanteert een aansprekende timing, stijl en argumentatie om anderen voor een standpunt te winnen; inspireert anderen en realiseert commitment.']},
+    {label:'4e ster',sym:'★★★★',
+     intro:'Om deze stap te maken is vooral veel ervaring nodig.\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze vierde ster.',
+     kaderTitel:'Wint op strategisch niveau uiteenlopende partners voor het eigen standpunt',
+     gedrag:['Is een krachtige spreker: is \'to the point\' en gebruikt zulke aansprekende voorbeelden en taal dat anderen geboeid zijn door wat hij/zij te vertellen heeft;','Verkrijgt draagvlak voor strategische plannen, door aan te sluiten bij de behoeften, de beleving en de ontwikkelingen in en buiten de organisatie;','Bespreekt openlijk bezwaren, benoemt verschillen en overeenkomsten in meningen;','Realiseert draagvlak voor voorstellen die moeilijk liggen; straalt gezag en overwicht uit en wint op basis daarvan anderen voor standpunten en ideeën.']}
+  ]},
+  {id:'k',label:'Klantgerichtheid',
+   definitie:'Herkennen van behoeften van de klant en hiermee rekening houden in het handelen door het goed afwegen van het eigenbelang en het belang van de klant',
+   kernwoorden:['Brug tussen klant en service','Inleven en meedenken','Neemt klant serieus','Relatiegericht','Verbeteren dienstverlening'],
+   sterren:[
+    {label:'1e ster',sym:'★☆☆☆',
+     intro:'Dit zien we als de basis van ons werk. De eerste ster zou na een half jaar ook behaald moeten zijn.\n\nVerder groeien op deze competentie gaat over het inzien van behoeftes van de klant, opbouwen van een klantrelatie en meedenken met de klant.\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze eerste ster.',
+     kaderTitel:'Toont wezenlijk interesse in de wensen van (interne) klanten',
+     gedrag:['Is goed aanspreekbaar en bereikbaar voor de klant;','Neemt een klacht, probleem of vraag van een klant serieus en reageert hier adequaat op;','Houdt zich aan gemaakte afspraken met de klant; adviseert/bedient de klant volgens opdracht;','Houdt de klant op de hoogte van de voortgang van de opdracht;','Luistert aandachtig naar wensen van de klant en vraagt naar hun tevredenheid;','Blijft rustig, correct, eerlijk en gaat niet in verdediging en uit geen beschuldiging naar klanten.']},
+    {label:'2e ster',sym:'★★☆☆',
+     intro:'Deze tweede ster gaat over het dieper ingaan op de klantbehoefte.\n\nStel jezelf vragen zoals:\n• Wat was de oorspronkelijke opdrachtbeschrijving en welke meerwaarde lever ik daarbuiten?\n• Welke latente behoefte heb ik bij de klant ontdekt? En wat heb ik daarmee gedaan?\n• Kan ik bij de klant waar ik nu zit een behoefte identificeren die de klant zelf nog niet door heeft?\n• Wat doe ik om de belangen van de klant in evenwicht te houden met de belangen van Précon?\n• Waar heb ik grenzen aangegeven aan de klant?\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze tweede ster.',
+     kaderTitel:'Speelt proactief in op wensen van klanten',
+     gedrag:['Onderzoekt wensen/behoeften van klanten, luistert actief en vraagt door;','Verdiept zich in de situatie van de klant, richt zich op verbetering, ontwikkelt een relatie met de klant en neemt acties om de tevredenheid te vergroten;','Signaleert en herkent uitgesproken klantwensen en vertaalt deze naar activiteiten;','Vertaalt de mogelijkheden van een product of dienst in voordelen voor de klant;','Verrast de klant met toegevoegde waarde;','Komt met voorstellen waarin rekening is gehouden met de belangen van de klant, zonder dat dit nadelen voor de eigen organisatie oplevert;','Is duidelijk naar de klant over de grenzen van de mogelijkheden.']},
+    {label:'3e ster',sym:'★★★☆',
+     intro:'Als je verder groeit op klantgerichtheid, ben je bezig met wat er speelt in de gehele klantorganisatie en denk je hierover mee. Je snapt hoe de klant werkt en wat deze nodig heeft en denkt creatief mee in mogelijke oplossingen voor problemen die spelen.\n\nStel jezelf vragen zoals:\n• In hoeverre weet ik wat in de hele klantorganisatie speelt?\n• Welke uitdagingen heeft mijn klant en denk ik daar over mee?\n• Met welke personen bij de klant spar ik wel eens?\n• Heb ik zelf wel eens geëvalueerd met de klant?\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze derde ster.',
+     kaderTitel:'Kent de organisatie en de klanten en gebruikt die kennis tot wederzijds voordeel',
+     gedrag:['Kent de business en laat merken op de hoogte te zijn van wat er in de klantorganisatie speelt;','Heeft zicht op mogelijke gevolgen van bepaalde gebeurtenissen in een klantorganisatie;','Heeft oog voor bedrijfsprocessen van de klant, denkt van daaruit naar mogelijke oplossingsrichtingen;','Monitort de klanttevredenheid en verbetert de kwaliteit van de eigen dienstverlening;','Speelt flexibel in op wensen van de klant;','Bedenkt alternatieven om klantwensen te vervullen en biedt deze aan.']},
+    {label:'4e ster',sym:'★★★★',
+     intro:'Dit is het hoogste niveau van klantgerichtheid. Hier beheer je het contact met de hele klantorganisatie en weet op elk niveau wat er speelt. Je brengt ontwikkelingen in de markt naar de klant toe en vertaalt deze naar kansen.\n\nStel jezelf vragen zoals:\n• Welke klantrelaties beheer ik?\n• Wat doe ik om deze klanten beter te bedienen?\n• Welke contactpersonen heb ik, op welke positie zitten zij?\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze vierde ster.',
+     kaderTitel:'Realiseert een toekomstgerichte klantrelatie op managementniveau',
+     gedrag:['Vertaalt complexe uitgesproken en niet uitgesproken wensen van diverse klanten naar een nieuw te ontwikkelen concept, dienst of product en overlegt hierover met de klant;','Verbetert de interne afstemming organisatie-breed om de klant beter te kunnen bedienen;','Benut bestaande en nieuwe mogelijkheden om klanten optimaal te bedienen;','Anticipeert op mogelijke toekomstige klantwensen en maakt de klant daarvan bewust;','Is op de hoogte van beslissers en onderlinge verhoudingen in de klantorganisatie;','Denkt op strategisch niveau mee met partners.']}
+  ]},
+  {id:'o',label:'Ondernemerschap',
+   definitie:'Het zien van kansen in de markt voor bestaande en nieuwe diensten en verantwoorde risico\'s durven aangaan om een zakelijk voordeel te behalen',
+   kernwoorden:['Initiatief','Tonen van lef','Anticiperen','Kansen zien en benutten','Marktsensitief','Netwerken'],
+   sterren:[
+    {label:'1e ster',sym:'★☆☆☆',
+     intro:'Dit zien we als de basis van ons werk. De eerste ster zou na een half jaar ook behaald moeten zijn.\n\nVerder groeien op deze competentie gaat over meedenken over ontwikkelingen in de markt en kansen die dat meebrengt op gebied van nieuwe diensten voor Précon.\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze eerste ster.',
+     kaderTitel:'Handelt proactief binnen eigen taak en rol',
+     gedrag:['Komt professioneel, verzorgd en representatief over;','Heeft oog voor kansen bij eigen klanten en meldt deze intern;','Onderneemt actie zonder af te wachten tot anderen het aangeven;','Signaleert knelpunten in het eigen werk en neemt initiatief om deze op te lossen.']},
+    {label:'2e ster',sym:'★★☆☆',
+     intro:'Als je verder groeit op ondernemerschap, ben je actiever bezig met kansen bij klanten. Zorg dat je informatie verzamelt over de markt, de concurrentie en de doelgroep. Lees vakbladen, bezoek websites.\n\nStel jezelf de volgende vragen:\n• Zie ik kansen bij mijn klanten? Wat doe ik daar mee?\n• Van welke bestaande diensten van Précon zou mijn klant profijt kunnen hebben?\n• Op welk gebied heeft mijn klant behoefte aan nieuwe diensten?\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze tweede ster.',
+     kaderTitel:'Weet wat Précon allemaal doet en kan en is van daaruit bezig met kansen bij klanten',
+     gedrag:['Polst zelf actief mogelijke interesse bij eigen klanten voor aanvullende dienstverlening;','Geeft kansen tijdig door aan collega\'s of het team en onderbouwt waarom ze waardevol zijn;','Houdt follow-up van mogelijke kansen in de gaten;','Staat open voor nieuwe ideeën en probeert nieuwe werkwijzen uit.']},
+    {label:'3e ster',sym:'★★★☆',
+     intro:'Op dit niveau geef je zelf ook echt opvolging aan de kansen die je ziet. Je bent bezig met Précon op de kaart zetten, je netwerk bijhouden en diensten ontwikkelen. Naast het belang van de klant en de kansen die je daar ziet, ben je ook bezig met de kosten en baten voor Précon.\n\nStel jezelf de volgende vragen:\n• Zie ik kansen die ik om kan zetten in diensten?\n• Hoe wegen de kosten van dienstenontwikkeling op tegen de baten?\n• Ben ik bezig met de marktontwikkelingen en kansen die daaruit ontstaan?\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze derde ster.',
+     kaderTitel:'Signaleert kansen in de markt en geeft daar opvolging aan',
+     gedrag:['Werkt kansen bij klanten uit tot concrete voorstellen;','Ondersteunt Précon door een goede profilering in de markt;','Treedt proactief in contact met klanten of andere stakeholders om marktbehoefte in kaart te brengen en ideeën te toetsen;','Weegt bij ontwikkeling van dienstverlening kosten en baten af, neemt berekende risico\'s en maakt keuzes die passen bij de Précon-visie.']},
+    {label:'4e ster',sym:'★★★★',
+     intro:'Op dit niveau kan je zelf innovaties drijven. Jij bent je bewust van de kansen en behoeftes in de markt, ontwikkelt nieuwe diensten die hierbij passen en rolt ze uit. Hiermee draag je bij aan de winstgevendheid van Précon.\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze vierde ster.',
+     kaderTitel:'Heeft een visie op kansen, marktontwikkelingen en lange-termijn groei',
+     gedrag:['Bouwt een netwerk op om samenwerkingsverbanden te creëren en marktontwikkelingen op te volgen;','Identificeert trends en vertaalt deze naar nieuwe dienstverlening;','Neemt initiatief voor innovatieprojecten met strategische impact;','Komt met voorstellen die gericht zijn op het vergroten van de marktgerichtheid of het marktaandeel.']}
+  ]},
+  {id:'org',label:'Organisatievermogen',
+   definitie:'Bepalen van prioriteiten en werkaanpak en optimaal inzetten van de beschikbare middelen om doelstellingen en resultaten te realiseren',
+   kernwoorden:['Planning','Overzicht','Doelstellingen','Voortgang','Rapporteren','Prioriteiten stellen'],
+   sterren:[
+    {label:'1e ster',sym:'★☆☆☆',
+     intro:'Dit zien we als de basis van ons werk. De eerste ster zou na een half jaar ook behaald moeten zijn.\n\nVerder groeien op deze competentie gaat over het organiseren, regelen en plannen van werkzaamheden.\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze eerste ster.',
+     kaderTitel:'Plant en regelt de eigen werkzaamheden',
+     gedrag:['Regelt datgene wat nodig is voor de voortgang van het eigen werk;','Plant de eigen werkzaamheden, stemt de planning duidelijk af met anderen en werkt volgens opgestelde planning;','Draagt bij aan een goede werkverdeling;','Stelt prioriteiten, heeft overzicht over eigen werkzaamheden en houdt de eigen voortgang actief in de gaten;','Werkt ordelijk en systematisch volgens logische stappen en vooraf bepaalde plannen;','Rapporteert relevante en noodzakelijke informatie op het juiste moment.']},
+    {label:'2e ster',sym:'★★☆☆',
+     intro:'Op dit niveau ben je niet alleen bezig met het goed organiseren van je eigen werk, maar ook met het werk van anderen.\n\nEen aantal tips:\n• Formuleer je doelen zo concreet mogelijk en leg deze ter verbetering voor aan een collega\n• Maak een lijst met al je werkzaamheden en bepaal steeds de mate van urgentie\n\nBedenk een aantal voorbeeldsituaties uit de praktijk. Pas jij onderstaande punten allemaal toe? Dan beheers je deze tweede ster.',
+     kaderTitel:'Plant en regelt de werkzaamheden van zichzelf en anderen',
+     gedrag:['Kan een projectplan opstellen: stelt concrete doelen, prioriteiten en acties voor zichzelf en anderen, maakt daarbij realistische inschattingen ten aanzien van de benodigde tijd, capaciteit en middelen;','Stemt werkzaamheden af die de verschillende mensen uitvoeren;','Houdt overzicht over de werkzaamheden van zichzelf en anderen en bewaakt nauwkeurig de voortgang;','Brengt structuur aan in het eigen en andermans werk;','Anticipeert op factoren die van invloed kunnen zijn op het realiseren van de planning en speelt hierop in.']},
+    {label:'3e ster',sym:'★★★☆',
+     intro:'Op dit niveau ben je niet alleen bezig met goed organiseren van het werk van jezelf en anderen, maar ook met de voorwaarden en het te behalen resultaat. Je draagt verantwoordelijkheid voor goede afstemming van resources en de benodigde tijd.\n\nEen aantal tips:\n• Bedenk voor jezelf hoe je tijdig aan informatie kan komen over de voortgang van gemaakte afspraken en plannen\n• Ga voor jezelf na in welke situaties de voortgangsbewaking goed verliep en maak een lijst met succes- en risicofactoren\n\nBedenk een aantal voorbeeldsituaties. Kan je bij allemaal een succesvol voorbeeld geven? Dan beheers je deze derde ster.',
+     kaderTitel:'Organiseert, binnen gegeven randvoorwaarden, zaken die behaald moeten worden',
+     gedrag:['Zet zaken in gang die gedurende alle fasen van een traject van belang zijn;','Zet zaken in gang, waarbij hij/zij verantwoordelijkheden draagt voor de totale uitvoer van lopende werkzaamheden/projecten;','Zoekt binnen de gegeven randvoorwaarden actief naar (nieuwe) mogelijkheden om mensen en middelen op zo goed mogelijke wijze in te zetten;','Creëert een aantrekkelijke lerende atmosfeer zodat plezier wordt beleefd aan het leveren van resultaten;','Zorgt continu voor een optimale afstemming tussen beschikbare en benodigde middelen;','Kan succesvol een project managen.']},
+    {label:'4e ster',sym:'★★★★',
+     intro:'Op dit niveau begrijp je hoe complexe, langere projecten georganiseerd moeten worden. Je kan de scope bepalen van een project, de kaders scheppen en begrijpt wat de impact is op andere werkzaamheden.\n\nBedenk een aantal voorbeeldsituaties. Kan je bij allemaal een succesvol voorbeeld geven? Dan beheers je deze vierde ster.',
+     kaderTitel:'Creëert randvoorwaarden voor zaken die op lange termijn gerealiseerd moeten worden',
+     gedrag:['Brengt randvoorwaarden in kaart voor de uitvoering van complexe lange-termijnprojecten;','Stelt bestaande randvoorwaarden bij als dit noodzakelijk is om het doel te bereiken;','Legt relaties tussen werkzaamheden van verschillende werkzaamheden in de organisatie, ziet het grotere verband en stemt de eigen planning hierop af;','Coördineert veel werkzaamheden die inhoudelijk van elkaar verschillen en die een lange doorlooptijd of gevolgen op lange termijn hebben;','Behoudt op elk moment en op elk niveau het overzicht van projecten en stuurt waar nodig bij.']}
+  ]},
+  {id:'t',label:'Training en coaching',trainerOnly:true,
+   definitie:'De ander de gereedschappen aanreiken om zelf de regie te nemen en kritisch naar eigen handelen te kijken',
+   kernwoorden:['Luisteren','Oprechte verbinding','Motiveren','Helder communiceren','Duidelijkheid bieden','Reflectievermogen stimuleren'],
+   sterren:[
+    {label:'1e ster',sym:'★☆☆☆',
+     intro:'De ander de gereedschappen aanreiken om zelf de regie te nemen en kritisch naar eigen handelen te kijken.\n\nKernwoorden: Luisteren · Oprechte verbinding · Motiveren · Helder communiceren · Duidelijkheid bieden · Reflectievermogen stimuleren\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze eerste ster.',
+     kaderTitel:'Kan goed uitleggen en toont oprechte interesse in mensen',
+     gedrag:['Kan duidelijk uitleggen;','Toont oprechte nieuwsgierigheid in en empathie voor anderen;','Weet aansluiting te vinden;','Durft voor een groep te staan.']},
+    {label:'2e ster',sym:'★★☆☆',
+     intro:'Bedenk een aantal voorbeeldsituaties uit de praktijk. Pas jij onderstaande punten allemaal toe? Dan beheers je deze tweede ster.',
+     kaderTitel:'Beheerst trainingstechnieken',
+     gedrag:['Kan een interactieve training neerzetten, waarin de deelnemers stap voor stap kennis en vaardigheden leren en in de praktijk leren toepassen (Galan-methode);','Maakt duidelijk wat de deelnemers gaan leren, zorgt voor overzicht voor de deelnemers en levert het beloofde resultaat;','Weet deelnemers te motiveren door ze vertrouwen te geven en te enthousiasmeren (Galan-methode);','Praat duidelijk en scheidt hoofd- en bijzaken;','Weet de aandacht vast te houden door de juiste non-verbale communicatie in te zetten: houding, bewegen, intonatie;','Legt opdrachten goed uit: geeft hierbij aan wat het doel is, wat de deelnemers moeten doen en hoeveel tijd ze daarvoor krijgen;','Maakt contact met de deelnemers, checkt regelmatig of iedereen het begrijpt en geeft complimenten;','Is authentiek en congruent: wat je zegt komt overeen met wat je uitstraalt.']},
+    {label:'3e ster',sym:'★★★☆',
+     intro:'Bedenk een aantal voorbeeldsituaties uit de praktijk. Kan je bij allemaal een succesvol voorbeeld geven? Dan beheers je deze derde ster.',
+     kaderTitel:'Kan zelf een training ontwerpen en loskomen van het standaardprogramma',
+     gedrag:['Kan de vraag van de klant vertalen naar het gewenste resultaat en op basis hiervan een training ontwerpen;','Kan een draaiboek maken, met een logische opbouw;','Zorgt voor een goede energieverdeling in de training, brengt evenwicht aan tussen zenden, interactie, zelf aan de slag en pauzes;','Houdt de aandacht van de deelnemers vast en enthousiasmeert ze;','Heeft aandacht voor vragen en eventuele bezwaren uit de groep en gaat hier op een goede manier mee om;','Zorgt ervoor dat deelnemers zich gezien en gehoord voelen;','Laat zien onbevooroordeeld te zijn;','Durft eigen kwetsbaarheid te tonen;','Durft deelnemers, vanuit professionele liefde, te confronteren om hun leerproces te bevorderen;','Kan flexibel inspelen op behoeftes van deelnemers en tegelijkertijd de regie houden.']},
+    {label:'4e ster',sym:'★★★★',
+     intro:'Bedenk een aantal voorbeeldsituaties uit de praktijk. Kan je bij allemaal een succesvol voorbeeld geven? Dan beheers je deze vierde ster.',
+     kaderTitel:'Weet organisaties de tools aan te reiken om medewerkers beter te motiveren en leiderschap te ontwikkelen',
+     gedrag:['Weet organisaties en individuele medewerkers inzicht te geven in bovenstroom (gedrag) en onderstroom (denken en willen);','Maakt gebruik van bewezen theorieën en modellen, zoals bijvoorbeeld McClelland/Bateson en Lencioni om diepere lagen aan te boren;','Heeft kennis van groepsdynamica en weet hierop in te spelen om het leerklimaat te bevorderen;','Maakt deelnemers verantwoordelijk voor hun eigen leerproces;','Kan soft skills trainen en zet hiervoor bewezen theorieën en modellen in, op het gebied van (situationeel) leiderschap en communicatie;','Kan omgaan met verschillende organisatieculturen en kent de voor- en nadelen van verschillende organisatieculturen;','Gaat op zoek naar de echte pijn en behoefte van de klant. Is gedurende het trainingstraject continu kritisch op het proces en betrekt de opdrachtgever hierbij.']}
+  ]}
+];
+
+// ══ STATE ══
+let huidig=0;
+let state={naam:'',bijPreconSinds:'',datum:'',datumVorig:'',hoofdbeoordelaar:'',medebeoordelaar:'',
+  hoeGaatHet:'',werkdruk:'',kernwaarden:'',situaties:['','',''],impact:'',declarabiliteit:'',afspraken:'',checks:'',profiel:'',
+  scores:{b:0,k:0,o:0,org:0,t:0},opmerkingen:{b:'',k:'',o:'',org:'',t:''},
+  tCellen:[],tDiepte:'',tBreedte:'',
+  vorigJaar:{vakexpert:0,adviseur:0,leider:0,trainer:0},
+  ambities:{vakexpert:false,adviseur:false,leider:false,trainer:false},
+  trainingsgroepen:{vakexpert:'',adviseur:'',leider:'',trainer:''},
+  ambitieNotitie:'',toolboxKeuze:'',checkpoints:'',tProfielOntwikkeling:'',overigeAfspraken:'',datumVolgend:''};
+try{const s=localStorage.getItem('precon_v3');if(s)state={...state,...JSON.parse(s)};}catch(e){}
+
+// ══ BEREKENINGEN ══
+function berekenNiveau(padId){
+  const pad=PADEN[padId],s=state.scores;let n=0;
+  for(let i=0;i<5;i++){const v=pad.vereisten[i];if(s.b>=v.b&&s.k>=v.k&&s.o>=v.o&&s.org>=v.org&&(v.t===undefined||s.t>=v.t))n=i+1;}
+  return n;
+}
+
+// ══ RENDER ══
+function renderAlles(){renderTabs();document.getElementById('schermen').innerHTML=renderScherm();renderTGrid();window.scrollTo(0,0);}
+function renderTabs(){
+  document.getElementById('tabs-bar').innerHTML=SCHERMEN.map((s,i)=>`<div class="tab ${i===huidig?'active':''}" onclick="naarScherm(${i})">${s.label}</div>`).join('');
+  document.getElementById('vp-bar').innerHTML=SCHERMEN.map((_,i)=>`<div class="vp-stap ${i<huidig?'gedaan':i===huidig?'actief':''}"></div>`).join('');
+}
+function nav(){return `<div class="nav-knoppen">${huidig>0?`<button class="btn btn-t" onclick="terug()">← Terug</button>`:'<span></span>'}${huidig<8?`<button class="btn btn-v" onclick="volgende()">Volgende →</button>`:`<button class="btn btn-v" onclick="window.print()">🖨 Afdrukken</button>`}</div>`;}
+function renderScherm(){
+  const fns={s1,s2,s3,s4,s5,s6,s7,s8,s9};
+  return `<div class="scherm active">${fns[SCHERMEN[huidig].id]()}${nav()}</div>`;
+}
+
+// ══ SCHERMEN ══
+function s1(){return `
+  <div class="scherm-titel">Basisgegevens</div><div class="scherm-sub">F-04 Functioneringsgesprek en POP · versie 02/04/2026</div>
+  <div class="form-rij"><div class="fg"><label>Naam professional</label><input id="f-naam" value="${e(state.naam)}" placeholder="Volledige naam..."/></div><div class="fg"><label>Bij Précon sinds</label><input id="f-bijPreconSinds" value="${e(state.bijPreconSinds)}" placeholder="bijv. januari 2022"/></div></div>
+  <div class="form-rij"><div class="fg"><label>Datum gesprek</label><input type="date" id="f-datum" value="${e(state.datum)}"/></div><div class="fg"><label>Datum vorig gesprek</label><input type="date" id="f-datumVorig" value="${e(state.datumVorig)}"/></div></div>
+  <div class="form-rij"><div class="fg"><label>Hoofdbeoordelaar</label><input id="f-hoofdbeoordelaar" value="${e(state.hoofdbeoordelaar)}" placeholder="Naam..."/></div><div class="fg"><label>Medebeoordelaar</label><input id="f-medebeoordelaar" value="${e(state.medebeoordelaar)}" placeholder="Naam (optioneel)..."/></div></div>`;}
+
+function s2(){return `
+  <div class="scherm-titel">Hoe gaat het?</div><div class="scherm-sub">Een open gesprek over welzijn, werkdruk en kernwaarden</div>
+  <div class="fg"><label>Hoe gaat het met je?</label><textarea id="f-hoeGaatHet" rows="4" placeholder="Vertel hoe het gaat...">${e(state.hoeGaatHet)}</textarea></div>
+  <div class="fg"><label>Werkdruk en ervaren belasting</label><textarea id="f-werkdruk" rows="3" placeholder="Hoe ervaar je de werkdruk?">${e(state.werkdruk)}</textarea></div>
+  <div class="sk">Kernwaarden: Praktisch · Betrokken · Vakkundig</div>
+  <div class="fg"><label>Voorbeelden kernwaarden</label><textarea id="f-kernwaarden" rows="4" placeholder="Geef voorbeelden van Praktisch, Betrokken en/of Vakkundig handelen...">${e(state.kernwaarden)}</textarea></div>`;}
+
+function s3(){return `
+  <div class="scherm-titel">Praktijksituaties</div><div class="scherm-sub">Bespreek minimaal 2 situaties die je afgelopen jaar hebt meegemaakt</div>
+  <div class="info-box">Wat is het behaalde resultaat en wat heb je hieruit geleerd? Wat zegt dat over je competenties en T-profiel?</div>
+  ${[0,1,2].map(i=>`<div class="fg"><label>Situatie ${i+1}${i===2?' (optioneel)':''}</label><textarea id="f-sit-${i}" rows="4" placeholder="Beschrijf de situatie, het resultaat en wat je hebt geleerd...">${e(state.situaties[i]||'')}</textarea></div>`).join('')}
+  <div class="sk">Resultaten en overig</div>
+  <div class="fg"><label>Overige resultaten en impactverbetering</label><textarea id="f-impact" rows="3" placeholder="Welk effect had het project? Bijdrage aan impactverbetering bij de klant?">${e(state.impact)}</textarea></div>
+  <div class="fg"><label>Declarabiliteit gepland en gerealiseerd</label><textarea id="f-declarabiliteit" rows="2">${e(state.declarabiliteit)}</textarea></div>
+  <div class="fg"><label>Overige afspraken uit vorig gesprek</label><textarea id="f-afspraken" rows="2">${e(state.afspraken)}</textarea></div>
+  <div class="fg"><label>Overige checks (inwerkschema, CV, portfolio)</label><textarea id="f-checks" rows="2">${e(state.checks)}</textarea></div>`;}
+
+function s4(){return `
+  <div class="scherm-titel">Jouw profiel</div><div class="scherm-sub">Om in je kracht te komen, moet je eerst weten wat die kracht is</div>
+  <div class="info-box">Schrijf op wat je zo te binnen schiet en spar hierover met je business manager. <strong>Hier is geen goed en fout!</strong></div>
+  <div class="fg"><label>Eigenschappen, krachten en drijfveren</label><textarea id="f-profiel" rows="8" placeholder="Eigenschappen (introvert/extravert, grote lijnen/details, pragmatisch...)&#10;Waar ben je goed in?&#10;Wat vind je leuk?&#10;Drijfveren: waar doe jij het eigenlijk voor?">${e(state.profiel)}</textarea></div>`;}
+
+function s5(){
+  return `<div class="scherm-titel">Competenties invullen</div><div class="scherm-sub">Bespreek per competentie welk niveau bij jou past · gebruik de Ontwikkelpadengids als ondersteuning</div>
+  <div class="info-box">Lees de beschrijving per ster. Klik de ster aan waarvoor je bij <strong>alle</strong> gedragspunten in het kader een goed praktijkvoorbeeld kunt geven.</div>
+  ${COMPS.map(comp=>{
+    const sc=state.scores[comp.id];
+    return `<div class="comp-card">
+      <div class="comp-header" onclick="toggleComp('${comp.id}')">
+        <h3>${comp.label}${comp.trainerOnly?` <span style="font-size:10px;opacity:.7">(Trainer-pad)</span>`:''}</h3>
+        <div class="comp-header-right">
+          ${sc>0?`<span style="font-size:11px;color:#ffd080">${sc} ster${sc>1?'ren':''}</span>`:''}
+          <span style="color:#ffd080;font-size:16px">${sc>0?'★'.repeat(sc)+'<span style="opacity:.3">'+'★'.repeat(4-sc)+'</span>':'<span style="opacity:.3">★★★★</span>'}</span>
+        </div>
+      </div>
+      <div class="comp-body" id="cb-${comp.id}">
+        <div style="background:var(--blauw-licht);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--grijs);line-height:1.6">
+          <div style="font-style:italic;color:var(--blauw);margin-bottom:6px">${comp.definitie}</div>
+          <div><strong style="color:var(--grijs-licht);font-size:11px;text-transform:uppercase;letter-spacing:.3px">Kernwoorden: </strong>${comp.kernwoorden.join(' · ')}</div>
+        </div>
+        ${comp.sterren.map((ster,si)=>`
+        <div class="ster-blok">
+          <div class="ster-header ${sc===si+1?'geselecteerd':''}" onclick="toggleSter('sb-${comp.id}-${si}')">
+            <span class="ster-nr">${ster.label}</span>
+            <span class="ster-sym">${ster.sym}</span>
+            ${sc===si+1?'<span style="font-size:11px;color:var(--oranje);margin-left:auto">✓ Mijn niveau</span>':''}
+          </div>
+          <div class="ster-body" id="sb-${comp.id}-${si}">
+            <div class="ster-intro" style="white-space:pre-line">${ster.intro}</div>
+            <div class="gedragskader">
+              <div class="gedragskader-titel">${ster.kaderTitel}</div>
+              <ul>${ster.gedrag.map(g=>`<li>${g}</li>`).join('')}</ul>
+            </div>
+            <button class="selecteer-btn ${sc===si+1?'actief':''}" onclick="setSter('${comp.id}',${si+1})">
+              ${sc===si+1?'✓ Dit is mijn niveau':'Selecteer als mijn niveau'}
+            </button>
+          </div>
+        </div>`).join('')}
+        <div class="opm-veld"><label>Toelichting / opmerkingen bij ${comp.label}</label>
+        <textarea id="opm-${comp.id}" placeholder="Notities, voorbeelden, afspraken...">${e(state.opmerkingen[comp.id]||'')}</textarea></div>
+      </div>
+    </div>`;
+  }).join('')}`;
+}
+
+function s6(){
+  return `<div class="scherm-titel">Ontwikkelpaden</div><div class="scherm-sub">Jouw positie op de vier paden, berekend op basis van je competentiescores</div>
+  ${renderScoreBox()}
+  <div style="overflow-x:auto;margin-bottom:20px">${renderPaden()}</div>
+  <div class="toolbox-wrap" style="margin-bottom:20px">
+    <div class="toolbox-hdr" onclick="toggleTB('fw-overzicht')" style="background:var(--blauw-mid)">📊 Framework overzicht – sterren per niveau per pad <span id="tbc-fw-overzicht">▼</span></div>
+    <div id="tb-fw-overzicht" style="display:none;background:#fff;padding:0">
+      ${renderFrameworkOverzicht()}
+    </div>
+  </div>
+  <div class="sk">T-profiel</div>
+  <div class="tip-box">Klik de vakjes om je T-profiel in te vullen. De T bestaat uit één horizontale rij bovenaan en twee verticale kolommen naar beneden. Klik nogmaals om te wissen.</div>
+  <div class="t-grid" id="t-grid">
+    ${Array.from({length:6},(_,r)=>Array.from({length:10},(_,k)=>`<div class="t-cel" id="tcel-${r}-${k}" onclick="toggleT(${r},${k})"></div>`).join('')).join('')}
+  </div>
+  <div style="font-size:11px;color:var(--grijs-licht);margin-top:4px">Oranje = T-profiel ingevuld</div>
+  <div class="form-rij" style="margin-top:12px">
+    <div class="fg"><label>Diepte: expertise in</label><textarea id="f-tDiepte" rows="2" placeholder="Waarin ben je expert?">${e(state.tDiepte)}</textarea></div>
+    <div class="fg"><label>Breedte: kennis van</label><textarea id="f-tBreedte" rows="2" placeholder="Welke aangrenzende gebieden ken je?">${e(state.tBreedte)}</textarea></div>
+  </div>`;
+}
+
+function s7(){
+  return `<div class="scherm-titel">Ambitie</div><div class="scherm-sub">Waar wil je naartoe? Je kunt ambitie tonen op meerdere paden.</div>
+  <div class="info-box"><strong>Maximaal 1 stap per pad per jaar</strong> is realistisch. De ambitiepijl verschijnt op de paden in scherm 6. Je kiest ook de trainingsgroep die bij je ambitie past.</div>
+  ${renderScoreBox()}
+  <div class="sk">Kies je ambitie per pad</div>
+  <div class="ambitie-grid">
+    ${Object.entries(PADEN).map(([padId,pad])=>{
+      const n=berekenNiveau(padId),heeftAmbitie=state.ambities[padId],volg=n<5?n+1:null;
+      return `<div class="ambitie-card ${heeftAmbitie?'actief':''}">
+        <div class="ambitie-toggle">
+          <input type="checkbox" id="amb-${padId}" ${heeftAmbitie?'checked':''} onchange="toggleAmbitie('${padId}')" ${n>=5?'disabled':''}>
+          <label for="amb-${padId}" style="font-weight:bold;color:${padId==='vakexpert'?'#7B1D2A':padId==='adviseur'?'#1D6B3A':padId==='leider'?'#1A3A6B':'#6B4A1A'};cursor:pointer">${pad.label}</label>
+        </div>
+        <div class="ambitie-niv-info">
+          Nu: <strong style="color:var(--blauw)">${n>0?'Niveau '+n+' – '+pad.rollen[n-1]:'Nog niet ingeschaald'}</strong><br>
+          ${volg?`Ambitie: <strong style="color:var(--oranje)">Niveau ${volg} – ${pad.rollen[volg-1]}</strong>`:'<span style="color:var(--groen)">✓ Hoogste niveau bereikt!</span>'}
+        </div>
+        ${heeftAmbitie&&volg?`<div style="margin-top:10px">
+          <div style="font-size:11px;font-weight:bold;color:var(--blauw);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px">Trainingsgroep</div>
+          <select id="tg-${padId}" onchange="setTG('${padId}',this.value)" style="width:100%;font-family:Arial;font-size:12px;border:1.5px solid var(--grijs-lijn);border-radius:5px;padding:5px 8px">
+            <option value="">— Kies trainingsgroep —</option>
+            ${TRAININGSGROEPEN[padId].map(tg=>`<option value="${tg.id}" ${state.trainingsgroepen[padId]===tg.id?'selected':''}>${tg.label}</option>`).join('')}
+          </select>
+        </div>`:''}
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="fg"><label>Omschrijving ambitie (in eigen woorden)</label>
+  <textarea id="f-ambitieNotitie" rows="5" placeholder="Omschrijf je ambities voor komend jaar...">${e(state.ambitieNotitie)}</textarea></div>`;
+}
+
+function s8(){
+  const actief=Object.entries(PADEN).filter(([padId])=>state.ambities[padId]||berekenNiveau(padId)>0);
+  return `<div class="scherm-titel">Ontwikkeling & POP</div><div class="scherm-sub">Je persoonlijk ontwikkelplan — stap 6, 7 en 8 samen vormen je POP</div>
+  ${actief.map(([padId,pad])=>{
+    const n=berekenNiveau(padId),heeftAmbitie=state.ambities[padId],doelN=heeftAmbitie&&n<5?n+1:null;
+    const vereist=doelN?pad.vereisten[doelN-1]:null,toolbox=doelN?pad.toolboxen[doelN]:null;
+    return `<div class="pop-pad">
+      <div class="pop-pad-header" onclick="togglePP('pb-${padId}')">
+        <h4 class="${pad.kleur}">${pad.label}${n>0?' – Niveau '+n+': '+pad.rollen[n-1]:''}</h4>
+        <span style="font-size:11px;color:var(--grijs-licht)">${heeftAmbitie&&doelN?'Ambitie: niveau '+doelN+' – '+pad.rollen[doelN-1]:'Geen ambitie'} ▼</span>
+      </div>
+      <div class="pop-pad-body" id="pb-${padId}">
+        ${doelN&&vereist?`
+        <p style="font-size:12px;font-weight:bold;color:var(--blauw);margin-bottom:8px">Vereiste competenties voor niveau ${doelN}:</p>
+        ${COMPS.filter(c=>!c.trainerOnly||(padId==='trainer')).map(c=>{
+          const vSter=vereist[c.id]||0,hSter=state.scores[c.id]||0,ok=hSter>=vSter;
+          return `<div class="comp-status ${ok?'ok':'nog'}">
+            <div class="cdot ${ok?'ok':'nog'}"></div>
+            ${c.label}: ${'★'.repeat(vSter)} vereist ${ok?'✓ behaald':`(nog ${vSter-hSter} ster${vSter-hSter>1?'ren':''} te gaan)`}
+          </div>`;
+        }).join('')}
+        ${toolbox?`<div class="toolbox-wrap">
+          <div class="toolbox-hdr" onclick="toggleTB('tb-${padId}')">📦 Toolbox voor niveau ${doelN}: ${pad.rollen[doelN-1]} <span id="tbc-${padId}">▼</span></div>
+          <div id="tb-${padId}" style="display:none">
+            ${toolbox.vereist?.length?`<div class="tb-cat"><h5>✅ Vereist</h5><ul class="tb-items">${toolbox.vereist.map(i=>`<li class="tb-item">${i}</li>`).join('')}</ul></div>`:''}
+            ${toolbox.zelfDoen?.length?`<div class="tb-cat"><h5>💪 Zelf doen</h5><ul class="tb-items">${toolbox.zelfDoen.map(i=>`<li class="tb-item">${i}</li>`).join('')}</ul></div>`:''}
+            ${toolbox.systemen?.length?`<div class="tb-cat"><h5>💻 Systemen</h5><ul class="tb-items">${toolbox.systemen.map(i=>`<li class="tb-item">${i}</li>`).join('')}</ul></div>`:''}
+            ${toolbox.collega?.length?`<div class="tb-cat"><h5>👥 Leren van collega's</h5><ul class="tb-items">${toolbox.collega.map(i=>`<li class="tb-item">${i}</li>`).join('')}</ul></div>`:''}
+            ${toolbox.trainingen?.length?`<div class="tb-cat"><h5>🎓 Trainingen</h5><ul class="tb-items">${toolbox.trainingen.map(i=>`<li class="tb-item">${i}</li>`).join('')}</ul></div>`:''}
+          </div>
+        </div>`:''}
+        `:`<div style="font-size:12px;color:var(--grijs-licht);padding:4px 0">${n>=5?'✓ Hoogste niveau bereikt!':'Selecteer ambitie in scherm 7 om de toolbox te zien.'}</div>`}
+      </div>
+    </div>`;
+  }).join('')}
+  <div class="sk">Mijn plan</div>
+  <div class="fg"><label>Wat ga ik concreet doen? (kies uit de toolboxen hierboven)</label><textarea id="f-toolboxKeuze" rows="5" placeholder="Kies de acties die bij jou passen...">${e(state.toolboxKeuze)}</textarea></div>
+  <div class="fg"><label>Checkpoints om bij te reflecteren</label><textarea id="f-checkpoints" rows="3" placeholder="Momenten in het jaar waarop je stilstaat bij je groei...">${e(state.checkpoints)}</textarea></div>
+  <div class="fg"><label>T-profiel ontwikkeling</label><textarea id="f-tProfielOntwikkeling" rows="3" placeholder="Diepte: verder specialiseren in...&#10;Breedte: kennis uitbreiden over...">${e(state.tProfielOntwikkeling)}</textarea></div>`;
+}
+
+function s9(){
+  return `<div class="scherm-titel">Afsluiting & afspraken</div>
+  <div class="fg"><label>Overige afspraken</label><textarea id="f-overigeAfspraken" rows="4">${e(state.overigeAfspraken)}</textarea></div>
+  <div class="fg"><label>Datum volgend functioneringsgesprek</label><input type="date" id="f-datumVolgend" value="${e(state.datumVolgend)}"/></div>
+  <div class="sk">Samenvatting</div>
+  ${renderScoreBox()}
+  <div class="score-box" style="background:var(--oranje-licht);border-color:#f0c090">
+    <h4 style="color:var(--oranje)">Positie op de ontwikkelpaden</h4>
+    ${Object.entries(PADEN).map(([padId,pad])=>{
+      const n=berekenNiveau(padId),amb=state.ambities[padId],tg=state.trainingsgroepen[padId];
+      const kleur=padId==='vakexpert'?'#7B1D2A':padId==='adviseur'?'#1D6B3A':padId==='leider'?'#1A3A6B':'#6B4A1A';
+      return `<div class="score-rij">
+        <span style="color:${kleur};font-weight:bold">${pad.label}</span>
+        <span style="text-align:right">${n>0?'Niveau '+n+' – '+pad.rollen[n-1]:'Niet ingeschaald'}${amb&&n<5?' → Ambitie: niveau '+(n+1)+' – '+pad.rollen[n]:''}${tg?'<br><span style="font-size:10.5px;color:var(--oranje)">Trainingsgroep: '+tg+'</span>':''}</span>
+      </div>`;
+    }).join('')}
+  </div>
+  <div style="background:#fff;border:1px solid var(--grijs-lijn);border-radius:8px;padding:16px;margin-top:16px">
+    <p style="font-size:13px;font-weight:bold;color:var(--grijs);margin-bottom:12px">Ondertekening voor akkoord</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:16px">
+      <div style="border-top:1px solid var(--grijs);padding-top:6px;font-size:11px;color:var(--grijs-licht)">Professional: ${e(state.naam)||'___________'}</div>
+      <div style="border-top:1px solid var(--grijs);padding-top:6px;font-size:11px;color:var(--grijs-licht)">Hoofdbeoordelaar: ${e(state.hoofdbeoordelaar)||'___________'}</div>
+      <div style="border-top:1px solid var(--grijs);padding-top:6px;font-size:11px;color:var(--grijs-licht)">Medebeoordelaar: ${e(state.medebeoordelaar)||'___________'}</div>
+    </div>
+    <p style="font-size:11px;color:var(--grijs-licht);margin-top:14px;font-style:italic">Na ondertekening per mail doorsturen naar evankouwen@precongroup.com</p>
+  </div>`;
+}
+
+// ══ HULPFUNCTIES ══
+function renderScoreBox(){
+  return `<div class="score-box"><h4>Competentiescores</h4>
+  ${COMPS.map(c=>`<div class="score-rij"><span>${c.label}</span><span class="sc-ster">${state.scores[c.id]>0?'★'.repeat(state.scores[c.id])+'<span style="opacity:.3">'+'★'.repeat(4-state.scores[c.id])+'</span>':'<span style="color:var(--grijs-licht);font-size:12px">Nog niet ingevuld</span>'}</span></div>`).join('')}
+  </div>`;
+}
+
+function renderPaden(){
+  return `<div class="paden-grid">
+    <div class="niv-col">${[5,4,3,2,1].map(n=>`<div class="niv-lbl">${n}</div>`).join('')}</div>
+    ${Object.entries(PADEN).map(([padId,pad])=>{
+      const n=berekenNiveau(padId),vj=state.vorigJaar[padId]||0,heeftAmb=state.ambities[padId];
+      const ambNiv=heeftAmb&&n<5?n+1:null;
+      // Bereken positie van bollen voor pijl
+      return `<div class="pad-col">
+        <div class="pad-kop ${pad.kleur}">${pad.label}</div>
+        <div class="pad-as ${pad.kleur}"></div>
+        ${[5,4,3,2,1].map(niv=>{
+          const rol=pad.rollen[niv-1];
+          const isH=niv===n,isV=niv===vj&&niv!==n,isA=ambNiv&&niv===ambNiv;
+          // SVG pijl: teken van huidig naar ambitie level
+          const showPijl=isA&&n>0;
+          return `<div class="niv-cel">
+            ${showPijl?`<div style="position:absolute;left:50%;transform:translateX(-50%);top:0;height:100%;display:flex;align-items:flex-start;justify-content:center;z-index:8;pointer-events:none">
+              <svg width="20" height="110" style="overflow:visible"><defs><marker id="mh-${padId}" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--oranje)"/></marker></defs>
+              <line x1="10" y1="110" x2="10" y2="5" stroke="var(--oranje)" stroke-width="2.5" stroke-dasharray="5,3" marker-end="url(#mh-${padId})"/></svg></div>`:''}
+            <div class="bol-wrap">
+              ${isA?`<div class="bol ambitie-bol" title="Ambitie: ${rol}"></div>`:''}
+              ${isH?`<div class="bol huidig" title="Huidig: ${rol}"></div>`:''}
+              ${isV?`<div class="bol vorig" title="Vorig jaar: ${pad.rollen[vj-1]}"></div>`:''}
+            </div>
+            <span class="rol-naam">${rol}</span>
+          </div>`;
+        }).join('')}
+        <div style="padding:6px 0;text-align:center">
+          <select style="font-size:10.5px;border:1px solid var(--grijs-lijn);border-radius:4px;padding:3px;color:var(--grijs)" onchange="setVJ('${padId}',this.value)">
+            <option value="0">Vorig jaar —</option>
+            ${[1,2,3,4,5].map(nv=>`<option value="${nv}" ${vj===nv?'selected':''}>${nv} – ${pad.rollen[nv-1]}</option>`).join('')}
+          </select>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// FRAMEWORK OVERZICHT
+function renderFrameworkOverzicht(){
+  const s=state.scores;
+  const sterSym=n=>'★'.repeat(n)+'☆'.repeat(4-n);
+  const padKleur={vakexpert:'#7B1D2A',adviseur:'#1D6B3A',leider:'#1A3A6B',trainer:'#6B4A1A'};
+  
+  return Object.entries(PADEN).map(([padId,pad])=>{
+    const nHuidig=berekenNiveau(padId);
+    return `<div style="border-bottom:1px solid var(--grijs-lijn)">
+      <div style="background:var(--grijs-bg);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleTB('fw-pad-${padId}')">
+        <span style="font-weight:bold;color:${padKleur[padId]};font-size:13px">${pad.label}</span>
+        <span style="font-size:11px;color:var(--grijs-licht)">${nHuidig>0?'Huidig: niveau '+nHuidig+' – '+pad.rollen[nHuidig-1]:'Nog niet ingeschaald'} <span id="tbc-fw-pad-${padId}">▼</span></span>
+      </div>
+      <div id="tb-fw-pad-${padId}" style="display:none">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:${padKleur[padId]}">
+                <th style="color:#fff;padding:8px 12px;text-align:left;width:140px">Niveau / Rol</th>
+                ${COMPS.filter(c=>!c.trainerOnly||(padId==='trainer')).map(c=>`<th style="color:#fff;padding:8px 12px;text-align:center">${c.label}</th>`).join('')}
+                <th style="color:#fff;padding:8px 12px;text-align:center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${[5,4,3,2,1].map(niv=>{
+                const v=pad.vereisten[niv-1];
+                const behaald=nHuidig>=niv;
+                const isHuidig=nHuidig===niv;
+                const rowBg=isHuidig?'#fff9f0':behaald?'#f0faf4':'#fff';
+                return `<tr style="background:${rowBg};border-bottom:1px solid var(--grijs-lijn)">
+                  <td style="padding:8px 12px;font-weight:${isHuidig?'bold':'normal'};color:${isHuidig?padKleur[padId]:'inherit'}">
+                    ${isHuidig?'▶ ':behaald?'✓ ':''}${niv}. ${pad.rollen[niv-1]}
+                  </td>
+                  ${COMPS.filter(c=>!c.trainerOnly||(padId==='trainer')).map(c=>{
+                    const vSter=v[c.id]||0;
+                    const hSter=s[c.id]||0;
+                    const ok=hSter>=vSter;
+                    return `<td style="padding:8px 12px;text-align:center">
+                      <span style="color:${isHuidig?(ok?'var(--groen)':'var(--oranje)'):'#888'};font-size:13px">${sterSym(vSter)}</span>
+                    </td>`;
+                  }).join('')}
+                  <td style="padding:8px 12px;text-align:center;font-size:11px">
+                    ${isHuidig?`<span style="background:var(--oranje);color:#fff;padding:2px 8px;border-radius:10px">Huidig</span>`:
+                      behaald?`<span style="background:var(--groen);color:#fff;padding:2px 8px;border-radius:10px">✓ Behaald</span>`:
+                      `<span style="color:var(--grijs-licht)">—</span>`}
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:10px 16px;background:var(--blauw-licht);font-size:11.5px;color:var(--grijs)">
+          <strong style="color:var(--blauw)">Jouw scores: </strong>
+          ${COMPS.filter(c=>!c.trainerOnly||(padId==='trainer')).map(c=>`${c.label}: <span style="color:var(--oranje)">${sterSym(s[c.id]||0)}</span>`).join(' · ')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// T-PROFIEL: echte T-vorm (rij 0 = volledig, kolommen 4-5 = verticale balk)
+function toggleT(r,k){
+  const key=r+'-'+k,idx=state.tCellen.indexOf(key);
+  if(idx>-1)state.tCellen.splice(idx,1);else state.tCellen.push(key);
+  renderTGrid();
+}
+function renderTGrid(){
+  for(let r=0;r<6;r++)for(let k=0;k<10;k++){
+    const el=document.getElementById('tcel-'+r+'-'+k);
+    if(!el)continue;
+    const aan=state.tCellen.includes(r+'-'+k);
+    el.className='t-cel'+(aan?' aan':'');
+  }
+}
+
+// ══ INTERACTIE ══
+function e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function naarScherm(i){slaVeldenOp();huidig=i;renderAlles();}
+function volgende(){naarScherm(Math.min(huidig+1,8))}
+function terug(){naarScherm(Math.max(huidig-1,0))}
+function toggleComp(id){const el=document.getElementById('cb-'+id);if(el)el.classList.toggle('open')}
+function toggleSter(id){const el=document.getElementById(id);if(el)el.classList.toggle('open')}
+function setSter(compId,n){state.scores[compId]=n;renderAlles();}
+function setVJ(pad,n){state.vorigJaar[pad]=parseInt(n);renderAlles();}
+function toggleAmbitie(padId){state.ambities[padId]=!state.ambities[padId];if(!state.ambities[padId])state.trainingsgroepen[padId]='';slaOp();renderAlles();}
+function setTG(padId,val){state.trainingsgroepen[padId]=val;slaOp();}
+function togglePP(id){const el=document.getElementById(id);if(el)el.classList.toggle('open')}
+function toggleTB(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  // Handle both style-based (display:none) and class-based (.open) elements
+  const isStyleHidden = el.style.display==='' || el.style.display==='none';
+  if(isStyleHidden){
+    el.style.display='block';
+  } else if(el.style.display==='block'){
+    el.style.display='none';
+  } else {
+    el.classList.toggle('open');
+  }
+  // Find chevron - strip leading 'tb-' for id lookup
+  const chId = 'tbc-' + id.replace(/^tb-/,'');
+  const ch = document.getElementById(chId) || document.getElementById('tbc-'+id);
+  if(ch){
+    const open = el.style.display==='block' || el.classList.contains('open');
+    ch.textContent = open ? '▲' : '▼';
+  }
+}
+
+function slaVeldenOp(){
+  ['naam','bijPreconSinds','datum','datumVorig','hoofdbeoordelaar','medebeoordelaar','hoeGaatHet','werkdruk','kernwaarden','profiel','ambitieNotitie','toolboxKeuze','checkpoints','tProfielOntwikkeling','overigeAfspraken','datumVolgend','tDiepte','tBreedte','impact','declarabiliteit','afspraken','checks'].forEach(id=>{
+    const el=document.getElementById('f-'+id);if(el)state[id]=el.value;
+  });
+  [0,1,2].forEach(i=>{const el=document.getElementById('f-sit-'+i);if(el)state.situaties[i]=el.value;});
+  COMPS.forEach(c=>{const el=document.getElementById('opm-'+c.id);if(el)state.opmerkingen[c.id]=el.value;});
+}
+function slaOp(){
+  slaVeldenOp();
+  localStorage.setItem('precon_v3',JSON.stringify(state));
+  const el=document.getElementById('ss');
+  if(el){el.textContent='✓ Opgeslagen om '+new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});setTimeout(()=>{el.textContent=''},3000);}
+}
+setInterval(slaOp,30000);
+
+// ══ WORD EXPORT ══
+function exportWord(){
+  slaVeldenOp();
+  const naam=state.naam||'Medewerker';
+  const datum=state.datum||new Date().toLocaleDateString('nl-NL');
+  
+  const sterren=n=>n>0?'★'.repeat(n)+'☆'.repeat(4-n):'—';
+  
+  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11pt;color:#333;max-width:800px;margin:0 auto;padding:20px}
+    h1{color:#003366;font-size:18pt;border-bottom:3px solid #E87722;padding-bottom:8px}
+    h2{color:#003366;font-size:14pt;margin-top:24px;border-bottom:1px solid #dde3ea;padding-bottom:4px}
+    h3{color:#E87722;font-size:12pt;margin-top:16px}
+    .meta{background:#e8f0f8;padding:12px;border-radius:4px;margin:16px 0;font-size:10pt}
+    .meta-rij{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .veld label{font-size:9pt;color:#666;font-weight:bold;text-transform:uppercase}
+    .veld p{border:1px solid #dde3ea;padding:8px;border-radius:4px;min-height:30px;margin:2px 0 10px}
+    table{width:100%;border-collapse:collapse;margin:12px 0}
+    td,th{border:1px solid #dde3ea;padding:8px;font-size:10pt}
+    th{background:#003366;color:#fff;font-weight:bold}
+    tr:nth-child(even){background:#f4f6f9}
+    .pad-label{font-weight:bold}
+    .vakexpert{color:#7B1D2A}.adviseur{color:#1D6B3A}.leider{color:#1A3A6B}.trainer{color:#6B4A1A}
+    .score-ok{color:#1a6b3a}.score-nog{color:#cc2222}
+    .kader{border:1.5px solid #003366;padding:10px;border-radius:4px;margin:8px 0}
+    .kader-titel{font-style:italic;font-weight:bold;color:#003366;margin-bottom:6px;font-size:10pt}
+    ul{margin:4px 0;padding-left:20px}
+    li{font-size:10pt;margin:2px 0}
+    .footer{margin-top:40px;border-top:1px solid #dde3ea;padding-top:16px;font-size:9pt;color:#666}
+    .sign-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:20px}
+    .sign-box{border-top:1px solid #333;padding-top:6px;font-size:9pt}
+  </style></head><body>
+  <h1>Précon persoonlijke ontwikkelpaden</h1>
+  <div class="meta">
+    <div class="meta-rij">
+      <div><strong>Naam:</strong> ${naam}</div>
+      <div><strong>Bij Précon sinds:</strong> ${state.bijPreconSinds||'—'}</div>
+      <div><strong>Datum gesprek:</strong> ${datum}</div>
+      <div><strong>Datum vorig gesprek:</strong> ${state.datumVorig||'—'}</div>
+      <div><strong>Hoofdbeoordelaar:</strong> ${state.hoofdbeoordelaar||'—'}</div>
+      <div><strong>Medebeoordelaar:</strong> ${state.medebeoordelaar||'—'}</div>
+    </div>
+  </div>`;
+
+  // Sectie 2
+  if(state.hoeGaatHet||state.werkdruk||state.kernwaarden){
+    html+=`<h2>Hoe gaat het?</h2>
+    ${state.hoeGaatHet?`<h3>Hoe gaat het</h3><div class="veld"><p>${state.hoeGaatHet.replace(/\n/g,'<br>')}</p></div>`:''}
+    ${state.werkdruk?`<h3>Werkdruk</h3><div class="veld"><p>${state.werkdruk.replace(/\n/g,'<br>')}</p></div>`:''}
+    ${state.kernwaarden?`<h3>Kernwaarden</h3><div class="veld"><p>${state.kernwaarden.replace(/\n/g,'<br>')}</p></div>`:''}`;
+  }
+
+  // Sectie 3
+  const sitFilled=state.situaties.filter(s=>s.trim());
+  if(sitFilled.length){
+    html+=`<h2>Praktijksituaties</h2>`;
+    state.situaties.forEach((s,i)=>{if(s.trim())html+=`<h3>Situatie ${i+1}</h3><div class="veld"><p>${s.replace(/\n/g,'<br>')}</p></div>`;});
+    if(state.impact)html+=`<h3>Overige resultaten</h3><div class="veld"><p>${state.impact.replace(/\n/g,'<br>')}</p></div>`;
+    if(state.declarabiliteit)html+=`<h3>Declarabiliteit</h3><div class="veld"><p>${state.declarabiliteit.replace(/\n/g,'<br>')}</p></div>`;
+  }
+
+  // Sectie 4
+  if(state.profiel)html+=`<h2>Jouw profiel</h2><div class="veld"><p>${state.profiel.replace(/\n/g,'<br>')}</p></div>`;
+
+  // Sectie 5 - competenties
+  html+=`<h2>Competentiescores</h2>
+  <table><tr><th>Competentie</th><th>Score</th><th>Toelichting</th></tr>
+  ${COMPS.map(c=>`<tr><td>${c.label}</td><td>${sterren(state.scores[c.id])}</td><td>${state.opmerkingen[c.id]||'—'}</td></tr>`).join('')}
+  </table>`;
+
+  // Sectie 6 - paden
+  html+=`<h2>Positie op de ontwikkelpaden</h2>
+  <table><tr><th>Pad</th><th>Vorig jaar</th><th>Huidig niveau</th><th>Ambitie</th><th>Trainingsgroep</th></tr>
+  ${Object.entries(PADEN).map(([padId,pad])=>{
+    const n=berekenNiveau(padId),vj=state.vorigJaar[padId],amb=state.ambities[padId];
+    return `<tr>
+      <td class="${padId}"><strong>${pad.label}</strong></td>
+      <td>${vj>0?'Niveau '+vj+' – '+pad.rollen[vj-1]:'—'}</td>
+      <td>${n>0?'Niveau '+n+' – '+pad.rollen[n-1]:'Niet ingeschaald'}</td>
+      <td>${amb&&n<5?'Niveau '+(n+1)+' – '+pad.rollen[n]:'—'}</td>
+      <td>${state.trainingsgroepen[padId]||'—'}</td>
+    </tr>`;
+  }).join('')}
+  </table>`;
+
+  // T-profiel
+  if(state.tDiepte||state.tBreedte)html+=`<h2>T-profiel</h2>
+  ${state.tDiepte?`<p><strong>Diepte (expertise):</strong> ${state.tDiepte}</p>`:''}
+  ${state.tBreedte?`<p><strong>Breedte (kennis van):</strong> ${state.tBreedte}</p>`:''}`;
+
+  // Sectie 7 - ambitie
+  if(state.ambitieNotitie)html+=`<h2>Ambitie</h2><div class="veld"><p>${state.ambitieNotitie.replace(/\n/g,'<br>')}</p></div>`;
+
+  // Sectie 8 - POP
+  html+=`<h2>Ontwikkeling & POP</h2>`;
+  Object.entries(PADEN).forEach(([padId,pad])=>{
+    const n=berekenNiveau(padId),amb=state.ambities[padId],doelN=amb&&n<5?n+1:null;
+    if(!amb&&n===0)return;
+    html+=`<h3 class="${padId}">${pad.label}${doelN?' → ambitie: niveau '+doelN+' – '+pad.rollen[doelN-1]:''}</h3>`;
+    if(doelN&&pad.toolboxen[doelN]){
+      const tb=pad.toolboxen[doelN];
+      html+=`<div class="kader"><div class="kader-titel">Toolbox voor niveau ${doelN}: ${pad.rollen[doelN-1]}</div>`;
+      if(tb.vereist?.length)html+=`<p><strong>Vereist:</strong></p><ul>${tb.vereist.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+      if(tb.zelfDoen?.length)html+=`<p><strong>Zelf doen:</strong></p><ul>${tb.zelfDoen.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+      if(tb.collega?.length)html+=`<p><strong>Leren van collega's:</strong></p><ul>${tb.collega.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+      if(tb.trainingen?.length)html+=`<p><strong>Trainingen:</strong></p><ul>${tb.trainingen.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+      html+=`</div>`;
+    }
+  });
+  if(state.toolboxKeuze)html+=`<h3>Wat ik ga doen</h3><div class="veld"><p>${state.toolboxKeuze.replace(/\n/g,'<br>')}</p></div>`;
+  if(state.checkpoints)html+=`<h3>Checkpoints</h3><div class="veld"><p>${state.checkpoints.replace(/\n/g,'<br>')}</p></div>`;
+  if(state.tProfielOntwikkeling)html+=`<h3>T-profiel ontwikkeling</h3><div class="veld"><p>${state.tProfielOntwikkeling.replace(/\n/g,'<br>')}</p></div>`;
+
+  // Afsluiting
+  if(state.overigeAfspraken)html+=`<h2>Overige afspraken</h2><div class="veld"><p>${state.overigeAfspraken.replace(/\n/g,'<br>')}</p></div>`;
+  if(state.datumVolgend)html+=`<p><strong>Datum volgend gesprek:</strong> ${state.datumVolgend}</p>`;
+
+  html+=`<div class="footer">
+    <div class="sign-grid">
+      <div class="sign-box">Professional: ${naam}</div>
+      <div class="sign-box">Hoofdbeoordelaar: ${state.hoofdbeoordelaar||'___________'}</div>
+      <div class="sign-box">Medebeoordelaar: ${state.medebeoordelaar||'___________'}</div>
+    </div>
+    <p style="margin-top:12px">Na ondertekening per mail doorsturen naar evankouwen@precongroup.com</p>
+  </div>
+  </body></html>`;
+
+  const blob=new Blob([html],{type:'application/msword'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`Précon_Ontwikkelpad_${naam.replace(/\s+/g,'_')}_${datum}.doc`;
+  a.click();URL.revokeObjectURL(url);
+}
+
+renderAlles();
+</script>
+</body>
+</html>

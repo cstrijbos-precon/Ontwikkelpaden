@@ -6,10 +6,5 @@ export default async function Page() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  return (
-    <HomePage
-      email={session.user?.email ?? ""}
-      isAdmin={session.user?.isAdmin ?? false}
-    />
-  );
+  return <HomePage />;
 }
