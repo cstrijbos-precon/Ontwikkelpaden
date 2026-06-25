@@ -1,0 +1,63 @@
+---
+description: Test suite requirements — >90% coverage target
+alwaysApply: true
+---
+
+# Testing standards
+
+## Coverage target
+
+**Minimum 90% line coverage** on `lib/`, `services/`, `hooks/`, and `app/api/`.  
+UI components: test behaviour, not implementation details.
+
+## Stack
+
+- **Vitest** + **@testing-library/react** for unit/integration tests
+- **@vitest/coverage-v8** for coverage reports
+- Node built-in test runner acceptable for pure `lib/` modules (current pattern)
+
+```bash
+npm i -D vitest @vitest/coverage-v8 @testing-library/react @testing-library/jest-dom jsdom
+```
+
+`vitest.config.ts`:
+
+```ts
+export default defineConfig({
+  test: {
+    environment: "jsdom",
+    coverage: {
+      provider: "v8",
+      thresholds: { lines: 90, branches: 85, functions: 90, statements: 90 },
+      include: ["lib/**", "services/**", "hooks/**", "app/api/**"],
+      exclude: ["**/*.d.ts", "**/types/**"],
+    },
+  },
+});
+```
+
+## What to test
+
+| Layer | Focus |
+|-------|-------|
+| `lib/` | Pure functions — edge cases, invalid input, round-trips |
+| `services/` | Mock external APIs; verify request shape and error handling |
+| `hooks/` | State transitions, loading/error paths |
+| `app/api/` | Auth rejection (401/403), validation errors (400), happy path |
+| `components/` | User-visible behaviour — render, click, form submit |
+
+## Test file conventions
+
+- Colocate: `lib/xliff.ts` → `lib/xliff.test.ts`
+- Or centralize: `tests/xliff.test.ts`
+- Name: `<module>.test.ts` — no `.spec` mixing within one project
+- No tests that only assert "renders without crashing"
+
+## CI
+
+```json
+"test": "vitest run",
+"test:coverage": "vitest run --coverage"
+```
+
+Block merge if coverage drops below thresholds.

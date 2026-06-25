@@ -1,0 +1,61 @@
+---
+description: Folder structure, atomic design, file size limits, UI/logic separation
+alwaysApply: true
+---
+
+# Architecture & folder structure
+
+## Target layout (Next.js App Router)
+
+```
+app/                          # Routes only — thin page shells
+  (routes)/page.tsx
+  api/<resource>/route.ts     # Thin handlers — delegate to lib/
+components/
+  atoms/                      # Button, Input, Icon, Label
+  molecules/                  # SearchBar, FormField, Card
+  organisms/                  # Header, GlossaryTable, TranslatorPanel
+  pages/                      # Page-level compositions (optional; or keep in app/)
+hooks/                        # useGlossary, useTranslation — stateful UI logic
+lib/                          # Pure business logic, parsers, validators
+services/                     # External API clients (Anthropic, etc.)
+types/                        # Shared TypeScript interfaces
+tests/                        # Unit + integration tests (or colocated __tests__/)
+```
+
+## Atomic design rules
+
+- **atoms** — zero business logic; props in, JSX out
+- **molecules** — compose atoms; may use local UI state only
+- **organisms** — compose molecules; receive data + callbacks via props
+- **pages / app routes** — wire organisms to hooks/services; no inline business logic
+
+## Separate UI from logic
+
+| Layer | Responsibility | Example |
+|-------|----------------|---------|
+| `components/` | Presentation | `<GlossaryRow term={t} onSave={fn} />` |
+| `hooks/` | Stateful orchestration | `useGlossary()` — fetch, mutate, loading |
+| `lib/` | Pure functions | `parseXliff()`, `validateTerm()` |
+| `services/` | I/O boundaries | `translateBatch()`, `sql` queries |
+| `app/api/` | Auth + HTTP + delegate | `auth()` → `lib/glossary.ts` |
+
+❌ Business logic in JSX event handlers beyond trivial glue  
+❌ Direct `fetch` to external APIs from components — use `services/` or server actions  
+✅ Custom hooks encapsulate data fetching and mutations  
+✅ `lib/` functions are testable without React
+
+## File size limit
+
+**Maximum 300 lines per file** (excluding generated files and lockfiles).
+
+When a file approaches 250 lines, split proactively:
+- Extract helpers to `lib/`
+- Extract sub-components to the next atomic level
+- Extract hook logic to `hooks/`
+
+## Imports
+
+- Use `@/` path alias for project root
+- Components import down the atomic hierarchy only (organism → molecule → atom)
+- `lib/` and `services/` must not import from `components/`
