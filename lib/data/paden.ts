@@ -32,9 +32,7 @@ export const PADEN: Record<PadId, Pad> = {
           "Website tekst/LinkedIn bericht voor Précon schrijven (onder toezicht van inhoudsdeskundige)",
         ],
         systemen: ["Elzi", "AFAS basis"],
-        collega: [
-          "Feedback vragen van collega's over inhoudelijk werk",
-        ],
+        collega: ["Feedback vragen van collega's over inhoudelijk werk"],
         trainingen: [
           "Training over inhoudelijk onderwerp volgen",
           "Trainingslijn 'Vakexpert 1' volgen",
@@ -380,9 +378,7 @@ export const PADEN: Record<PadId, Pad> = {
           "Opdrachtgevers betrekken bij ontwerp trainingstraject",
         ],
         systemen: [],
-        collega: [
-          "Sparren met senior trainers over complexe groepssituaties",
-        ],
+        collega: ["Sparren met senior trainers over complexe groepssituaties"],
         trainingen: [
           "Verdiepingstraining groepsdynamica",
           "Trainingslijn 'Trainer 3' volgen",
@@ -399,9 +395,7 @@ export const PADEN: Record<PadId, Pad> = {
           "Klanten inzicht geven in bovenstroom en onderstroom",
         ],
         systemen: [],
-        collega: [
-          "Sparren met MT over organisatiebrede vraagstukken",
-        ],
+        collega: ["Sparren met MT over organisatiebrede vraagstukken"],
         trainingen: [
           "Opleiding organisatieontwikkeling",
           "Trainingslijn 'Trainer 4' volgen",

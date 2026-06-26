@@ -1,10 +1,7 @@
 "use client";
 
-import { SCHERMEN } from "@/lib/data/schermen";
-import { useOntwikkelpaden } from "@/hooks/useOntwikkelpaden";
 import { ScreenNav } from "@/components/molecules/ScreenNav";
 import { AppHeader } from "@/components/organisms/AppHeader";
-import { TabNavigation } from "@/components/organisms/TabNavigation";
 import { ScreenAfsluiting } from "@/components/organisms/screens/ScreenAfsluiting";
 import { ScreenAmbitie } from "@/components/organisms/screens/ScreenAmbitie";
 import { ScreenCompetenties } from "@/components/organisms/screens/ScreenCompetenties";
@@ -14,6 +11,9 @@ import { ScreenOntwikkelpaden } from "@/components/organisms/screens/ScreenOntwi
 import { ScreenPop } from "@/components/organisms/screens/ScreenPop";
 import { ScreenPraktijksituaties } from "@/components/organisms/screens/ScreenPraktijksituaties";
 import { ScreenProfiel } from "@/components/organisms/screens/ScreenProfiel";
+import { TabNavigation } from "@/components/organisms/TabNavigation";
+import { useOntwikkelpaden } from "@/hooks/useOntwikkelpaden";
+import { SCHERMEN } from "@/lib/data/schermen";
 
 export function OntwikkelpadenApp() {
   const app = useOntwikkelpaden();
@@ -22,6 +22,18 @@ export function OntwikkelpadenApp() {
     return (
       <div className="scherm" style={{ textAlign: "center", padding: 48 }}>
         Laden...
+      </div>
+    );
+  }
+
+  if (app.loadError) {
+    return (
+      <div className="scherm" style={{ textAlign: "center", padding: 48 }}>
+        <p>Kon gegevens niet laden uit de database.</p>
+        <p style={{ color: "#666", marginTop: 8 }}>{app.loadError}</p>
+        <p style={{ color: "#666", marginTop: 16, fontSize: "0.9rem" }}>
+          Controleer of de database is ingesteld (zie README.md).
+        </p>
       </div>
     );
   }

@@ -1,0 +1,59 @@
+---
+description: TypeScript and Next.js coding standards
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript & Next.js
+
+New code must be TypeScript (`.ts` / `.tsx`). Migrate existing `.js` files when touching them.
+
+## Strict mode
+
+`tsconfig.json` must include:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true
+  }
+}
+```
+
+`next.config.ts` — enable `reactStrictMode: true`.
+
+## Server vs client
+
+- Default to **Server Components** — add `"use client"` only when needed (state, effects, browser APIs)
+- Secrets and DB access only in Server Components, Route Handlers, or Server Actions
+- Never import server-only modules into client components
+
+## API route pattern
+
+```ts
+import { auth } from "@/auth";
+import { getTerms } from "@/lib/glossary";
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const terms = await getTerms(session.user.email);
+  return Response.json(terms);
+}
+```
+
+- Every mutating route: auth check → authorization (group/role) → validate input → execute
+- Return typed JSON; use consistent error shape `{ error: string }`
+- Validate request bodies with `zod` schemas in `lib/validators/`
+
+## Types
+
+- Shared domain types in `types/` — not duplicated across files
+- Prefer `interface` for object shapes, `type` for unions/intersections
+- Avoid `any` — use `unknown` + narrowing
+- Env vars: define `lib/env.ts` with zod validation, export typed `env` object

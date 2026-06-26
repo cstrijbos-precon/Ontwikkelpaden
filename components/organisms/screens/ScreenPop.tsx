@@ -1,8 +1,8 @@
+import { FormField } from "@/components/molecules/FormField";
 import { berekenNiveau } from "@/lib/bereken-niveau";
 import { COMPS } from "@/lib/data/competenties";
-import { PADEN, PAD_IDS } from "@/lib/data/paden";
-import { FormField } from "@/components/molecules/FormField";
-import type { OntwikkelpadenState, PadId, Toolbox } from "@/types/ontwikkelpaden";
+import { PAD_IDS, PADEN } from "@/lib/data/paden";
+import type { OntwikkelpadenState, Toolbox } from "@/types/ontwikkelpaden";
 
 interface ToolboxPanelProps {
   doelN: number;
@@ -30,8 +30,7 @@ function ToolboxPanel({
   return (
     <div className="toolbox-wrap">
       <button type="button" className="toolbox-hdr" onClick={onToggle}>
-        📦 Toolbox voor niveau {doelN}: {rol}{" "}
-        <span>{open ? "▲" : "▼"}</span>
+        📦 Toolbox voor niveau {doelN}: {rol} <span>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
         <div className="toolbox-body open">

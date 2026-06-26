@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { berekenNiveau } from "@/lib/bereken-niveau";
 import { COMPS } from "@/lib/data/competenties";
-import { PADEN, PAD_IDS } from "@/lib/data/paden";
+import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { getPadColor } from "@/lib/pad-colors";
 import { sterSym } from "@/lib/star-display";
-import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
+import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface FrameworkOverzichtProps {
   state: OntwikkelpadenState;

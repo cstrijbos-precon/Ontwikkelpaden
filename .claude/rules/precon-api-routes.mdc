@@ -1,0 +1,50 @@
+---
+description: API route conventions — auth, validation, thin handlers
+globs: "**/app/api/**/*.{ts,js}"
+alwaysApply: false
+---
+
+# API route conventions
+
+Route handlers are thin HTTP adapters. Business logic lives in `lib/` or `services/`.
+
+## Required structure
+
+```ts
+import { auth } from "@/auth";
+import { z } from "zod";
+import { createTerm } from "@/lib/glossary";
+
+const bodySchema = z.object({
+  source: z.string().min(1).max(500),
+  scope: z.enum(["shared", "personal"]),
+});
+
+export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const parsed = bodySchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return Response.json({ error: "Invalid input" }, { status: 400 });
+  }
+
+  // Authorization check before mutation
+  if (parsed.data.scope === "shared" && !isAdmin(session)) {
+    return Response.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const result = await createTerm(parsed.data, session.user.email);
+  return Response.json(result, { status: 201 });
+}
+```
+
+## Rules
+
+- Export only HTTP methods the route implements
+- Wrap DB calls in try/catch — return 500 with generic message, log details server-side
+- Use correct status codes: 400 validation, 401 unauthenticated, 403 unauthorized, 404 not found, 409 conflict
+- No GET endpoints that mutate state
+- Paginate list endpoints that can grow unbounded

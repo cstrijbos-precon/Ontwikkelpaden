@@ -1,6 +1,6 @@
+import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { findUserByEmail } from "@/lib/auth-users";
 import { isAdmin } from "@/lib/is-admin";
 
@@ -15,7 +15,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Wachtwoord", type: "password" },
       },
       authorize: async (credentials) => {
-        const email = String(credentials?.email || "").toLowerCase().trim();
+        const email = String(credentials?.email || "")
+          .toLowerCase()
+          .trim();
         const password = String(credentials?.password || "");
         if (!email || !password) return null;
 

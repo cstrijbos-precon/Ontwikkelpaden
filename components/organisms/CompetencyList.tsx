@@ -63,7 +63,9 @@ export function CompetencyList({
                 </span>
               </div>
             </button>
-            <div className={`comp-body ${openComps.has(comp.id) ? "open" : ""}`}>
+            <div
+              className={`comp-body ${openComps.has(comp.id) ? "open" : ""}`}
+            >
               <div className="comp-definitie-box">
                 <div className="comp-definitie">{comp.definitie}</div>
                 <div>
@@ -124,14 +126,14 @@ export function CompetencyList({
                   </div>
                 );
               })}
-              <div className="opm-veld">
-                <label>Toelichting / opmerkingen bij {comp.label}</label>
+              <label className="opm-veld">
+                <span>Toelichting / opmerkingen bij {comp.label}</span>
                 <textarea
                   placeholder="Notities, voorbeelden, afspraken..."
                   value={opmerkingen[comp.id]}
                   onChange={(e) => onUpdateOpmerking(comp.id, e.target.value)}
                 />
-              </div>
+              </label>
             </div>
           </div>
         );

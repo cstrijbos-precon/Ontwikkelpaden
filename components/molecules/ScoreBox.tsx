@@ -7,7 +7,10 @@ interface ScoreBoxProps {
   title?: string;
 }
 
-export function ScoreBox({ state, title = "Competentiescores" }: ScoreBoxProps) {
+export function ScoreBox({
+  state,
+  title = "Competentiescores",
+}: ScoreBoxProps) {
   return (
     <div className="score-box">
       <h4>{title}</h4>

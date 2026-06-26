@@ -1,0 +1,20 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../lib/**/*.ts",
+    "../services/**/*.ts",
+    "../hooks/**/*.ts",
+    "../app/**/*.ts",
+    "../types/**/*.ts",
+    "../auth.ts"
+  ]
+}

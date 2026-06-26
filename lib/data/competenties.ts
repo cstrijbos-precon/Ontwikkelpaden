@@ -93,7 +93,8 @@ export const COMPS: Competentie[] = [
         sym: "★☆☆☆",
         intro:
           "Dit zien we als de basis van ons werk. De eerste ster zou na een half jaar ook behaald moeten zijn.\n\nGa bij jezelf na of je de onderstaande punten beheerst en voorbeelden kan bedenken waarbij je deze hebt ingezet. Als je bij allemaal een goed praktijkvoorbeeld kan geven, beheers je deze eerste ster.",
-        kaderTitel: "Toont wezenlijk interesse in de wensen van (interne) klanten",
+        kaderTitel:
+          "Toont wezenlijk interesse in de wensen van (interne) klanten",
         gedrag: [
           "Is goed aanspreekbaar en bereikbaar voor de klant;",
           "Neemt een klacht, probleem of vraag van een klant serieus en reageert hier adequaat op;",

@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { hasDatabase } from "@/lib/db";
-import { createGesprekBodySchema } from "@/lib/gesprekken-schema";
 import { createGesprek, listGesprekken } from "@/lib/gesprekken";
+import { createGesprekBodySchema } from "@/lib/gesprekken-schema";
 
 export async function GET() {
   const session = await auth();
@@ -20,7 +20,10 @@ export async function GET() {
     );
     return Response.json({ items });
   } catch {
-    return Response.json({ error: "Failed to list gesprekken" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to list gesprekken" },
+      { status: 500 },
+    );
   }
 }
 
@@ -55,6 +58,9 @@ export async function POST(request: Request) {
     );
     return Response.json(gesprek, { status: 201 });
   } catch {
-    return Response.json({ error: "Failed to create gesprek" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to create gesprek" },
+      { status: 500 },
+    );
   }
 }

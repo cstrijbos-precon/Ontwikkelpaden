@@ -1,5 +1,5 @@
 import { berekenNiveau } from "@/lib/bereken-niveau";
-import { PADEN, PAD_IDS } from "@/lib/data/paden";
+import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
 const NIVEAUS = [5, 4, 3, 2, 1] as const;
@@ -54,7 +54,14 @@ export function PadenGrid({ state, onSetVorigJaar }: PadenGridProps) {
                         pointerEvents: "none",
                       }}
                     >
-                      <svg width="20" height="110" style={{ overflow: "visible" }}>
+                      <svg
+                        width="20"
+                        height="110"
+                        style={{ overflow: "visible" }}
+                        role="presentation"
+                        aria-hidden="true"
+                      >
+                        <title>Verbindingslijn tussen niveaus</title>
                         <defs>
                           <marker
                             id={`mh-${padId}`}

@@ -1,0 +1,45 @@
+---
+description: Blocked software licenses — no copyleft in commercial/internal tools
+alwaysApply: true
+---
+
+# License policy
+
+Precon internal tools are proprietary. Do not add dependencies with licenses that force source disclosure or restrict commercial use.
+
+## Blocked licenses
+
+Reject any npm package whose license is:
+
+| License | Reason |
+|---------|--------|
+| **GPL** (v2, v3) | Strong copyleft — infects combined work |
+| **LGPL** (v2.1, v3) | Weak copyleft — linking restrictions |
+| **AGPL** | Network copyleft — SaaS trigger |
+| **SSPL** | Server-side copyleft (MongoDB, etc.) |
+| **CC-BY-NC** / **CC-BY-NC-SA** | Non-commercial only |
+| **Commons Clause** | Restricts commercial use |
+| **UNLICENSED** / missing license | Unknown terms |
+
+## Allowed licenses
+
+MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, CC0-1.0, Unlicense, Python-2.0, MPL-2.0 (file-level copyleft only — review if statically linked).
+
+## Before adding a dependency
+
+1. Check `license` field in `package.json` on npm
+2. Run `npx license-checker --summary` or `npx license-checker --failOn 'GPL;LGPL;AGPL;SSPL'`
+3. For dual-licensed packages, ensure we use under the permissive option
+4. Document exceptions in `docs/THIRD_PARTY_LICENSES.md` with legal approval
+
+## CI gate
+
+Add to CI:
+
+```bash
+npx license-checker --production --failOn 'GPL;LGPL;AGPL;SSPL;CC-BY-NC;CC-BY-NC-SA' --summary
+```
+
+## Native / binary deps
+
+Extra scrutiny on packages with native bindings (sharp, bcrypt native, etc.) — verify their transitive licenses too.

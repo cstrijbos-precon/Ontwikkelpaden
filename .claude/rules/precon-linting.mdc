@@ -1,0 +1,52 @@
+---
+description: Linting and formatting — Biome for TS/JS (not Ruff)
+alwaysApply: true
+---
+
+# Linting & formatting
+
+## Ruff is Python-only
+
+**Ruff does not apply to Next.js/TypeScript projects.** Use **Biome** (recommended) or ESLint + Prettier for this stack.
+
+If a project also contains Python scripts, add Ruff separately in `pyproject.toml` — keep JS and Python tooling independent.
+
+## Biome setup (recommended)
+
+```bash
+npm i -D @biomejs/biome
+npx @biomejs/biome init
+```
+
+`biome.json` essentials:
+
+```json
+{
+  "linter": {
+    "enabled": true,
+    "rules": { "recommended": true }
+  },
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
+  "javascript": { "formatter": { "quoteStyle": "double" } }
+}
+```
+
+`package.json` scripts:
+
+```json
+{
+  "lint": "biome check .",
+  "lint:fix": "biome check --write .",
+  "format": "biome format --write ."
+}
+```
+
+## CI gate
+
+- `biome check .` must pass with zero errors before merge
+- Run `npm run build` and `npm test` in CI alongside lint
+- Do not disable lint rules without a comment explaining why
+
+## File size enforcement
+
+Add a CI script or pre-commit check that fails on files >300 lines (exclude `node_modules`, `.next`, generated files).

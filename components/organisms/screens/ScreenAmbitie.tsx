@@ -1,9 +1,9 @@
-import { berekenNiveau } from "@/lib/bereken-niveau";
-import { TRAININGSGROEPEN } from "@/lib/data/training-groups";
-import { PADEN, PAD_IDS } from "@/lib/data/paden";
-import { getPadColor } from "@/lib/pad-colors";
-import { ScoreBox } from "@/components/molecules/ScoreBox";
 import { FormField } from "@/components/molecules/FormField";
+import { ScoreBox } from "@/components/molecules/ScoreBox";
+import { berekenNiveau } from "@/lib/bereken-niveau";
+import { PAD_IDS, PADEN } from "@/lib/data/paden";
+import { TRAININGSGROEPEN } from "@/lib/data/training-groups";
+import { getPadColor } from "@/lib/pad-colors";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
 interface ScreenAmbitieProps {

@@ -19,7 +19,11 @@ export function ScreenNav({ huidig, onTerug, onVolgende }: ScreenNavProps) {
           Volgende →
         </button>
       ) : (
-        <button type="button" className="btn btn-v" onClick={() => window.print()}>
+        <button
+          type="button"
+          className="btn btn-v"
+          onClick={() => window.print()}
+        >
           🖨 Afdrukken
         </button>
       )}

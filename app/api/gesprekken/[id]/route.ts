@@ -55,6 +55,12 @@ export async function PUT(request: Request, context: RouteContext) {
 
   const parsed = updateGesprekBodySchema.safeParse(body);
   if (!parsed.success) {
+    if (process.env.NODE_ENV === "development") {
+      console.error(
+        "gesprekken PUT validation failed:",
+        parsed.error.flatten(),
+      );
+    }
     return Response.json({ error: "Validation failed" }, { status: 400 });
   }
 
@@ -71,7 +77,13 @@ export async function PUT(request: Request, context: RouteContext) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
     return Response.json(gesprek);
-  } catch {
-    return Response.json({ error: "Failed to update gesprek" }, { status: 500 });
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("gesprekken PUT failed:", error);
+    }
+    return Response.json(
+      { error: "Failed to update gesprek" },
+      { status: 500 },
+    );
   }
 }

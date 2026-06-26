@@ -1,8 +1,9 @@
-import { berekenNiveau } from "@/lib/bereken-niveau";
-import { PADEN, PAD_IDS } from "@/lib/data/paden";
-import { getPadColor } from "@/lib/pad-colors";
+import { DateInput } from "@/components/atoms/DateInput";
 import { FormField } from "@/components/molecules/FormField";
 import { ScoreBox } from "@/components/molecules/ScoreBox";
+import { berekenNiveau } from "@/lib/bereken-niveau";
+import { PAD_IDS, PADEN } from "@/lib/data/paden";
+import { getPadColor } from "@/lib/pad-colors";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface ScreenAfsluitingProps {
@@ -25,10 +26,9 @@ export function ScreenAfsluiting({ state, onUpdate }: ScreenAfsluitingProps) {
         />
       </FormField>
       <FormField label="Datum volgend functioneringsgesprek">
-        <input
-          type="date"
+        <DateInput
           value={state.datumVolgend}
-          onChange={(e) => onUpdate("datumVolgend", e.target.value)}
+          onValueChange={(value) => onUpdate("datumVolgend", value)}
         />
       </FormField>
       <div className="sk">Samenvatting</div>

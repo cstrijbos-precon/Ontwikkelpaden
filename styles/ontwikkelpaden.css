@@ -967,6 +967,7 @@ body {
   .nav-knoppen,
   .save-area,
   .vp-bar {
+    /* biome-ignore lint/complexity/noImportantStyles: print-overrides moeten schermregels met hogere specificiteit overschrijven */
     display: none !important;
   }
 
@@ -978,6 +979,7 @@ body {
   .ster-body,
   .pop-pad-body,
   .toolbox-body {
+    /* biome-ignore lint/complexity/noImportantStyles: print-overrides moeten schermregels met hogere specificiteit overschrijven */
     display: block !important;
   }
 }

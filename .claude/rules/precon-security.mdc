@@ -1,0 +1,80 @@
+---
+description: Production security hardening checklist for API routes and deployment
+alwaysApply: true
+---
+
+# Security hardening
+
+Run this checklist before every production release and when adding API routes.
+
+## API route audit
+
+For every file in `app/api/**/route.ts`:
+
+- [ ] Calls `auth()` and returns 401 if unauthenticated
+- [ ] Enforces role/group authorization before reads or writes
+- [ ] Validates input with zod (reject unknown fields)
+- [ ] No sensitive data in error messages or logs
+- [ ] Rate-limit expensive endpoints (translation, file upload)
+- [ ] No open/public routes unless explicitly documented
+
+## Secrets exposure
+
+- [ ] No API keys, DB URLs, or `AUTH_SECRET` in `NEXT_PUBLIC_*` vars
+- [ ] `.env.local` and `.env` are gitignored
+- [ ] Client bundles contain no `process.env` secrets (verify with `next build` output)
+- [ ] Anthropic/OpenAI keys only in server route handlers or `services/`
+
+## Middleware
+
+- [ ] `middleware.ts` protects all pages except `/login`, auth callbacks, and static assets
+- [ ] Review matcher regex — `api` excluded from middleware is intentional only for auth callbacks
+- [ ] API routes enforce their own auth (middleware exclusion ≠ open API)
+
+## CORS
+
+- [ ] Default: no custom CORS headers (same-origin only)
+- [ ] If cross-origin needed: explicit allowlist of origins, never `*`
+- [ ] Preflight only on routes that require it
+
+## Headers & config
+
+`next.config.ts`:
+
+```ts
+const securityHeaders = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+```
+
+- [ ] `reactStrictMode: true`
+- [ ] CSP configured for production (start restrictive, loosen as needed)
+- [ ] `poweredByHeader: false`
+
+## Caching
+
+- [ ] User-specific or auth-gated responses: `Cache-Control: private, no-store`
+- [ ] Static assets: rely on Next.js defaults
+- [ ] Never cache authenticated API responses at CDN without `Vary: Cookie`
+
+## Dependencies
+
+- [ ] `npm audit` — no high/critical unmitigated vulnerabilities
+- [ ] Pin major versions; review new deps against license rules
+- [ ] No typosquat packages — verify npm package names and download counts
+
+## Database
+
+- [ ] Parameterized queries only (`sql\`...\`` tagged templates)
+- [ ] Row-level authorization in SQL WHERE clauses (user_email, scope)
+- [ ] Migrations reviewed — no accidental data exposure
+
+## Entra / Auth.js
+
+- [ ] Enterprise app: assignment required
+- [ ] Redirect URIs match exactly (prod + localhost)
+- [ ] `AUTH_SECRET` is 32+ random bytes
+- [ ] Session strategy appropriate (JWT for serverless; validate expiry)

@@ -21,7 +21,10 @@ export function DashboardHeader({ email, isAdmin }: DashboardHeaderProps) {
             Admin
           </span>
         )}
-        <Button variant="ghost" onClick={() => signOut({ callbackUrl: "/login" })}>
+        <Button
+          variant="ghost"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+        >
           Uitloggen
         </Button>
       </div>

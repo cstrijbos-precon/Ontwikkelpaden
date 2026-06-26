@@ -1,5 +1,9 @@
 import { PADEN } from "@/lib/data/paden";
-import type { CompId, OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
+import type {
+  CompId,
+  OntwikkelpadenState,
+  PadId,
+} from "@/types/ontwikkelpaden";
 
 export function berekenNiveau(
   padId: PadId,

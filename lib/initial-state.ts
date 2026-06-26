@@ -1,6 +1,5 @@
+import { ontwikkelpadenStateSchema } from "@/lib/gesprekken-schema";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
-
-export const STORAGE_KEY = "precon_v3";
 
 export function createInitialState(): OntwikkelpadenState {
   return {
@@ -25,7 +24,12 @@ export function createInitialState(): OntwikkelpadenState {
     tDiepte: "",
     tBreedte: "",
     vorigJaar: { vakexpert: 0, adviseur: 0, leider: 0, trainer: 0 },
-    ambities: { vakexpert: false, adviseur: false, leider: false, trainer: false },
+    ambities: {
+      vakexpert: false,
+      adviseur: false,
+      leider: false,
+      trainer: false,
+    },
     trainingsgroepen: { vakexpert: "", adviseur: "", leider: "", trainer: "" },
     ambitieNotitie: "",
     toolboxKeuze: "",
@@ -36,20 +40,23 @@ export function createInitialState(): OntwikkelpadenState {
   };
 }
 
-export function loadStateFromStorage(): OntwikkelpadenState {
-  const initial = createInitialState();
-  if (typeof window === "undefined") return initial;
+const STATE_KEYS = Object.keys(
+  createInitialState(),
+) as (keyof OntwikkelpadenState)[];
 
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return initial;
-    return { ...initial, ...JSON.parse(saved) };
-  } catch {
-    return initial;
+export function mergeWithInitialState(input: unknown): OntwikkelpadenState {
+  const base = createInitialState();
+  if (typeof input !== "object" || input === null) {
+    return ontwikkelpadenStateSchema.parse(base);
   }
-}
 
-export function saveStateToStorage(state: OntwikkelpadenState): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const partial = input as Record<string, unknown>;
+  const picked: Record<string, unknown> = { ...base };
+  for (const key of STATE_KEYS) {
+    if (key in partial) {
+      picked[key] = partial[key];
+    }
+  }
+
+  return ontwikkelpadenStateSchema.parse(picked);
 }

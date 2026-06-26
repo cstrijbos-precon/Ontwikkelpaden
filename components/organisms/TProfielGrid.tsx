@@ -13,15 +13,11 @@ export function TProfielGrid({ state, onToggle }: TProfielGridProps) {
           const key = `${r}-${k}`;
           const aan = state.tCellen.includes(key);
           return (
-            <div
+            <button
+              type="button"
               key={key}
               className={`t-cel ${aan ? "aan" : ""}`}
               onClick={() => onToggle(r, k)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") onToggle(r, k);
-              }}
-              role="button"
-              tabIndex={0}
               aria-pressed={aan}
             />
           );

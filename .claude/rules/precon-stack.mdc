@@ -1,0 +1,51 @@
+---
+description: Precon internal project stack — Entra, Vercel, Neon (from SETUP.md)
+alwaysApply: true
+---
+
+# Precon project stack
+
+All internal Precon apps share this infrastructure. See `docs/SETUP.md` for step-by-step provisioning.
+
+## Platform
+
+| Piece | Purpose |
+|-------|---------|
+| **Next.js 16+ (App Router)** | Web framework — TypeScript required for new code |
+| **Vercel** | Hosting, preview deployments, env vars |
+| **Microsoft Entra ID** | Company login (Auth.js / next-auth) |
+| **Neon Postgres (EU)** | Serverless Postgres — use pooled `DATABASE_URL` |
+
+## Auth pattern
+
+- Provider: Microsoft Entra ID (`AUTH_MICROSOFT_ENTRA_ID_*` env vars)
+- Security groups gate access (e.g. `precon-<app>-users`, `precon-<app>-admins`)
+- Enterprise app: **Assignment required** — only assigned groups can sign in
+- Groups exposed via ID token optional claim
+- Role checks in API routes and server components — never trust client-side flags
+
+## Database pattern
+
+```ts
+// lib/db.ts
+import { neon } from "@neondatabase/serverless";
+export const sql = neon(process.env.DATABASE_URL!);
+```
+
+- Always use **pooled** `DATABASE_URL` in route handlers (hostname contains `-pooler`)
+- Use `DATABASE_URL_UNPOOLED` only for migrations
+- Parameterized queries only — never string-concatenate SQL
+- EU region (e.g. `aws-eu-central-1`) for Dutch users
+
+## Environment variables
+
+- Secrets live in Vercel + `.env.local` (never committed)
+- Local: `npx vercel env pull .env.local`
+- No `NEXT_PUBLIC_` prefix on secrets — only on truly public config
+- Validate required env vars at startup (use `zod` or similar)
+
+## Naming conventions
+
+- Entra app registration: `Precon <App Name>`
+- Security groups: `precon-<app-slug>-users`, `precon-<app-slug>-admins`
+- Neon database: `<app-slug>` (kebab-case)

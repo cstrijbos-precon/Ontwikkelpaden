@@ -26,6 +26,8 @@ npm i -D vitest @vitest/coverage-v8 @testing-library/react @testing-library/jest
 export default defineConfig({
   test: {
     environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     coverage: {
       provider: "v8",
       thresholds: { lines: 90, branches: 85, functions: 90, statements: 90 },
@@ -48,10 +50,14 @@ export default defineConfig({
 
 ## Test file conventions
 
-- Colocate: `lib/xliff.ts` → `lib/xliff.test.ts`
-- Or centralize: `tests/xliff.test.ts`
+- **Centralized in `tests/`** — mirror source layout:
+  - `lib/bereken-niveau.ts` → `tests/lib/bereken-niveau.test.ts`
+  - `hooks/useOntwikkelpaden.ts` → `tests/hooks/useOntwikkelpaden.test.tsx`
+  - `app/api/health/route.ts` → `tests/app/api/health/route.test.ts`
 - Name: `<module>.test.ts` — no `.spec` mixing within one project
 - No tests that only assert "renders without crashing"
+- Shared mocks/fixtures live in `tests/helpers/`
+- Do not colocate `*.test.ts` next to source files
 
 ## CI
 

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, test & build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      AUTH_SECRET: ci-auth-secret-not-used-in-production
+      APP_USERS: ci@precon.nl:$2b$12$ciplaceholderhashnotforlogin
+      APP_ADMINS: ci@precon.nl
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: License check
+        run: >
+          npx license-checker@25 --production
+          --failOn 'GPL;LGPL;AGPL;SSPL;CC-BY-NC;CC-BY-NC-SA'
+          --summary
+
+      - name: Build
+        run: npm run build

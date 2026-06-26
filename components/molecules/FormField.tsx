@@ -5,9 +5,10 @@ interface FormFieldProps {
 
 export function FormField({ label, children }: FormFieldProps) {
   return (
-    <div className="fg">
-      <label>{label}</label>
+    // biome-ignore lint/a11y/noLabelWithoutControl: het invoerveld wordt via {children} aangeleverd en zit binnen het label (impliciete koppeling)
+    <label className="fg">
+      <span>{label}</span>
       {children}
-    </div>
+    </label>
   );
 }

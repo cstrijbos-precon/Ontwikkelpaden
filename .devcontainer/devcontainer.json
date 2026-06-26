@@ -1,0 +1,23 @@
+{
+  "name": "Trainingslijnen",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "postCreateCommand": "npm install",
+  "forwardPorts": [3000, 3001],
+  "portsAttributes": {
+    "3000": {
+      "label": "Trainingslijnen",
+      "onAutoForward": "openBrowser"
+    },
+    "3001": {
+      "label": "Trainingslijnen (reserve)",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true
+      }
+    }
+  }
+}

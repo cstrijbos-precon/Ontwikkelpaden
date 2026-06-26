@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/atoms/DateInput";
 import { FormField } from "@/components/molecules/FormField";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
@@ -34,17 +35,15 @@ export function ScreenGegevens({ state, onUpdate }: ScreenGegevensProps) {
       </div>
       <div className="form-rij">
         <FormField label="Datum gesprek">
-          <input
-            type="date"
+          <DateInput
             value={state.datum}
-            onChange={(e) => onUpdate("datum", e.target.value)}
+            onValueChange={(value) => onUpdate("datum", value)}
           />
         </FormField>
         <FormField label="Datum vorig gesprek">
-          <input
-            type="date"
+          <DateInput
             value={state.datumVorig}
-            onChange={(e) => onUpdate("datumVorig", e.target.value)}
+            onValueChange={(value) => onUpdate("datumVorig", value)}
           />
         </FormField>
       </div>
