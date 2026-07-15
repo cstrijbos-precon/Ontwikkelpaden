@@ -1,4 +1,8 @@
-import type { Gesprek, GesprekListItem } from "@/types/gesprekken";
+import type {
+  Gesprek,
+  GesprekListItem,
+  GesprekStatus,
+} from "@/types/gesprekken";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -34,11 +38,19 @@ export async function createGesprek(
 export async function saveGesprek(
   id: string,
   state: OntwikkelpadenState,
+  status?: GesprekStatus,
 ): Promise<Gesprek> {
   const res = await fetch(`/api/gesprekken/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ state }),
+    body: JSON.stringify(status ? { state, status } : { state }),
+  });
+  return parseJson<Gesprek>(res);
+}
+
+export async function startNewCycle(id: string): Promise<Gesprek> {
+  const res = await fetch(`/api/gesprekken/${id}/next-cycle`, {
+    method: "POST",
   });
   return parseJson<Gesprek>(res);
 }

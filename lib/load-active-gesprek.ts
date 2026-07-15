@@ -8,11 +8,14 @@ import {
   fetchGesprek,
   fetchGesprekkenList,
 } from "@/services/gesprekken-client";
+import type { GesprekStatus } from "@/types/gesprekken";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 export interface ActiveGesprek {
   id: string;
   state: OntwikkelpadenState;
+  status: GesprekStatus;
+  previousGesprekId: string | null;
 }
 
 export async function loadActiveGesprek(): Promise<ActiveGesprek> {
@@ -24,6 +27,8 @@ export async function loadActiveGesprek(): Promise<ActiveGesprek> {
       return {
         id: gesprek.id,
         state: mergeWithInitialState(gesprek.state),
+        status: gesprek.status ?? "draft",
+        previousGesprekId: gesprek.previousGesprekId ?? null,
       };
     } catch {
       // Stored id invalid — fall through to list/create.
@@ -38,6 +43,8 @@ export async function loadActiveGesprek(): Promise<ActiveGesprek> {
     return {
       id: gesprek.id,
       state: mergeWithInitialState(gesprek.state),
+      status: gesprek.status ?? "draft",
+      previousGesprekId: gesprek.previousGesprekId ?? null,
     };
   }
 
@@ -46,5 +53,7 @@ export async function loadActiveGesprek(): Promise<ActiveGesprek> {
   return {
     id: created.id,
     state: mergeWithInitialState(created.state),
+    status: created.status ?? "draft",
+    previousGesprekId: created.previousGesprekId ?? null,
   };
 }

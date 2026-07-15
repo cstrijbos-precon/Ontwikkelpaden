@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 # Test coverage output
 coverage
 tsconfig.build.tsbuildinfo
+
+# Privacygevoelige voorbeeldbestanden (bevatten echte beoordelingsinformatie)
+docs/*.docx

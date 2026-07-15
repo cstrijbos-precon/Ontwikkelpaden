@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useCycle } from "@/hooks/useCycle";
+import { useReflecties } from "@/hooks/useReflecties";
 import { exportWord } from "@/lib/export-word";
 import { clampPadNiveau, clampScore } from "@/lib/field-format";
 import { createInitialState } from "@/lib/initial-state";
 import { loadActiveGesprek } from "@/lib/load-active-gesprek";
 import { saveGesprek } from "@/services/gesprekken-client";
+import type { GesprekStatus } from "@/types/gesprekken";
 import type {
   CompId,
   OntwikkelpadenState,
@@ -16,6 +19,10 @@ export function useOntwikkelpaden() {
   const [huidig, setHuidig] = useState(0);
   const [gesprekId, setGesprekId] = useState<string | null>(null);
   const [state, setState] = useState<OntwikkelpadenState>(createInitialState);
+  const [status, setStatus] = useState<GesprekStatus>("draft");
+  const [previousGesprekId, setPreviousGesprekId] = useState<string | null>(
+    null,
+  );
   const [saveStatus, setSaveStatus] = useState("");
   const [loadError, setLoadError] = useState("");
   const [openComps, setOpenComps] = useState<Set<string>>(new Set());
@@ -35,6 +42,8 @@ export function useOntwikkelpaden() {
         if (cancelled) return;
         setGesprekId(active.id);
         setState(active.state);
+        setStatus(active.status ?? "draft");
+        setPreviousGesprekId(active.previousGesprekId ?? null);
         setLoadError("");
       } catch (error) {
         if (cancelled) return;
@@ -51,6 +60,19 @@ export function useOntwikkelpaden() {
       cancelled = true;
     };
   }, []);
+
+  const { addReflectie, updateReflectie, removeReflectie } =
+    useReflecties(setState);
+  const { handleAfronden, handleStartNewCycle } = useCycle({
+    gesprekId,
+    state,
+    setState,
+    setGesprekId,
+    setStatus,
+    setPreviousGesprekId,
+    setHuidig,
+    setSaveStatus,
+  });
 
   const save = useCallback(
     async (nextState: OntwikkelpadenState) => {
@@ -228,6 +250,8 @@ export function useOntwikkelpaden() {
   return {
     huidig,
     state,
+    status,
+    previousGesprekId,
     saveStatus,
     loadError,
     hydrated,
@@ -247,6 +271,11 @@ export function useOntwikkelpaden() {
     toggleSter,
     togglePopPad,
     toggleToolbox,
+    addReflectie,
+    updateReflectie,
+    removeReflectie,
+    handleAfronden,
+    handleStartNewCycle,
     naarScherm,
     volgende,
     terug,

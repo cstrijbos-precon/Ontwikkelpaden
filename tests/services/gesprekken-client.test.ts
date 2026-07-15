@@ -5,6 +5,7 @@ import {
   fetchGesprek,
   fetchGesprekkenList,
   saveGesprek,
+  startNewCycle,
 } from "@/services/gesprekken-client";
 
 describe("gesprekken-client", () => {
@@ -71,6 +72,39 @@ describe("gesprekken-client", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ state }),
     });
+  });
+
+  it("saveGesprek includes status when provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: "abc" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const state = createInitialState();
+    await saveGesprek("abc", state, "completed");
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/gesprekken/abc", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state, status: "completed" }),
+    });
+  });
+
+  it("startNewCycle posts to the next-cycle endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: "gesprek-2" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const gesprek = await startNewCycle("gesprek-1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/gesprekken/gesprek-1/next-cycle",
+      { method: "POST" },
+    );
+    expect(gesprek.id).toBe("gesprek-2");
   });
 
   it("throws on error response", async () => {

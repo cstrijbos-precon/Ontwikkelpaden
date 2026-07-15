@@ -14,6 +14,7 @@ export interface Gesprek {
   medebeoordelaar: string;
   status: GesprekStatus;
   state: OntwikkelpadenState;
+  previousGesprekId: string | null;
   createdBy: string;
   updatedBy: string;
   createdAt: string;

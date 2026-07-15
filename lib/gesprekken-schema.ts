@@ -33,6 +33,12 @@ const padRecordSchema = <T extends z.ZodType>(valueSchema: T) =>
 /** Leeg of YYYY-MM-DD — zelfde regel als DateInput. */
 export const dateFieldSchema = z.string().transform(enforceDate);
 
+const reflectieSchema = z.object({
+  id: z.string(),
+  datum: dateFieldSchema,
+  tekst: z.string(),
+});
+
 export const ontwikkelpadenStateSchema = z.object({
   naam: z.string(),
   bijPreconSinds: z.string(),
@@ -58,11 +64,16 @@ export const ontwikkelpadenStateSchema = z.object({
   ambities: padRecordSchema(z.boolean()),
   trainingsgroepen: padRecordSchema(z.string()),
   ambitieNotitie: z.string(),
+  niveauInschaling: z.string(),
   toolboxKeuze: z.string(),
   checkpoints: z.string(),
   tProfielOntwikkeling: z.string(),
   overigeAfspraken: z.string(),
   datumVolgend: dateFieldSchema,
+  reflecties: z.array(reflectieSchema),
+  akkoordProfessional: z.boolean(),
+  akkoordHoofdbeoordelaar: z.boolean(),
+  akkoordMedebeoordelaar: z.boolean(),
 });
 
 export const createGesprekBodySchema = z

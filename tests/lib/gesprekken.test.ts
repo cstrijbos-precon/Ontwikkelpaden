@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createGesprek,
+  GesprekNotCompletedError,
   getGesprekById,
   listGesprekken,
+  startNewCycle,
   updateGesprek,
 } from "@/lib/gesprekken";
 import { createInitialState } from "@/lib/initial-state";
@@ -28,6 +30,7 @@ function gesprekRow(overrides: Record<string, unknown> = {}) {
     medebeoordelaar: "",
     status: "draft",
     state,
+    previous_gesprek_id: null,
     created_by: "creator@precon.nl",
     updated_by: "creator@precon.nl",
     created_at: "2024-01-01T00:00:00Z",
@@ -147,6 +150,67 @@ describe("updateGesprek", () => {
       false,
       createInitialState(),
     );
+    expect(result).toBeNull();
+  });
+});
+
+describe("startNewCycle", () => {
+  beforeEach(() => {
+    sqlMock.mockReset();
+  });
+
+  /** Matcht queries op inhoud i.p.v. aanroepvolgorde — robuust tegen extract-table sync-calls. */
+  function mockSqlByQuery(existingRow: ReturnType<typeof gesprekRow>) {
+    sqlMock.mockImplementation((strings: TemplateStringsArray) => {
+      const text = strings.join("");
+      if (text.includes("SELECT * FROM gesprekken WHERE id")) {
+        return Promise.resolve([existingRow]);
+      }
+      if (text.includes("UPDATE gesprekken SET")) {
+        return Promise.resolve([{ ...existingRow, status: "archived" }]);
+      }
+      if (text.includes("INSERT INTO gesprekken")) {
+        return Promise.resolve([
+          gesprekRow({
+            id: "gesprek-2",
+            status: "draft",
+            previous_gesprek_id: existingRow.id,
+          }),
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+  }
+
+  it("archives the completed gesprek and creates a new cycle", async () => {
+    const existingRow = gesprekRow({ status: "completed" });
+    mockSqlByQuery(existingRow);
+
+    const result = await startNewCycle("gesprek-1", "creator@precon.nl", false);
+
+    expect(result?.id).toBe("gesprek-2");
+    expect(result?.previousGesprekId).toBe("gesprek-1");
+
+    const updateCalls = sqlMock.mock.calls.filter((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCalls).toHaveLength(1);
+    expect(updateCalls[0]).toContain("archived");
+  });
+
+  it("throws GesprekNotCompletedError when gesprek is still draft", async () => {
+    mockSqlByQuery(gesprekRow({ status: "draft" }));
+
+    await expect(
+      startNewCycle("gesprek-1", "creator@precon.nl", false),
+    ).rejects.toThrow(GesprekNotCompletedError);
+  });
+
+  it("returns null when gesprek not found or not accessible", async () => {
+    sqlMock.mockResolvedValueOnce([]);
+    const result = await startNewCycle("missing", "creator@precon.nl", false);
     expect(result).toBeNull();
   });
 });

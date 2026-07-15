@@ -1,11 +1,19 @@
 import { SCHERMEN } from "@/lib/data/schermen";
+import type { GesprekStatus } from "@/types/gesprekken";
 
 interface TabNavigationProps {
   huidig: number;
+  status: GesprekStatus;
   onSelect: (index: number) => void;
 }
 
-export function TabNavigation({ huidig, onSelect }: TabNavigationProps) {
+export function TabNavigation({
+  huidig,
+  status,
+  onSelect,
+}: TabNavigationProps) {
+  const gesprekVergrendeld = status !== "draft";
+
   return (
     <>
       <div className="vp-bar">
@@ -24,6 +32,7 @@ export function TabNavigation({ huidig, onSelect }: TabNavigationProps) {
             className={`tab ${i === huidig ? "active" : ""}`}
             onClick={() => onSelect(i)}
           >
+            {s.fase === "gesprek" && gesprekVergrendeld ? "🔒 " : ""}
             {s.label}
           </button>
         ))}

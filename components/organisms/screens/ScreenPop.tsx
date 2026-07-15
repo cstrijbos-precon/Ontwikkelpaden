@@ -1,8 +1,15 @@
+import Link from "next/link";
 import { FormField } from "@/components/molecules/FormField";
+import { ReflectieItem } from "@/components/molecules/ReflectieItem";
 import { berekenNiveau } from "@/lib/bereken-niveau";
 import { COMPS } from "@/lib/data/competenties";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
-import type { OntwikkelpadenState, Toolbox } from "@/types/ontwikkelpaden";
+import type { GesprekStatus } from "@/types/gesprekken";
+import type {
+  OntwikkelpadenState,
+  Reflectie,
+  Toolbox,
+} from "@/types/ontwikkelpaden";
 
 interface ToolboxPanelProps {
   doelN: number;
@@ -57,6 +64,8 @@ function ToolboxPanel({
 
 interface ScreenPopProps {
   state: OntwikkelpadenState;
+  status: GesprekStatus;
+  previousGesprekId: string | null;
   openPopPads: Set<string>;
   openToolboxes: Set<string>;
   onUpdate: <K extends keyof OntwikkelpadenState>(
@@ -65,15 +74,28 @@ interface ScreenPopProps {
   ) => void;
   onTogglePopPad: (id: string) => void;
   onToggleToolbox: (id: string) => void;
+  onAddReflectie: () => void;
+  onUpdateReflectie: (
+    id: string,
+    patch: Partial<Pick<Reflectie, "datum" | "tekst">>,
+  ) => void;
+  onRemoveReflectie: (id: string) => void;
+  onStartNewCycle: () => void;
 }
 
 export function ScreenPop({
   state,
+  status,
+  previousGesprekId,
   openPopPads,
   openToolboxes,
   onUpdate,
   onTogglePopPad,
   onToggleToolbox,
+  onAddReflectie,
+  onUpdateReflectie,
+  onRemoveReflectie,
+  onStartNewCycle,
 }: ScreenPopProps) {
   const actief = PAD_IDS.filter(
     (padId) => state.ambities[padId] || berekenNiveau(padId, state.scores) > 0,
@@ -199,6 +221,54 @@ export function ScreenPop({
           onChange={(e) => onUpdate("tProfielOntwikkeling", e.target.value)}
         />
       </FormField>
+
+      <div className="sk">Reflecties</div>
+      <div className="tip-box">
+        Voeg gedurende het jaar reflectiemomenten toe — met een datum en je
+        eigen woorden. Zo bouw je je POP zelf verder uit.
+      </div>
+      {state.reflecties.map((reflectie) => (
+        <ReflectieItem
+          key={reflectie.id}
+          reflectie={reflectie}
+          onUpdate={(patch) => onUpdateReflectie(reflectie.id, patch)}
+          onRemove={() => onRemoveReflectie(reflectie.id)}
+        />
+      ))}
+      <button type="button" className="btn btn-t" onClick={onAddReflectie}>
+        + Reflectie toevoegen
+      </button>
+
+      <div className="sk">Volgend jaar</div>
+      {status === "completed" ? (
+        <div className="info-box">
+          <p>
+            Dit functioneringsgesprek is afgerond. Start hieronder de nieuwe
+            cyclus: je sterren, T-profiel-framework en stamgegevens gaan mee, de
+            rest begint leeg.
+          </p>
+          <button
+            type="button"
+            className="btn btn-v"
+            style={{ marginTop: 10 }}
+            onClick={onStartNewCycle}
+          >
+            Start nieuw functioneringsgesprek
+          </button>
+        </div>
+      ) : (
+        <div className="tip-box">
+          Ronde eerst het functioneringsgesprek af (stap 8) om een nieuwe cyclus
+          te kunnen starten.
+        </div>
+      )}
+      {previousGesprekId && (
+        <p style={{ marginTop: 12 }}>
+          <Link href={`/gesprekken/${previousGesprekId}`}>
+            Bekijk vorig gesprek
+          </Link>
+        </p>
+      )}
     </>
   );
 }

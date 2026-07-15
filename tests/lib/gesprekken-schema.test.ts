@@ -26,6 +26,34 @@ describe("ontwikkelpadenStateSchema", () => {
     const result = ontwikkelpadenStateSchema.parse(state);
     expect(result.scores.b).toBe(3);
   });
+
+  it("accepts reflecties with a valid datum and normalizes invalid ones", () => {
+    const state = {
+      ...createInitialState(),
+      reflecties: [
+        { id: "r1", datum: "2026-03-01", tekst: "Goed gesprek gehad" },
+        { id: "r2", datum: "not-a-date", tekst: "" },
+      ],
+    };
+    const result = ontwikkelpadenStateSchema.parse(state);
+    expect(result.reflecties).toHaveLength(2);
+    expect(result.reflecties[0]?.datum).toBe("2026-03-01");
+    expect(result.reflecties[1]?.datum).toBe("");
+  });
+
+  it("validates akkoord flags and niveauInschaling", () => {
+    const state = {
+      ...createInitialState(),
+      niveauInschaling: "Medior",
+      akkoordProfessional: true,
+      akkoordHoofdbeoordelaar: true,
+      akkoordMedebeoordelaar: false,
+    };
+    const result = ontwikkelpadenStateSchema.parse(state);
+    expect(result.niveauInschaling).toBe("Medior");
+    expect(result.akkoordProfessional).toBe(true);
+    expect(result.akkoordMedebeoordelaar).toBe(false);
+  });
 });
 
 describe("createGesprekBodySchema", () => {

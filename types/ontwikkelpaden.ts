@@ -4,6 +4,7 @@ export type CompId = "b" | "k" | "o" | "org" | "t";
 export interface Scherm {
   id: string;
   label: string;
+  fase: "gesprek" | "pop";
 }
 
 export interface Vereisten {
@@ -52,6 +53,12 @@ export interface Trainingsgroep {
   label: string;
 }
 
+export interface Reflectie {
+  id: string;
+  datum: string;
+  tekst: string;
+}
+
 export interface OntwikkelpadenState {
   naam: string;
   bijPreconSinds: string;
@@ -77,9 +84,14 @@ export interface OntwikkelpadenState {
   ambities: Record<PadId, boolean>;
   trainingsgroepen: Record<PadId, string>;
   ambitieNotitie: string;
+  niveauInschaling: string;
   toolboxKeuze: string;
   checkpoints: string;
   tProfielOntwikkeling: string;
   overigeAfspraken: string;
   datumVolgend: string;
+  reflecties: Reflectie[];
+  akkoordProfessional: boolean;
+  akkoordHoofdbeoordelaar: boolean;
+  akkoordMedebeoordelaar: boolean;
 }

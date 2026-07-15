@@ -8,6 +8,11 @@ describe("createInitialState", () => {
     expect(state.situaties).toEqual(["", "", ""]);
     expect(state.scores.t).toBe(0);
     expect(state.ambities.trainer).toBe(false);
+    expect(state.niveauInschaling).toBe("");
+    expect(state.reflecties).toEqual([]);
+    expect(state.akkoordProfessional).toBe(false);
+    expect(state.akkoordHoofdbeoordelaar).toBe(false);
+    expect(state.akkoordMedebeoordelaar).toBe(false);
   });
 });
 

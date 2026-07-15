@@ -4,20 +4,33 @@ import { ScoreBox } from "@/components/molecules/ScoreBox";
 import { berekenNiveau } from "@/lib/bereken-niveau";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { getPadColor } from "@/lib/pad-colors";
+import type { GesprekStatus } from "@/types/gesprekken";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
-interface ScreenAfsluitingProps {
+interface ScreenAfrondingProps {
   state: OntwikkelpadenState;
+  status: GesprekStatus;
   onUpdate: <K extends keyof OntwikkelpadenState>(
     key: K,
     value: OntwikkelpadenState[K],
   ) => void;
+  onAfronden: () => void;
 }
 
-export function ScreenAfsluiting({ state, onUpdate }: ScreenAfsluitingProps) {
+export function ScreenAfronding({
+  state,
+  status,
+  onUpdate,
+  onAfronden,
+}: ScreenAfrondingProps) {
+  const alleAkkoord =
+    state.akkoordProfessional &&
+    state.akkoordHoofdbeoordelaar &&
+    state.akkoordMedebeoordelaar;
+
   return (
     <>
-      <div className="scherm-titel">Afsluiting & afspraken</div>
+      <div className="scherm-titel">Afronding & ondertekening</div>
       <FormField label="Overige afspraken">
         <textarea
           rows={4}
@@ -80,16 +93,54 @@ export function ScreenAfsluiting({ state, onUpdate }: ScreenAfsluitingProps) {
           Ondertekening voor akkoord
         </p>
         <div className="sign-grid">
-          <div className="sign-box">
-            Professional: {state.naam || "___________"}
-          </div>
-          <div className="sign-box">
-            Hoofdbeoordelaar: {state.hoofdbeoordelaar || "___________"}
-          </div>
-          <div className="sign-box">
-            Medebeoordelaar: {state.medebeoordelaar || "___________"}
-          </div>
+          <label className="sign-box" style={{ cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={state.akkoordProfessional}
+              onChange={(e) =>
+                onUpdate("akkoordProfessional", e.target.checked)
+              }
+            />{" "}
+            Professional: {state.naam || "___________"} akkoord
+          </label>
+          <label className="sign-box" style={{ cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={state.akkoordHoofdbeoordelaar}
+              onChange={(e) =>
+                onUpdate("akkoordHoofdbeoordelaar", e.target.checked)
+              }
+            />{" "}
+            Hoofdbeoordelaar: {state.hoofdbeoordelaar || "___________"} akkoord
+          </label>
+          <label className="sign-box" style={{ cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={state.akkoordMedebeoordelaar}
+              onChange={(e) =>
+                onUpdate("akkoordMedebeoordelaar", e.target.checked)
+              }
+            />{" "}
+            Medebeoordelaar: {state.medebeoordelaar || "___________"} akkoord
+          </label>
         </div>
+        <button
+          type="button"
+          className="btn btn-v"
+          style={{ marginTop: 16 }}
+          disabled={!alleAkkoord || status === "completed"}
+          onClick={onAfronden}
+        >
+          {status === "completed"
+            ? "✓ Gesprek is afgerond"
+            : "Gesprek afronden"}
+        </button>
+        {status === "completed" && (
+          <p style={{ fontSize: 11, color: "var(--groen)", marginTop: 8 }}>
+            Dit functioneringsgesprek is afgerond en vergrendeld. Verder werken
+            kan nu op het POP-scherm.
+          </p>
+        )}
         <p
           style={{
             fontSize: 11,

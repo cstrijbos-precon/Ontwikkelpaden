@@ -67,6 +67,13 @@ export function ScreenOntwikkelpaden({
           />
         </FormField>
       </div>
+      <FormField label="Junior, medior of senior?">
+        <input
+          value={state.niveauInschaling}
+          placeholder="bijv. Medior"
+          onChange={(e) => onUpdate("niveauInschaling", e.target.value)}
+        />
+      </FormField>
     </>
   );
 }

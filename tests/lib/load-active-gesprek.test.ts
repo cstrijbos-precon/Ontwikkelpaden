@@ -20,6 +20,8 @@ describe("loadActiveGesprek", () => {
     vi.mocked(client.fetchGesprek).mockResolvedValue({
       id: "stored-id",
       state: mockState,
+      status: "draft",
+      previousGesprekId: null,
     } as Awaited<ReturnType<typeof client.fetchGesprek>>);
 
     const result = await loadActiveGesprek();

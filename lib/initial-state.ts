@@ -32,11 +32,16 @@ export function createInitialState(): OntwikkelpadenState {
     },
     trainingsgroepen: { vakexpert: "", adviseur: "", leider: "", trainer: "" },
     ambitieNotitie: "",
+    niveauInschaling: "",
     toolboxKeuze: "",
     checkpoints: "",
     tProfielOntwikkeling: "",
     overigeAfspraken: "",
     datumVolgend: "",
+    reflecties: [],
+    akkoordProfessional: false,
+    akkoordHoofdbeoordelaar: false,
+    akkoordMedebeoordelaar: false,
   };
 }
 

@@ -2,7 +2,7 @@
 
 import { ScreenNav } from "@/components/molecules/ScreenNav";
 import { AppHeader } from "@/components/organisms/AppHeader";
-import { ScreenAfsluiting } from "@/components/organisms/screens/ScreenAfsluiting";
+import { ScreenAfronding } from "@/components/organisms/screens/ScreenAfronding";
 import { ScreenAmbitie } from "@/components/organisms/screens/ScreenAmbitie";
 import { ScreenCompetenties } from "@/components/organisms/screens/ScreenCompetenties";
 import { ScreenGegevens } from "@/components/organisms/screens/ScreenGegevens";
@@ -38,7 +38,10 @@ export function OntwikkelpadenApp() {
     );
   }
 
-  const screenId = SCHERMEN[app.huidig]?.id;
+  const scherm = SCHERMEN[app.huidig];
+  const screenId = scherm?.id;
+  const gesprekVergrendeld =
+    scherm?.fase === "gesprek" && app.status !== "draft";
 
   return (
     <>
@@ -47,63 +50,83 @@ export function OntwikkelpadenApp() {
         onSave={app.handleSave}
         onExport={app.handleExport}
       />
-      <TabNavigation huidig={app.huidig} onSelect={app.naarScherm} />
+      <TabNavigation
+        huidig={app.huidig}
+        status={app.status}
+        onSelect={app.naarScherm}
+      />
       <div className="scherm">
-        {screenId === "s1" && (
-          <ScreenGegevens state={app.state} onUpdate={app.updateField} />
-        )}
-        {screenId === "s2" && (
-          <ScreenHoeGaatHet state={app.state} onUpdate={app.updateField} />
-        )}
-        {screenId === "s3" && (
-          <ScreenPraktijksituaties
-            state={app.state}
-            onUpdate={app.updateField}
-            onUpdateSituatie={app.updateSituatie}
-          />
-        )}
-        {screenId === "s4" && (
-          <ScreenProfiel state={app.state} onUpdate={app.updateField} />
-        )}
-        {screenId === "s5" && (
-          <ScreenCompetenties
-            state={app.state}
-            openComps={app.openComps}
-            openSterren={app.openSterren}
-            onToggleComp={app.toggleComp}
-            onToggleSter={app.toggleSter}
-            onSetSter={app.setSter}
-            onUpdateOpmerking={app.updateOpmerking}
-          />
-        )}
-        {screenId === "s6" && (
-          <ScreenOntwikkelpaden
-            state={app.state}
-            onUpdate={app.updateField}
-            onSetVorigJaar={app.setVorigJaar}
-            onToggleTCell={app.toggleTCell}
-          />
-        )}
-        {screenId === "s7" && (
-          <ScreenAmbitie
-            state={app.state}
-            onUpdate={app.updateField}
-            onToggleAmbitie={app.toggleAmbitie}
-            onSetTrainingsgroep={app.setTrainingsgroep}
-          />
-        )}
-        {screenId === "s8" && (
+        <fieldset
+          disabled={gesprekVergrendeld}
+          style={{ border: "none", padding: 0, margin: 0 }}
+        >
+          {screenId === "s1" && (
+            <ScreenGegevens state={app.state} onUpdate={app.updateField} />
+          )}
+          {screenId === "s2" && (
+            <ScreenHoeGaatHet state={app.state} onUpdate={app.updateField} />
+          )}
+          {screenId === "s3" && (
+            <ScreenPraktijksituaties
+              state={app.state}
+              onUpdate={app.updateField}
+              onUpdateSituatie={app.updateSituatie}
+            />
+          )}
+          {screenId === "s4" && (
+            <ScreenProfiel state={app.state} onUpdate={app.updateField} />
+          )}
+          {screenId === "s5" && (
+            <ScreenCompetenties
+              state={app.state}
+              openComps={app.openComps}
+              openSterren={app.openSterren}
+              onToggleComp={app.toggleComp}
+              onToggleSter={app.toggleSter}
+              onSetSter={app.setSter}
+              onUpdateOpmerking={app.updateOpmerking}
+            />
+          )}
+          {screenId === "s6" && (
+            <ScreenOntwikkelpaden
+              state={app.state}
+              onUpdate={app.updateField}
+              onSetVorigJaar={app.setVorigJaar}
+              onToggleTCell={app.toggleTCell}
+            />
+          )}
+          {screenId === "s7" && (
+            <ScreenAmbitie
+              state={app.state}
+              onUpdate={app.updateField}
+              onToggleAmbitie={app.toggleAmbitie}
+              onSetTrainingsgroep={app.setTrainingsgroep}
+            />
+          )}
+          {screenId === "s8" && (
+            <ScreenAfronding
+              state={app.state}
+              status={app.status}
+              onUpdate={app.updateField}
+              onAfronden={app.handleAfronden}
+            />
+          )}
+        </fieldset>
+        {screenId === "s9" && (
           <ScreenPop
             state={app.state}
+            status={app.status}
+            previousGesprekId={app.previousGesprekId}
             openPopPads={app.openPopPads}
             openToolboxes={app.openToolboxes}
             onUpdate={app.updateField}
             onTogglePopPad={app.togglePopPad}
             onToggleToolbox={app.toggleToolbox}
+            onAddReflectie={app.addReflectie}
+            onUpdateReflectie={app.updateReflectie}
+            onRemoveReflectie={app.removeReflectie}
+            onStartNewCycle={app.handleStartNewCycle}
           />
-        )}
-        {screenId === "s9" && (
-          <ScreenAfsluiting state={app.state} onUpdate={app.updateField} />
         )}
         <ScreenNav
           huidig={app.huidig}

@@ -1,3 +1,4 @@
+import { buildNextCycleState } from "@/lib/cycle-carry-over";
 import { sql } from "@/lib/db";
 import {
   clampPadNiveau,
@@ -43,6 +44,7 @@ interface GesprekRow {
   medebeoordelaar: string;
   status: GesprekStatus;
   state: OntwikkelpadenState;
+  previous_gesprek_id: string | null;
   created_by: string;
   updated_by: string;
   created_at: string;
@@ -74,6 +76,7 @@ function mapRow(row: GesprekRow): Gesprek {
     medebeoordelaar: row.medebeoordelaar,
     status: row.status,
     state: row.state,
+    previousGesprekId: row.previous_gesprek_id,
     createdBy: row.created_by,
     updatedBy: row.updated_by,
     createdAt: row.created_at,
@@ -179,6 +182,7 @@ export async function createGesprek(
   userEmail: string,
   stateInput?: OntwikkelpadenState,
   medewerkerEmail?: string,
+  previousGesprekId?: string,
 ): Promise<Gesprek> {
   const state = stateInput
     ? mergeWithInitialState(stateInput)
@@ -189,7 +193,8 @@ export async function createGesprek(
     INSERT INTO gesprekken (
       medewerker_naam, medewerker_email, bij_precon_sinds,
       gesprek_datum, datum_vorig, datum_volgend,
-      hoofdbeoordelaar, medebeoordelaar, state, created_by, updated_by
+      hoofdbeoordelaar, medebeoordelaar, state, previous_gesprek_id,
+      created_by, updated_by
     ) VALUES (
       ${meta.medewerkerNaam},
       ${medewerkerEmail ?? null},
@@ -200,6 +205,7 @@ export async function createGesprek(
       ${meta.hoofdbeoordelaar},
       ${meta.medebeoordelaar},
       ${state},
+      ${previousGesprekId ?? null},
       ${userEmail},
       ${userEmail}
     )
@@ -255,4 +261,36 @@ export async function updateGesprek(
   const gesprek = mapRow(row);
   await syncExtractTables(gesprek.id, cleanState);
   return gesprek;
+}
+
+export class GesprekNotCompletedError extends Error {
+  constructor() {
+    super("Gesprek is nog niet afgerond");
+    this.name = "GesprekNotCompletedError";
+  }
+}
+
+/**
+ * Archiveert een afgerond gesprek en start de volgende jaarcyclus: sterren,
+ * T-profiel-framework en stamgegevens gaan mee, tekstvelden en akkoord starten leeg.
+ */
+export async function startNewCycle(
+  id: string,
+  userEmail: string,
+  isAdmin: boolean,
+): Promise<Gesprek | null> {
+  const existing = await getGesprekById(id, userEmail, isAdmin);
+  if (!existing) return null;
+  if (existing.status !== "completed") {
+    throw new GesprekNotCompletedError();
+  }
+
+  await updateGesprek(id, userEmail, isAdmin, existing.state, "archived");
+
+  return createGesprek(
+    userEmail,
+    buildNextCycleState(existing.state),
+    existing.medewerkerEmail ?? undefined,
+    existing.id,
+  );
 }
