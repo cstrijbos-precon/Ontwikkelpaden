@@ -7,7 +7,7 @@ import { exportWord } from "@/lib/export-word";
 import { clampPadNiveau, clampScore } from "@/lib/field-format";
 import { createInitialState } from "@/lib/initial-state";
 import { loadActiveGesprek } from "@/lib/load-active-gesprek";
-import { saveGesprek } from "@/services/gesprekken-client";
+import { importGesprekDocx, saveGesprek } from "@/services/gesprekken-client";
 import type { GesprekStatus } from "@/types/gesprekken";
 import type {
   CompId,
@@ -25,6 +25,7 @@ export function useOntwikkelpaden() {
   );
   const [saveStatus, setSaveStatus] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
   const [openComps, setOpenComps] = useState<Set<string>>(new Set());
   const [openSterren, setOpenSterren] = useState<Set<string>>(new Set());
   const [openPopPads, setOpenPopPads] = useState<Set<string>>(new Set());
@@ -247,6 +248,21 @@ export function useOntwikkelpaden() {
     exportWord(state);
   }, [state, save]);
 
+  const handleImportDocx = useCallback(async (file: File) => {
+    try {
+      const result = await importGesprekDocx(file);
+      setState((prev) => ({ ...prev, ...result.state }));
+      setImportWarnings(result.warnings);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Import mislukt";
+      setImportWarnings([message]);
+    }
+  }, []);
+
+  const dismissImportWarnings = useCallback(() => {
+    setImportWarnings([]);
+  }, []);
+
   return {
     huidig,
     state,
@@ -254,6 +270,7 @@ export function useOntwikkelpaden() {
     previousGesprekId,
     saveStatus,
     loadError,
+    importWarnings,
     hydrated,
     openComps,
     openSterren,
@@ -281,5 +298,7 @@ export function useOntwikkelpaden() {
     terug,
     handleSave,
     handleExport,
+    handleImportDocx,
+    dismissImportWarnings,
   };
 }

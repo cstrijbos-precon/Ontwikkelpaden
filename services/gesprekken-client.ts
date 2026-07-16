@@ -5,6 +5,11 @@ import type {
 } from "@/types/gesprekken";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
+export interface ImportGesprekDocxResult {
+  state: Partial<OntwikkelpadenState>;
+  warnings: string[];
+}
+
 async function parseJson<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) {
@@ -46,6 +51,19 @@ export async function saveGesprek(
     body: JSON.stringify(status ? { state, status } : { state }),
   });
   return parseJson<Gesprek>(res);
+}
+
+export async function importGesprekDocx(
+  file: File,
+): Promise<ImportGesprekDocxResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch("/api/gesprekken/import-docx", {
+    method: "POST",
+    body: formData,
+  });
+  return parseJson<ImportGesprekDocxResult>(res);
 }
 
 export async function startNewCycle(id: string): Promise<Gesprek> {

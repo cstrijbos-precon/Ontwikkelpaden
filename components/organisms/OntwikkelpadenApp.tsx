@@ -61,7 +61,13 @@ export function OntwikkelpadenApp() {
           style={{ border: "none", padding: 0, margin: 0 }}
         >
           {screenId === "s1" && (
-            <ScreenGegevens state={app.state} onUpdate={app.updateField} />
+            <ScreenGegevens
+              state={app.state}
+              importWarnings={app.importWarnings}
+              onUpdate={app.updateField}
+              onImportDocx={app.handleImportDocx}
+              onDismissImportWarnings={app.dismissImportWarnings}
+            />
           )}
           {screenId === "s2" && (
             <ScreenHoeGaatHet state={app.state} onUpdate={app.updateField} />

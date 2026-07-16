@@ -4,6 +4,7 @@ import {
   createGesprek,
   fetchGesprek,
   fetchGesprekkenList,
+  importGesprekDocx,
   saveGesprek,
   startNewCycle,
 } from "@/services/gesprekken-client";
@@ -105,6 +106,26 @@ describe("gesprekken-client", () => {
       { method: "POST" },
     );
     expect(gesprek.id).toBe("gesprek-2");
+  });
+
+  it("importGesprekDocx posts the file as form data", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({ state: { naam: "Piet" }, warnings: ["let op"] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const file = new File(["inhoud"], "gesprek.docx");
+    const result = await importGesprekDocx(file);
+
+    expect(result).toEqual({ state: { naam: "Piet" }, warnings: ["let op"] });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/gesprekken/import-docx");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get("file")).toBe(file);
   });
 
   it("throws on error response", async () => {

@@ -9,6 +9,7 @@ vi.mock("@/lib/load-active-gesprek", () => ({
 
 vi.mock("@/services/gesprekken-client", () => ({
   saveGesprek: vi.fn(),
+  importGesprekDocx: vi.fn(),
 }));
 
 vi.mock("@/lib/export-word", () => ({
@@ -16,7 +17,7 @@ vi.mock("@/lib/export-word", () => ({
 }));
 
 import { loadActiveGesprek } from "@/lib/load-active-gesprek";
-import { saveGesprek } from "@/services/gesprekken-client";
+import { importGesprekDocx, saveGesprek } from "@/services/gesprekken-client";
 
 describe("useOntwikkelpaden", () => {
   afterEach(() => {
@@ -172,5 +173,61 @@ describe("useOntwikkelpaden", () => {
       result.current.handleExport();
     });
     expect(exportWord).toHaveBeenCalled();
+  });
+
+  it("merges parsed docx state and reports warnings on import", async () => {
+    const state = createInitialState();
+    vi.mocked(loadActiveGesprek).mockResolvedValue({
+      id: "g-1",
+      state,
+      status: "draft",
+      previousGesprekId: null,
+    });
+    vi.mocked(importGesprekDocx).mockResolvedValue({
+      state: { naam: "Uit document" },
+      warnings: ["Sectie X niet herkend"],
+    });
+
+    const { result } = renderHook(() => useOntwikkelpaden());
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    const file = new File(["inhoud"], "gesprek.docx");
+    await act(async () => {
+      await result.current.handleImportDocx(file);
+    });
+
+    expect(importGesprekDocx).toHaveBeenCalledWith(file);
+    expect(result.current.state.naam).toBe("Uit document");
+    expect(result.current.importWarnings).toEqual(["Sectie X niet herkend"]);
+
+    act(() => {
+      result.current.dismissImportWarnings();
+    });
+    expect(result.current.importWarnings).toEqual([]);
+  });
+
+  it("shows an error message when docx import fails", async () => {
+    const state = createInitialState();
+    vi.mocked(loadActiveGesprek).mockResolvedValue({
+      id: "g-1",
+      state,
+      status: "draft",
+      previousGesprekId: null,
+    });
+    vi.mocked(importGesprekDocx).mockRejectedValue(
+      new Error("Geen geldig .docx-bestand"),
+    );
+
+    const { result } = renderHook(() => useOntwikkelpaden());
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    const file = new File(["inhoud"], "gesprek.docx");
+    await act(async () => {
+      await result.current.handleImportDocx(file);
+    });
+
+    expect(result.current.importWarnings).toEqual([
+      "Geen geldig .docx-bestand",
+    ]);
   });
 });

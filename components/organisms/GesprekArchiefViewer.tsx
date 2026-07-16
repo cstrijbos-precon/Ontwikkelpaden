@@ -43,7 +43,13 @@ export function GesprekArchiefViewer({ gesprek }: GesprekArchiefViewerProps) {
       <div className="scherm">
         <fieldset disabled style={{ border: "none", padding: 0, margin: 0 }}>
           {screenId === "s1" && (
-            <ScreenGegevens state={state} onUpdate={NOOP} />
+            <ScreenGegevens
+              state={state}
+              importWarnings={[]}
+              onUpdate={NOOP}
+              onImportDocx={NOOP}
+              onDismissImportWarnings={NOOP}
+            />
           )}
           {screenId === "s2" && (
             <ScreenHoeGaatHet state={state} onUpdate={NOOP} />
