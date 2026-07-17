@@ -1,5 +1,5 @@
 {
-  "name": "trainingslijnen",
+  "name": "ontwikkelpaden",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -20,6 +20,8 @@
     "@neondatabase/serverless": "^1.1.0",
     "bcryptjs": "^3.0.2",
     "fast-xml-parser": "^5.9.3",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.460.0",
     "next": "16.2.9",
