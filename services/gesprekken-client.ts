@@ -1,4 +1,7 @@
 import type {
+  BeoordelaarRol,
+  BekendeMedewerker,
+  DashboardOverzicht,
   Gesprek,
   GesprekListItem,
   GesprekStatus,
@@ -29,13 +32,25 @@ export async function fetchGesprek(id: string): Promise<Gesprek> {
   return parseJson<Gesprek>(res);
 }
 
+export interface CreateGesprekOptions {
+  medewerkerEmail?: string;
+  status?: GesprekStatus;
+}
+
 export async function createGesprek(
   state?: OntwikkelpadenState,
+  options?: CreateGesprekOptions,
 ): Promise<Gesprek> {
   const res = await fetch("/api/gesprekken", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(state ? { state } : {}),
+    body: JSON.stringify({
+      ...(state ? { state } : {}),
+      ...(options?.medewerkerEmail
+        ? { medewerkerEmail: options.medewerkerEmail }
+        : {}),
+      ...(options?.status ? { status: options.status } : {}),
+    }),
   });
   return parseJson<Gesprek>(res);
 }
@@ -44,13 +59,24 @@ export async function saveGesprek(
   id: string,
   state: OntwikkelpadenState,
   status?: GesprekStatus,
+  medewerkerEmail?: string | null,
 ): Promise<Gesprek> {
   const res = await fetch(`/api/gesprekken/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(status ? { state, status } : { state }),
+    body: JSON.stringify({
+      state,
+      ...(status ? { status } : {}),
+      ...(medewerkerEmail !== undefined ? { medewerkerEmail } : {}),
+    }),
   });
   return parseJson<Gesprek>(res);
+}
+
+export async function fetchKnownUserEmails(): Promise<string[]> {
+  const res = await fetch("/api/users");
+  const data = await parseJson<{ emails: string[] }>(res);
+  return data.emails;
 }
 
 export async function importGesprekDocx(
@@ -69,6 +95,42 @@ export async function importGesprekDocx(
 export async function startNewCycle(id: string): Promise<Gesprek> {
   const res = await fetch(`/api/gesprekken/${id}/next-cycle`, {
     method: "POST",
+  });
+  return parseJson<Gesprek>(res);
+}
+
+export async function fetchDashboard(): Promise<DashboardOverzicht> {
+  const res = await fetch("/api/dashboard");
+  return parseJson<DashboardOverzicht>(res);
+}
+
+export async function fetchBekendeMedewerkers(): Promise<BekendeMedewerker[]> {
+  const res = await fetch("/api/medewerkers");
+  const data = await parseJson<{ medewerkers: BekendeMedewerker[] }>(res);
+  return data.medewerkers;
+}
+
+export async function koppelBeoordelaar(
+  medewerkerEmail: string,
+  rol: BeoordelaarRol,
+): Promise<Gesprek> {
+  const res = await fetch("/api/medewerkers/koppel-beoordelaar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ medewerkerEmail, rol }),
+  });
+  return parseJson<Gesprek>(res);
+}
+
+export async function respondBeoordelaarKoppeling(
+  gesprekId: string,
+  rol: BeoordelaarRol,
+  actie: "goedkeuren" | "afwijzen",
+): Promise<Gesprek> {
+  const res = await fetch(`/api/gesprekken/${gesprekId}/beoordelaar-status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rol, actie }),
   });
   return parseJson<Gesprek>(res);
 }

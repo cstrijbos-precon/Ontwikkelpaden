@@ -4,6 +4,7 @@ import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 export function createInitialState(): OntwikkelpadenState {
   return {
     naam: "",
+    wereld: "",
     bijPreconSinds: "",
     datum: "",
     datumVorig: "",
@@ -36,12 +37,19 @@ export function createInitialState(): OntwikkelpadenState {
     toolboxKeuze: "",
     checkpoints: "",
     tProfielOntwikkeling: "",
+    trainingslijnLeren: "",
     overigeAfspraken: "",
     datumVolgend: "",
     reflecties: [],
     akkoordProfessional: false,
+    akkoordProfessionalNaam: "",
+    akkoordProfessionalAt: "",
     akkoordHoofdbeoordelaar: false,
+    akkoordHoofdbeoordelaarNaam: "",
+    akkoordHoofdbeoordelaarAt: "",
     akkoordMedebeoordelaar: false,
+    akkoordMedebeoordelaarNaam: "",
+    akkoordMedebeoordelaarAt: "",
   };
 }
 

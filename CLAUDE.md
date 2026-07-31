@@ -1,4 +1,4 @@
-# Trainingslijnen — Claude Code instructies
+# Ontwikkelpaden — Claude Code instructies
 
 Je werkt aan de **Précon Persoonlijke Ontwikkelpaden** app (interne tool voor functioneringsgesprekken).
 

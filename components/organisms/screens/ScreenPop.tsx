@@ -221,6 +221,14 @@ export function ScreenPop({
           onChange={(e) => onUpdate("tProfielOntwikkeling", e.target.value)}
         />
       </FormField>
+      <FormField label="Wat heb je geleerd uit je trainingslijn(en)?">
+        <textarea
+          rows={3}
+          placeholder="Wat heb je opgestoken van de trainingen die je hebt gevolgd..."
+          value={state.trainingslijnLeren}
+          onChange={(e) => onUpdate("trainingslijnLeren", e.target.value)}
+        />
+      </FormField>
 
       <div className="sk">Reflecties</div>
       <div className="tip-box">

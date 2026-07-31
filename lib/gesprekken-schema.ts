@@ -41,6 +41,7 @@ const reflectieSchema = z.object({
 
 export const ontwikkelpadenStateSchema = z.object({
   naam: z.string(),
+  wereld: z.string(),
   bijPreconSinds: z.string(),
   datum: dateFieldSchema,
   datumVorig: dateFieldSchema,
@@ -68,18 +69,26 @@ export const ontwikkelpadenStateSchema = z.object({
   toolboxKeuze: z.string(),
   checkpoints: z.string(),
   tProfielOntwikkeling: z.string(),
+  trainingslijnLeren: z.string(),
   overigeAfspraken: z.string(),
   datumVolgend: dateFieldSchema,
   reflecties: z.array(reflectieSchema),
   akkoordProfessional: z.boolean(),
+  akkoordProfessionalNaam: z.string(),
+  akkoordProfessionalAt: z.string(),
   akkoordHoofdbeoordelaar: z.boolean(),
+  akkoordHoofdbeoordelaarNaam: z.string(),
+  akkoordHoofdbeoordelaarAt: z.string(),
   akkoordMedebeoordelaar: z.boolean(),
+  akkoordMedebeoordelaarNaam: z.string(),
+  akkoordMedebeoordelaarAt: z.string(),
 });
 
 export const createGesprekBodySchema = z
   .object({
     state: ontwikkelpadenStateSchema.optional(),
     medewerkerEmail: z.string().email().optional(),
+    status: gesprekStatusSchema.optional(),
   })
   .strict();
 
@@ -88,6 +97,22 @@ export const updateGesprekBodySchema = z
     state: ontwikkelpadenStateSchema,
     status: gesprekStatusSchema.optional(),
     medewerkerEmail: z.string().email().nullable().optional(),
+  })
+  .strict();
+
+const beoordelaarRolSchema = z.enum(["hoofdbeoordelaar", "medebeoordelaar"]);
+
+export const koppelBeoordelaarBodySchema = z
+  .object({
+    medewerkerEmail: z.string().email(),
+    rol: beoordelaarRolSchema,
+  })
+  .strict();
+
+export const beoordelaarStatusBodySchema = z
+  .object({
+    rol: beoordelaarRolSchema,
+    actie: z.enum(["goedkeuren", "afwijzen"]),
   })
   .strict();
 

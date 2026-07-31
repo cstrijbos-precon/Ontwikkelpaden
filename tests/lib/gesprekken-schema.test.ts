@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  beoordelaarStatusBodySchema,
   createGesprekBodySchema,
+  koppelBeoordelaarBodySchema,
   ontwikkelpadenStateSchema,
   updateGesprekBodySchema,
 } from "@/lib/gesprekken-schema";
@@ -73,6 +75,55 @@ describe("createGesprekBodySchema", () => {
     ).toBe(true);
     expect(
       createGesprekBodySchema.safeParse({ medewerkerEmail: "invalid" }).success,
+    ).toBe(false);
+  });
+
+  it("accepts an optional status (bv. archived bij upload)", () => {
+    expect(
+      createGesprekBodySchema.safeParse({ status: "archived" }).success,
+    ).toBe(true);
+    expect(
+      createGesprekBodySchema.safeParse({ status: "onbekend" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("koppelBeoordelaarBodySchema", () => {
+  it("accepts a valid request", () => {
+    expect(
+      koppelBeoordelaarBodySchema.safeParse({
+        medewerkerEmail: "jan@precon.nl",
+        rol: "hoofdbeoordelaar",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an invalid rol", () => {
+    expect(
+      koppelBeoordelaarBodySchema.safeParse({
+        medewerkerEmail: "jan@precon.nl",
+        rol: "manager",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("beoordelaarStatusBodySchema", () => {
+  it("accepts a valid request", () => {
+    expect(
+      beoordelaarStatusBodySchema.safeParse({
+        rol: "medebeoordelaar",
+        actie: "afwijzen",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an invalid actie", () => {
+    expect(
+      beoordelaarStatusBodySchema.safeParse({
+        rol: "medebeoordelaar",
+        actie: "verwijderen",
+      }).success,
     ).toBe(false);
   });
 });

@@ -27,6 +27,9 @@ function setup(gesprekId: string | null = "g-1") {
     const [huidig, setHuidig] = useState(3);
     const [saveStatus, setSaveStatus] = useState("");
     const [id, setGesprekId] = useState<string | null>(gesprekId);
+    const [medewerkerEmail, setMedewerkerEmail] = useState<string | null>(
+      null,
+    );
 
     const cycle = useCycle({
       gesprekId: id,
@@ -35,11 +38,20 @@ function setup(gesprekId: string | null = "g-1") {
       setGesprekId,
       setStatus,
       setPreviousGesprekId,
+      setMedewerkerEmail,
       setHuidig,
       setSaveStatus,
     });
 
-    return { state, status, previousGesprekId, huidig, saveStatus, ...cycle };
+    return {
+      state,
+      status,
+      previousGesprekId,
+      medewerkerEmail,
+      huidig,
+      saveStatus,
+      ...cycle,
+    };
   });
 }
 
@@ -84,6 +96,7 @@ describe("useCycle", () => {
       state: nieuweState,
       status: "draft",
       previousGesprekId: "g-1",
+      medewerkerEmail: "medewerker@precon.nl",
     } as Awaited<ReturnType<typeof startNewCycle>>);
 
     const { result } = setup();
@@ -96,6 +109,7 @@ describe("useCycle", () => {
     expect(result.current.state.naam).toBe("Pien");
     expect(result.current.status).toBe("draft");
     expect(result.current.previousGesprekId).toBe("g-1");
+    expect(result.current.medewerkerEmail).toBe("medewerker@precon.nl");
     expect(result.current.huidig).toBe(0);
   });
 });

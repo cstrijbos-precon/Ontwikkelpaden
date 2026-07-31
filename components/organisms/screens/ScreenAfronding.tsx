@@ -1,3 +1,5 @@
+import { useSession } from "next-auth/react";
+import { useState } from "react";
 import { DateInput } from "@/components/atoms/DateInput";
 import { FormField } from "@/components/molecules/FormField";
 import { ScoreBox } from "@/components/molecules/ScoreBox";
@@ -10,6 +12,7 @@ import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 interface ScreenAfrondingProps {
   state: OntwikkelpadenState;
   status: GesprekStatus;
+  medewerkerEmail: string | null;
   onUpdate: <K extends keyof OntwikkelpadenState>(
     key: K,
     value: OntwikkelpadenState[K],
@@ -17,16 +20,108 @@ interface ScreenAfrondingProps {
   onAfronden: () => void;
 }
 
+function formatTijdstip(iso: string): string {
+  if (!iso) return "";
+  const datum = new Date(iso);
+  if (Number.isNaN(datum.getTime())) return "";
+  return datum.toLocaleString("nl-NL", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+interface SignBoxProps {
+  roleLabel: string;
+  persoonEmail: string;
+  signed: boolean;
+  signedNaam: string;
+  signedAt: string;
+  canSign: boolean;
+  onSign: (naam: string) => void;
+  onWijzig: () => void;
+}
+
+function SignBox({
+  roleLabel,
+  persoonEmail,
+  signed,
+  signedNaam,
+  signedAt,
+  canSign,
+  onSign,
+  onWijzig,
+}: SignBoxProps) {
+  const [draftNaam, setDraftNaam] = useState("");
+
+  return (
+    <div className="sign-box">
+      <p style={{ margin: 0, fontWeight: "bold" }}>
+        {roleLabel}: {persoonEmail || "___________"}
+      </p>
+      {signed ? (
+        <>
+          <p style={{ margin: "4px 0 0", color: "var(--groen)" }}>
+            ✓ Ondertekend door {signedNaam}
+            {signedAt ? ` op ${formatTijdstip(signedAt)}` : ""}
+          </p>
+          {canSign && (
+            <button
+              type="button"
+              className="btn btn-t"
+              style={{ marginTop: 6, fontSize: 11 }}
+              onClick={onWijzig}
+            >
+              Wijzig
+            </button>
+          )}
+        </>
+      ) : canSign ? (
+        <div style={{ marginTop: 6, display: "flex", gap: 6 }}>
+          <input
+            value={draftNaam}
+            placeholder="Typ je volledige naam ter bevestiging"
+            onChange={(e) => setDraftNaam(e.target.value)}
+            style={{ flex: 1 }}
+          />
+          <button
+            type="button"
+            className="btn btn-v"
+            disabled={!draftNaam.trim()}
+            onClick={() => onSign(draftNaam.trim())}
+          >
+            Bevestig
+          </button>
+        </div>
+      ) : (
+        <p style={{ margin: "4px 0 0", color: "var(--grijs-licht)" }}>
+          Wacht op ondertekening door {persoonEmail || "de beoordelaar"}.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ScreenAfronding({
   state,
   status,
+  medewerkerEmail,
   onUpdate,
   onAfronden,
 }: ScreenAfrondingProps) {
+  const { data: session } = useSession();
+  const sessionEmail = session?.user?.email?.toLowerCase() ?? null;
+  const isAdmin = session?.user?.isAdmin ?? false;
+
   const alleAkkoord =
     state.akkoordProfessional &&
     state.akkoordHoofdbeoordelaar &&
     state.akkoordMedebeoordelaar;
+
+  const magTekenenAls = (roleEmail: string | null) =>
+    isAdmin ||
+    (sessionEmail !== null &&
+      roleEmail !== null &&
+      roleEmail.trim().toLowerCase() === sessionEmail);
 
   return (
     <>
@@ -93,36 +188,66 @@ export function ScreenAfronding({
           Ondertekening voor akkoord
         </p>
         <div className="sign-grid">
-          <label className="sign-box" style={{ cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={state.akkoordProfessional}
-              onChange={(e) =>
-                onUpdate("akkoordProfessional", e.target.checked)
-              }
-            />{" "}
-            Professional: {state.naam || "___________"} akkoord
-          </label>
-          <label className="sign-box" style={{ cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={state.akkoordHoofdbeoordelaar}
-              onChange={(e) =>
-                onUpdate("akkoordHoofdbeoordelaar", e.target.checked)
-              }
-            />{" "}
-            Hoofdbeoordelaar: {state.hoofdbeoordelaar || "___________"} akkoord
-          </label>
-          <label className="sign-box" style={{ cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={state.akkoordMedebeoordelaar}
-              onChange={(e) =>
-                onUpdate("akkoordMedebeoordelaar", e.target.checked)
-              }
-            />{" "}
-            Medebeoordelaar: {state.medebeoordelaar || "___________"} akkoord
-          </label>
+          <SignBox
+            roleLabel="Professional"
+            persoonEmail={medewerkerEmail ?? state.naam}
+            signed={state.akkoordProfessional}
+            signedNaam={state.akkoordProfessionalNaam}
+            signedAt={state.akkoordProfessionalAt}
+            canSign={magTekenenAls(medewerkerEmail)}
+            onSign={(naam) => {
+              onUpdate("akkoordProfessional", true);
+              onUpdate("akkoordProfessionalNaam", naam);
+              onUpdate("akkoordProfessionalAt", new Date().toISOString());
+            }}
+            onWijzig={() => {
+              onUpdate("akkoordProfessional", false);
+              onUpdate("akkoordProfessionalNaam", "");
+              onUpdate("akkoordProfessionalAt", "");
+            }}
+          />
+          <SignBox
+            roleLabel="Hoofdbeoordelaar"
+            persoonEmail={state.hoofdbeoordelaar}
+            signed={state.akkoordHoofdbeoordelaar}
+            signedNaam={state.akkoordHoofdbeoordelaarNaam}
+            signedAt={state.akkoordHoofdbeoordelaarAt}
+            canSign={magTekenenAls(state.hoofdbeoordelaar)}
+            onSign={(naam) => {
+              onUpdate("akkoordHoofdbeoordelaar", true);
+              onUpdate("akkoordHoofdbeoordelaarNaam", naam);
+              onUpdate(
+                "akkoordHoofdbeoordelaarAt",
+                new Date().toISOString(),
+              );
+            }}
+            onWijzig={() => {
+              onUpdate("akkoordHoofdbeoordelaar", false);
+              onUpdate("akkoordHoofdbeoordelaarNaam", "");
+              onUpdate("akkoordHoofdbeoordelaarAt", "");
+            }}
+          />
+          <SignBox
+            roleLabel="Medebeoordelaar"
+            persoonEmail={state.medebeoordelaar}
+            signed={state.akkoordMedebeoordelaar}
+            signedNaam={state.akkoordMedebeoordelaarNaam}
+            signedAt={state.akkoordMedebeoordelaarAt}
+            canSign={magTekenenAls(state.medebeoordelaar)}
+            onSign={(naam) => {
+              onUpdate("akkoordMedebeoordelaar", true);
+              onUpdate("akkoordMedebeoordelaarNaam", naam);
+              onUpdate(
+                "akkoordMedebeoordelaarAt",
+                new Date().toISOString(),
+              );
+            }}
+            onWijzig={() => {
+              onUpdate("akkoordMedebeoordelaar", false);
+              onUpdate("akkoordMedebeoordelaarNaam", "");
+              onUpdate("akkoordMedebeoordelaarAt", "");
+            }}
+          />
         </div>
         <button
           type="button"

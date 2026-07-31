@@ -61,6 +61,7 @@ export interface Reflectie {
 
 export interface OntwikkelpadenState {
   naam: string;
+  wereld: string;
   bijPreconSinds: string;
   datum: string;
   datumVorig: string;
@@ -88,10 +89,17 @@ export interface OntwikkelpadenState {
   toolboxKeuze: string;
   checkpoints: string;
   tProfielOntwikkeling: string;
+  trainingslijnLeren: string;
   overigeAfspraken: string;
   datumVolgend: string;
   reflecties: Reflectie[];
   akkoordProfessional: boolean;
+  akkoordProfessionalNaam: string;
+  akkoordProfessionalAt: string;
   akkoordHoofdbeoordelaar: boolean;
+  akkoordHoofdbeoordelaarNaam: string;
+  akkoordHoofdbeoordelaarAt: string;
   akkoordMedebeoordelaar: boolean;
+  akkoordMedebeoordelaarNaam: string;
+  akkoordMedebeoordelaarAt: string;
 }

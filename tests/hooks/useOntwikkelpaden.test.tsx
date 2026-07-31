@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOntwikkelpaden } from "@/hooks/useOntwikkelpaden";
 import { createInitialState } from "@/lib/initial-state";
 
@@ -7,9 +7,15 @@ vi.mock("@/lib/load-active-gesprek", () => ({
   loadActiveGesprek: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("@/services/gesprekken-client", () => ({
   saveGesprek: vi.fn(),
   importGesprekDocx: vi.fn(),
+  fetchKnownUserEmails: vi.fn(),
+  fetchGesprek: vi.fn(),
 }));
 
 vi.mock("@/lib/export-word", () => ({
@@ -17,9 +23,18 @@ vi.mock("@/lib/export-word", () => ({
 }));
 
 import { loadActiveGesprek } from "@/lib/load-active-gesprek";
-import { importGesprekDocx, saveGesprek } from "@/services/gesprekken-client";
+import {
+  fetchGesprek,
+  fetchKnownUserEmails,
+  importGesprekDocx,
+  saveGesprek,
+} from "@/services/gesprekken-client";
 
 describe("useOntwikkelpaden", () => {
+  beforeEach(() => {
+    vi.mocked(fetchKnownUserEmails).mockResolvedValue([]);
+  });
+
   afterEach(() => {
     vi.resetAllMocks();
   });
@@ -32,6 +47,7 @@ describe("useOntwikkelpaden", () => {
       state,
       status: "draft",
       previousGesprekId: null,
+      medewerkerEmail: null,
     });
 
     const { result } = renderHook(() => useOntwikkelpaden());
@@ -39,6 +55,26 @@ describe("useOntwikkelpaden", () => {
     await waitFor(() => expect(result.current.hydrated).toBe(true));
     expect(result.current.state.naam).toBe("Jan");
     expect(result.current.loadError).toBe("");
+  });
+
+  it("loads an explicit gesprekId directly and skips loadActiveGesprek", async () => {
+    const state = createInitialState();
+    state.naam = "Expliciet";
+    vi.mocked(fetchGesprek).mockResolvedValue({
+      id: "g-9",
+      state,
+      status: "draft",
+      previousGesprekId: null,
+      medewerkerEmail: "mede@precon.nl",
+    } as Awaited<ReturnType<typeof fetchGesprek>>);
+
+    const { result } = renderHook(() => useOntwikkelpaden("g-9"));
+
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(fetchGesprek).toHaveBeenCalledWith("g-9");
+    expect(loadActiveGesprek).not.toHaveBeenCalled();
+    expect(result.current.state.naam).toBe("Expliciet");
+    expect(result.current.medewerkerEmail).toBe("mede@precon.nl");
   });
 
   it("shows load error on failure", async () => {
@@ -57,6 +93,7 @@ describe("useOntwikkelpaden", () => {
       state,
       status: "draft",
       previousGesprekId: null,
+      medewerkerEmail: null,
     });
     vi.mocked(saveGesprek).mockResolvedValue(
       {} as Awaited<ReturnType<typeof saveGesprek>>,
@@ -83,6 +120,7 @@ describe("useOntwikkelpaden", () => {
       state,
       status: "draft",
       previousGesprekId: null,
+      medewerkerEmail: null,
     });
     vi.mocked(saveGesprek).mockResolvedValue(
       {} as Awaited<ReturnType<typeof saveGesprek>>,
@@ -131,6 +169,7 @@ describe("useOntwikkelpaden", () => {
       state,
       status: "completed",
       previousGesprekId: "g-0",
+      medewerkerEmail: null,
     });
 
     const { result } = renderHook(() => useOntwikkelpaden());
@@ -163,6 +202,7 @@ describe("useOntwikkelpaden", () => {
       state,
       status: "draft",
       previousGesprekId: null,
+      medewerkerEmail: null,
     });
     const { exportWord } = await import("@/lib/export-word");
 
@@ -182,6 +222,7 @@ describe("useOntwikkelpaden", () => {
       state,
       status: "draft",
       previousGesprekId: null,
+      medewerkerEmail: null,
     });
     vi.mocked(importGesprekDocx).mockResolvedValue({
       state: { naam: "Uit document" },
@@ -206,6 +247,63 @@ describe("useOntwikkelpaden", () => {
     expect(result.current.importWarnings).toEqual([]);
   });
 
+  it("loads known emails and links the current user as medewerker", async () => {
+    const state = createInitialState();
+    vi.mocked(loadActiveGesprek).mockResolvedValue({
+      id: "g-1",
+      state,
+      status: "draft",
+      previousGesprekId: null,
+      medewerkerEmail: null,
+    });
+    vi.mocked(fetchKnownUserEmails).mockResolvedValue([
+      "a@precon.nl",
+      "b@precon.nl",
+    ]);
+    vi.mocked(saveGesprek).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof saveGesprek>>,
+    );
+
+    const { result } = renderHook(() => useOntwikkelpaden());
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    await waitFor(() =>
+      expect(result.current.knownEmails).toEqual(["a@precon.nl", "b@precon.nl"]),
+    );
+
+    await act(async () => {
+      await result.current.setMedewerkerEmail("a@precon.nl");
+    });
+
+    expect(result.current.medewerkerEmail).toBe("a@precon.nl");
+    expect(saveGesprek).toHaveBeenCalledWith(
+      "g-1",
+      expect.anything(),
+      undefined,
+      "a@precon.nl",
+    );
+  });
+
+  it("reverts medewerkerEmail when linking fails", async () => {
+    const state = createInitialState();
+    vi.mocked(loadActiveGesprek).mockResolvedValue({
+      id: "g-1",
+      state,
+      status: "draft",
+      previousGesprekId: null,
+      medewerkerEmail: null,
+    });
+    vi.mocked(saveGesprek).mockRejectedValue(new Error("db"));
+
+    const { result } = renderHook(() => useOntwikkelpaden());
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    await act(async () => {
+      await result.current.setMedewerkerEmail("a@precon.nl");
+    });
+
+    expect(result.current.medewerkerEmail).toBeNull();
+  });
+
   it("shows an error message when docx import fails", async () => {
     const state = createInitialState();
     vi.mocked(loadActiveGesprek).mockResolvedValue({
@@ -213,6 +311,7 @@ describe("useOntwikkelpaden", () => {
       state,
       status: "draft",
       previousGesprekId: null,
+      medewerkerEmail: null,
     });
     vi.mocked(importGesprekDocx).mockRejectedValue(
       new Error("Geen geldig .docx-bestand"),

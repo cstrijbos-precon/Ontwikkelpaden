@@ -1,4 +1,4 @@
-# Trainingslijnen — Précon Persoonlijke Ontwikkelpaden
+# Ontwikkelpaden — Précon Persoonlijke Ontwikkelpaden
 
 Interne webapp voor functioneringsgesprekken en POP. Ingevulde gegevens worden opgeslagen in een **gedeelde Neon-database** (niet in je browser).
 
@@ -37,7 +37,7 @@ Je hoeft **geen** Neon-account en **geen** SQL uit te voeren als de beheerder de
 
 ## Stap 1 — Codespace openen
 
-1. Ga in je browser naar de **GitHub-repository** van Trainingslijnen.
+1. Ga in je browser naar de **GitHub-repository** van Ontwikkelpaden.
 2. Klik op de groene knop **Code**.
 3. Kies het tabblad **Codespaces**.
 4. Klik op **Create codespace on main** (of op de naam van de standaardbranch).
@@ -197,7 +197,7 @@ Daarna hoeven andere gebruikers **alleen** de `DATABASE_URL` in hun `.env.local`
 
 ### Vercel
 
-1. Project **trainingslijnen** koppelen aan deze repo.
+1. Project **ontwikkelpaden** koppelen aan deze repo.
 2. Neon-integratie → `DATABASE_URL` in Vercel Environment Variables.
 3. Ook `AUTH_SECRET`, `APP_USERS`, `APP_ADMINS` zetten.
 4. Deel `DATABASE_URL` veilig met gebruikers voor Codespaces.

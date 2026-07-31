@@ -1,17 +1,22 @@
+import type { BeoordelaarStatus } from "@/lib/gesprekken-access";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 export type GesprekStatus = "draft" | "completed" | "archived";
+export type { BeoordelaarStatus };
 
 export interface Gesprek {
   id: string;
   medewerkerNaam: string;
   medewerkerEmail: string | null;
+  wereld: string;
   bijPreconSinds: string;
   gesprekDatum: string | null;
   datumVorig: string | null;
   datumVolgend: string | null;
   hoofdbeoordelaar: string;
+  hoofdbeoordelaarStatus: BeoordelaarStatus;
   medebeoordelaar: string;
+  medebeoordelaarStatus: BeoordelaarStatus;
   status: GesprekStatus;
   state: OntwikkelpadenState;
   previousGesprekId: string | null;
@@ -28,5 +33,22 @@ export interface GesprekListItem {
   gesprekDatum: string | null;
   status: GesprekStatus;
   hoofdbeoordelaar: string;
+  hoofdbeoordelaarStatus: BeoordelaarStatus;
+  medebeoordelaar: string;
+  medebeoordelaarStatus: BeoordelaarStatus;
   updatedAt: string;
+}
+
+export interface BekendeMedewerker {
+  naam: string;
+  email: string;
+}
+
+export type BeoordelaarRol = "hoofdbeoordelaar" | "medebeoordelaar";
+
+export interface DashboardOverzicht {
+  eigen: GesprekListItem[];
+  alsHoofdbeoordelaar: GesprekListItem[];
+  alsMedebeoordelaar: GesprekListItem[];
+  pendingGoedkeuringen: GesprekListItem[];
 }

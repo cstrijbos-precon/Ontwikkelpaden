@@ -46,9 +46,12 @@ export function GesprekArchiefViewer({ gesprek }: GesprekArchiefViewerProps) {
             <ScreenGegevens
               state={state}
               importWarnings={[]}
+              medewerkerEmail={gesprek.medewerkerEmail}
+              knownEmails={[]}
               onUpdate={NOOP}
               onImportDocx={NOOP}
               onDismissImportWarnings={NOOP}
+              onSetMedewerkerEmail={NOOP}
             />
           )}
           {screenId === "s2" && (
@@ -93,6 +96,7 @@ export function GesprekArchiefViewer({ gesprek }: GesprekArchiefViewerProps) {
             <ScreenAfronding
               state={state}
               status={gesprek.status}
+              medewerkerEmail={gesprek.medewerkerEmail}
               onUpdate={NOOP}
               onAfronden={NOOP}
             />

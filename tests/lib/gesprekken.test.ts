@@ -1,9 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  BeoordelaarAlGekoppeldError,
   createGesprek,
+  GeenToegangError,
   GesprekNotCompletedError,
+  getBekendeMedewerkers,
+  getDashboardOverzicht,
   getGesprekById,
+  getPendingGoedkeuringen,
   listGesprekken,
+  MedewerkerNietGevondenError,
+  requestBeoordelaarKoppeling,
+  respondBeoordelaarKoppeling,
   startNewCycle,
   updateGesprek,
 } from "@/lib/gesprekken";
@@ -22,12 +30,15 @@ function gesprekRow(overrides: Record<string, unknown> = {}) {
     id: "gesprek-1",
     medewerker_naam: "Jan",
     medewerker_email: "jan@precon.nl",
+    wereld: "QA",
     bij_precon_sinds: "2020",
     gesprek_datum: "2024-01-15",
     datum_vorig: null,
     datum_volgend: null,
     hoofdbeoordelaar: "Lead",
+    hoofdbeoordelaar_status: "toegestaan",
     medebeoordelaar: "",
+    medebeoordelaar_status: "toegestaan",
     status: "draft",
     state,
     previous_gesprek_id: null,
@@ -96,6 +107,30 @@ describe("getGesprekById", () => {
       await getGesprekById("gesprek-1", "other@precon.nl", false),
     ).toBeNull();
   });
+
+  it("returns gesprek when user is the hoofdbeoordelaar", async () => {
+    sqlMock.mockResolvedValueOnce([
+      gesprekRow({ hoofdbeoordelaar: "lead@precon.nl" }),
+    ]);
+    const gesprek = await getGesprekById(
+      "gesprek-1",
+      "Lead@Precon.nl",
+      false,
+    );
+    expect(gesprek?.id).toBe("gesprek-1");
+  });
+
+  it("returns gesprek when user is the medebeoordelaar", async () => {
+    sqlMock.mockResolvedValueOnce([
+      gesprekRow({ medebeoordelaar: "mede@precon.nl" }),
+    ]);
+    const gesprek = await getGesprekById(
+      "gesprek-1",
+      "mede@precon.nl",
+      false,
+    );
+    expect(gesprek?.id).toBe("gesprek-1");
+  });
 });
 
 describe("createGesprek", () => {
@@ -116,6 +151,46 @@ describe("createGesprek", () => {
     await expect(createGesprek("creator@precon.nl")).rejects.toThrow(
       "Failed to create gesprek",
     );
+  });
+
+  it("respecteert een expliciet meegegeven status (bv. archived bij upload)", async () => {
+    sqlMock
+      .mockResolvedValueOnce([gesprekRow({ status: "archived" })])
+      .mockResolvedValue([]);
+
+    const gesprek = await createGesprek(
+      "jan@precon.nl",
+      undefined,
+      "jan@precon.nl",
+      undefined,
+      "archived",
+    );
+
+    expect(gesprek.status).toBe("archived");
+    const insertCall = sqlMock.mock.calls[0];
+    expect(insertCall).toContain("archived");
+  });
+
+  it("persisteert wereld en berekent huidig_niveau per pad in gesprek_paden", async () => {
+    sqlMock.mockResolvedValueOnce([gesprekRow()]).mockResolvedValue([]);
+
+    const state = createInitialState();
+    state.naam = "Jan";
+    state.wereld = "RA";
+    state.scores = { b: 1, k: 1, o: 1, org: 1, t: 0 };
+
+    await createGesprek("creator@precon.nl", state);
+
+    const insertGesprekCall = sqlMock.mock.calls[0];
+    expect(insertGesprekCall).toContain("RA");
+
+    const insertPadenCall = sqlMock.mock.calls.find(
+      (call) =>
+        (call[0] as TemplateStringsArray)
+          .join("")
+          .includes("INSERT INTO gesprek_paden") && call.includes("vakexpert"),
+    );
+    expect(insertPadenCall).toContain(1);
   });
 });
 
@@ -151,6 +226,302 @@ describe("updateGesprek", () => {
       createInitialState(),
     );
     expect(result).toBeNull();
+  });
+
+  it("zet hoofdbeoordelaar_status naar toegestaan als de medewerker zelf een nieuw adres invult", async () => {
+    const existingRow = gesprekRow({
+      hoofdbeoordelaar: "oud@precon.nl",
+      hoofdbeoordelaar_status: "in_afwachting",
+    });
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    nextState.hoofdbeoordelaar = "nieuw@precon.nl";
+
+    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCall).toContain("toegestaan");
+  });
+
+  it("laat een openstaande hoofdbeoordelaar_status met rust als het adres niet wijzigt", async () => {
+    const existingRow = gesprekRow({
+      hoofdbeoordelaar: "hoofd@precon.nl",
+      hoofdbeoordelaar_status: "in_afwachting",
+    });
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    nextState.hoofdbeoordelaar = "hoofd@precon.nl";
+
+    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCall).toContain("in_afwachting");
+  });
+
+  it("persisteert de wereld uit de state", async () => {
+    const row = gesprekRow();
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([row])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    nextState.wereld = "Learning";
+
+    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCall).toContain("Learning");
+  });
+});
+
+describe("requestBeoordelaarKoppeling", () => {
+  beforeEach(() => {
+    sqlMock.mockReset();
+  });
+
+  it("koppelt de beoordelaar en zet status in_afwachting", async () => {
+    const row = gesprekRow({ hoofdbeoordelaar: "" });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([
+        { ...row, hoofdbeoordelaar: "beoordelaar@precon.nl", hoofdbeoordelaar_status: "in_afwachting" },
+      ]);
+
+    const gesprek = await requestBeoordelaarKoppeling(
+      "jan@precon.nl",
+      "hoofdbeoordelaar",
+      "beoordelaar@precon.nl",
+    );
+
+    expect(gesprek.hoofdbeoordelaar).toBe("beoordelaar@precon.nl");
+    expect(gesprek.hoofdbeoordelaarStatus).toBe("in_afwachting");
+  });
+
+  it("gooit MedewerkerNietGevondenError als er geen gesprek is voor deze medewerker", async () => {
+    sqlMock.mockResolvedValueOnce([]);
+    await expect(
+      requestBeoordelaarKoppeling(
+        "onbekend@precon.nl",
+        "hoofdbeoordelaar",
+        "b@precon.nl",
+      ),
+    ).rejects.toThrow(MedewerkerNietGevondenError);
+  });
+
+  it("gooit BeoordelaarAlGekoppeldError als het rol-veld al gevuld is", async () => {
+    sqlMock.mockResolvedValueOnce([
+      gesprekRow({ hoofdbeoordelaar: "al-iemand@precon.nl" }),
+    ]);
+    await expect(
+      requestBeoordelaarKoppeling(
+        "jan@precon.nl",
+        "hoofdbeoordelaar",
+        "nieuw@precon.nl",
+      ),
+    ).rejects.toThrow(BeoordelaarAlGekoppeldError);
+  });
+});
+
+describe("respondBeoordelaarKoppeling", () => {
+  beforeEach(() => {
+    sqlMock.mockReset();
+  });
+
+  it("keurt een verzoek goed als de medewerker zelf dit doet", async () => {
+    const row = gesprekRow({
+      hoofdbeoordelaar: "hoofd@precon.nl",
+      hoofdbeoordelaar_status: "in_afwachting",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([{ ...row, hoofdbeoordelaar_status: "toegestaan" }]);
+
+    const gesprek = await respondBeoordelaarKoppeling(
+      "gesprek-1",
+      "jan@precon.nl",
+      false,
+      "hoofdbeoordelaar",
+      "goedkeuren",
+    );
+
+    expect(gesprek?.hoofdbeoordelaarStatus).toBe("toegestaan");
+  });
+
+  it("wijst een verzoek af door het veld leeg te maken", async () => {
+    const row = gesprekRow({
+      hoofdbeoordelaar: "hoofd@precon.nl",
+      hoofdbeoordelaar_status: "in_afwachting",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([
+        { ...row, hoofdbeoordelaar: "", hoofdbeoordelaar_status: "toegestaan" },
+      ]);
+
+    const gesprek = await respondBeoordelaarKoppeling(
+      "gesprek-1",
+      "jan@precon.nl",
+      false,
+      "hoofdbeoordelaar",
+      "afwijzen",
+    );
+
+    expect(gesprek?.hoofdbeoordelaar).toBe("");
+  });
+
+  it("gooit GeenToegangError als iemand anders dan de medewerker het probeert", async () => {
+    sqlMock.mockResolvedValueOnce([gesprekRow()]);
+
+    await expect(
+      respondBeoordelaarKoppeling(
+        "gesprek-1",
+        "creator@precon.nl",
+        false,
+        "hoofdbeoordelaar",
+        "goedkeuren",
+      ),
+    ).rejects.toThrow(GeenToegangError);
+  });
+
+  it("staat admins ook toe om te reageren", async () => {
+    const row = gesprekRow({
+      hoofdbeoordelaar: "hoofd@precon.nl",
+      hoofdbeoordelaar_status: "in_afwachting",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([{ ...row, hoofdbeoordelaar_status: "toegestaan" }]);
+
+    const gesprek = await respondBeoordelaarKoppeling(
+      "gesprek-1",
+      "admin@precon.nl",
+      true,
+      "hoofdbeoordelaar",
+      "goedkeuren",
+    );
+    expect(gesprek?.hoofdbeoordelaarStatus).toBe("toegestaan");
+  });
+
+  it("retourneert null als het gesprek niet gevonden/toegankelijk is", async () => {
+    sqlMock.mockResolvedValueOnce([]);
+    const gesprek = await respondBeoordelaarKoppeling(
+      "missing",
+      "jan@precon.nl",
+      false,
+      "hoofdbeoordelaar",
+      "goedkeuren",
+    );
+    expect(gesprek).toBeNull();
+  });
+});
+
+describe("getBekendeMedewerkers", () => {
+  beforeEach(() => {
+    sqlMock.mockReset();
+  });
+
+  it("geeft naam+e-mail terug, gesorteerd op naam", async () => {
+    sqlMock.mockResolvedValueOnce([
+      { medewerker_naam: "Zeb", medewerker_email: "zeb@precon.nl" },
+      { medewerker_naam: "Alice", medewerker_email: "alice@precon.nl" },
+    ]);
+
+    const medewerkers = await getBekendeMedewerkers();
+    expect(medewerkers).toEqual([
+      { naam: "Alice", email: "alice@precon.nl" },
+      { naam: "Zeb", email: "zeb@precon.nl" },
+    ]);
+  });
+});
+
+describe("getPendingGoedkeuringen", () => {
+  beforeEach(() => {
+    sqlMock.mockReset();
+  });
+
+  it("geeft gesprekken met een openstaand verzoek terug", async () => {
+    sqlMock.mockResolvedValueOnce([
+      {
+        id: "gesprek-1",
+        medewerker_naam: "Jan",
+        medewerker_email: "jan@precon.nl",
+        gesprek_datum: "2024-01-15",
+        status: "draft",
+        hoofdbeoordelaar: "hoofd@precon.nl",
+        hoofdbeoordelaar_status: "in_afwachting",
+        medebeoordelaar: "",
+        medebeoordelaar_status: "toegestaan",
+        updated_at: "2024-01-02",
+      },
+    ]);
+
+    const items = await getPendingGoedkeuringen("jan@precon.nl");
+    expect(items).toHaveLength(1);
+    expect(items[0]?.hoofdbeoordelaarStatus).toBe("in_afwachting");
+  });
+});
+
+describe("getDashboardOverzicht", () => {
+  beforeEach(() => {
+    sqlMock.mockReset();
+  });
+
+  it("categoriseert gesprekken in eigen/hoofdbeoordelaar/medebeoordelaar", async () => {
+    sqlMock
+      .mockResolvedValueOnce([
+        {
+          id: "1",
+          medewerker_naam: "Jan",
+          medewerker_email: "jan@precon.nl",
+          gesprek_datum: "2024-01-01",
+          status: "draft",
+          hoofdbeoordelaar: "",
+          hoofdbeoordelaar_status: "toegestaan",
+          medebeoordelaar: "",
+          medebeoordelaar_status: "toegestaan",
+          updated_at: "2024-01-01",
+        },
+        {
+          id: "2",
+          medewerker_naam: "Piet",
+          medewerker_email: "piet@precon.nl",
+          gesprek_datum: "2023-01-01",
+          status: "completed",
+          hoofdbeoordelaar: "jan@precon.nl",
+          hoofdbeoordelaar_status: "toegestaan",
+          medebeoordelaar: "",
+          medebeoordelaar_status: "toegestaan",
+          updated_at: "2023-01-01",
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const overzicht = await getDashboardOverzicht("jan@precon.nl", false);
+
+    expect(overzicht.eigen).toHaveLength(1);
+    expect(overzicht.eigen[0]?.id).toBe("1");
+    expect(overzicht.alsHoofdbeoordelaar).toHaveLength(1);
+    expect(overzicht.alsHoofdbeoordelaar[0]?.id).toBe("2");
+    expect(overzicht.alsMedebeoordelaar).toHaveLength(0);
+    expect(overzicht.pendingGoedkeuringen).toEqual([]);
   });
 });
 

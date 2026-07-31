@@ -1,13 +1,19 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCycle } from "@/hooks/useCycle";
 import { useReflecties } from "@/hooks/useReflecties";
 import { exportWord } from "@/lib/export-word";
 import { clampPadNiveau, clampScore } from "@/lib/field-format";
-import { createInitialState } from "@/lib/initial-state";
+import { createInitialState, mergeWithInitialState } from "@/lib/initial-state";
 import { loadActiveGesprek } from "@/lib/load-active-gesprek";
-import { importGesprekDocx, saveGesprek } from "@/services/gesprekken-client";
+import {
+  fetchGesprek,
+  fetchKnownUserEmails,
+  importGesprekDocx,
+  saveGesprek,
+} from "@/services/gesprekken-client";
 import type { GesprekStatus } from "@/types/gesprekken";
 import type {
   CompId,
@@ -15,7 +21,8 @@ import type {
   PadId,
 } from "@/types/ontwikkelpaden";
 
-export function useOntwikkelpaden() {
+export function useOntwikkelpaden(gesprekIdParam?: string) {
+  const schermParam = useSearchParams().get("scherm");
   const [huidig, setHuidig] = useState(0);
   const [gesprekId, setGesprekId] = useState<string | null>(null);
   const [state, setState] = useState<OntwikkelpadenState>(createInitialState);
@@ -23,6 +30,10 @@ export function useOntwikkelpaden() {
   const [previousGesprekId, setPreviousGesprekId] = useState<string | null>(
     null,
   );
+  const [medewerkerEmail, setMedewerkerEmailState] = useState<string | null>(
+    null,
+  );
+  const [knownEmails, setKnownEmails] = useState<string[]>([]);
   const [saveStatus, setSaveStatus] = useState("");
   const [loadError, setLoadError] = useState("");
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
@@ -39,12 +50,27 @@ export function useOntwikkelpaden() {
 
     async function load() {
       try {
-        const active = await loadActiveGesprek();
-        if (cancelled) return;
-        setGesprekId(active.id);
-        setState(active.state);
-        setStatus(active.status ?? "draft");
-        setPreviousGesprekId(active.previousGesprekId ?? null);
+        if (gesprekIdParam) {
+          const gesprek = await fetchGesprek(gesprekIdParam);
+          if (cancelled) return;
+          setGesprekId(gesprek.id);
+          setState(mergeWithInitialState(gesprek.state));
+          setStatus(gesprek.status ?? "draft");
+          setPreviousGesprekId(gesprek.previousGesprekId ?? null);
+          setMedewerkerEmailState(gesprek.medewerkerEmail ?? null);
+          const schermIndex = schermParam ? Number(schermParam) : null;
+          if (schermIndex !== null && !Number.isNaN(schermIndex)) {
+            setHuidig(schermIndex);
+          }
+        } else {
+          const active = await loadActiveGesprek();
+          if (cancelled) return;
+          setGesprekId(active.id);
+          setState(active.state);
+          setStatus(active.status ?? "draft");
+          setPreviousGesprekId(active.previousGesprekId ?? null);
+          setMedewerkerEmailState(active.medewerkerEmail ?? null);
+        }
         setLoadError("");
       } catch (error) {
         if (cancelled) return;
@@ -60,6 +86,20 @@ export function useOntwikkelpaden() {
     return () => {
       cancelled = true;
     };
+  }, [gesprekIdParam, schermParam]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchKnownUserEmails()
+      .then((emails) => {
+        if (!cancelled) setKnownEmails(emails);
+      })
+      .catch(() => {
+        // Autocomplete is best-effort; geen bekende adressen is geen blokkade.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const { addReflectie, updateReflectie, removeReflectie } =
@@ -71,6 +111,7 @@ export function useOntwikkelpaden() {
     setGesprekId,
     setStatus,
     setPreviousGesprekId,
+    setMedewerkerEmail: setMedewerkerEmailState,
     setHuidig,
     setSaveStatus,
   });
@@ -113,6 +154,22 @@ export function useOntwikkelpaden() {
     }, 300_000);
     return () => clearInterval(interval);
   }, [hydrated, gesprekId, loadError, state, save]);
+
+  const setMedewerkerEmail = useCallback(
+    async (email: string | null) => {
+      if (!gesprekId) return;
+      const previous = medewerkerEmail;
+      setMedewerkerEmailState(email);
+      try {
+        await saveGesprek(gesprekId, state, undefined, email);
+      } catch {
+        setMedewerkerEmailState(previous);
+        setSaveStatus("⚠ Koppelen mislukt");
+        setTimeout(() => setSaveStatus(""), 3000);
+      }
+    },
+    [gesprekId, state, medewerkerEmail],
+  );
 
   const updateField = useCallback(
     <K extends keyof OntwikkelpadenState>(
@@ -268,6 +325,9 @@ export function useOntwikkelpaden() {
     state,
     status,
     previousGesprekId,
+    medewerkerEmail,
+    knownEmails,
+    setMedewerkerEmail,
     saveStatus,
     loadError,
     importWarnings,

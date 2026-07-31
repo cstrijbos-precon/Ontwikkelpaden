@@ -6,7 +6,7 @@ export function LoginCard() {
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-lg" />
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Trainingslijnen</h1>
+          <h1 className="text-lg font-bold text-slate-900">Ontwikkelpaden</h1>
           <p className="text-xs text-slate-500">Log in om te beginnen</p>
         </div>
       </div>

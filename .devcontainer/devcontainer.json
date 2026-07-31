@@ -1,15 +1,15 @@
 {
-  "name": "Trainingslijnen",
+  "name": "Ontwikkelpaden",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
   "postCreateCommand": "npm install",
   "forwardPorts": [3000, 3001],
   "portsAttributes": {
     "3000": {
-      "label": "Trainingslijnen",
+      "label": "Ontwikkelpaden",
       "onAutoForward": "openBrowser"
     },
     "3001": {
-      "label": "Trainingslijnen (reserve)",
+      "label": "Ontwikkelpaden (reserve)",
       "onAutoForward": "silent"
     }
   },

@@ -15,8 +15,12 @@ import { TabNavigation } from "@/components/organisms/TabNavigation";
 import { useOntwikkelpaden } from "@/hooks/useOntwikkelpaden";
 import { SCHERMEN } from "@/lib/data/schermen";
 
-export function OntwikkelpadenApp() {
-  const app = useOntwikkelpaden();
+interface OntwikkelpadenAppProps {
+  gesprekId?: string;
+}
+
+export function OntwikkelpadenApp({ gesprekId }: OntwikkelpadenAppProps = {}) {
+  const app = useOntwikkelpaden(gesprekId);
 
   if (!app.hydrated) {
     return (
@@ -64,9 +68,12 @@ export function OntwikkelpadenApp() {
             <ScreenGegevens
               state={app.state}
               importWarnings={app.importWarnings}
+              medewerkerEmail={app.medewerkerEmail}
+              knownEmails={app.knownEmails}
               onUpdate={app.updateField}
               onImportDocx={app.handleImportDocx}
               onDismissImportWarnings={app.dismissImportWarnings}
+              onSetMedewerkerEmail={app.setMedewerkerEmail}
             />
           )}
           {screenId === "s2" && (
@@ -113,6 +120,7 @@ export function OntwikkelpadenApp() {
             <ScreenAfronding
               state={app.state}
               status={app.status}
+              medewerkerEmail={app.medewerkerEmail}
               onUpdate={app.updateField}
               onAfronden={app.handleAfronden}
             />

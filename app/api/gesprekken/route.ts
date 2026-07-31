@@ -55,6 +55,8 @@ export async function POST(request: Request) {
       session.user.email,
       parsed.data.state,
       parsed.data.medewerkerEmail,
+      undefined,
+      parsed.data.status,
     );
     return Response.json(gesprek, { status: 201 });
   } catch {

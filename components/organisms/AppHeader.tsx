@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 
 interface AppHeaderProps {
   saveStatus: string;
@@ -23,6 +24,9 @@ export function AppHeader({ saveStatus, onSave, onExport }: AppHeaderProps) {
         </div>
         <div className="save-area">
           <span className="save-status">{saveStatus}</span>
+          <Link href="/dashboard" className="btn btn-ghost-header">
+            ← Dashboard
+          </Link>
           <button
             type="button"
             className="btn btn-ghost-header"

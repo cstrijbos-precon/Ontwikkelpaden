@@ -5,6 +5,7 @@ import { createInitialState } from "@/lib/initial-state";
 function afgerondGesprek() {
   const state = createInitialState();
   state.naam = "Pien";
+  state.wereld = "RA";
   state.bijPreconSinds = "januari 2022";
   state.niveauInschaling = "Medior";
   state.datum = "2026-06-08";
@@ -52,6 +53,7 @@ describe("buildNextCycleState", () => {
   it("copies naam, bijPreconSinds en niveauInschaling", () => {
     const next = buildNextCycleState(afgerondGesprek());
     expect(next.naam).toBe("Pien");
+    expect(next.wereld).toBe("RA");
     expect(next.bijPreconSinds).toBe("januari 2022");
     expect(next.niveauInschaling).toBe("Medior");
   });

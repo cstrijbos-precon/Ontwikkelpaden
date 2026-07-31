@@ -1,3 +1,4 @@
+import { berekenAlleNiveaus } from "@/lib/bereken-niveau";
 import { buildNextCycleState } from "@/lib/cycle-carry-over";
 import { sql } from "@/lib/db";
 import {
@@ -6,9 +7,13 @@ import {
   enforceDateOrNull,
   formatDateFromDb,
 } from "@/lib/field-format";
+import type { BeoordelaarStatus } from "@/lib/gesprekken-access";
 import { canAccessGesprek } from "@/lib/gesprekken-access";
 import { createInitialState, mergeWithInitialState } from "@/lib/initial-state";
 import type {
+  BeoordelaarRol,
+  BekendeMedewerker,
+  DashboardOverzicht,
   Gesprek,
   GesprekListItem,
   GesprekStatus,
@@ -29,6 +34,9 @@ interface GesprekListRow {
   gesprek_datum: string | null;
   status: GesprekStatus;
   hoofdbeoordelaar: string;
+  hoofdbeoordelaar_status: BeoordelaarStatus;
+  medebeoordelaar: string;
+  medebeoordelaar_status: BeoordelaarStatus;
   updated_at: string;
 }
 
@@ -36,12 +44,15 @@ interface GesprekRow {
   id: string;
   medewerker_naam: string;
   medewerker_email: string | null;
+  wereld: string;
   bij_precon_sinds: string;
   gesprek_datum: unknown;
   datum_vorig: unknown;
   datum_volgend: unknown;
   hoofdbeoordelaar: string;
+  hoofdbeoordelaar_status: BeoordelaarStatus;
   medebeoordelaar: string;
+  medebeoordelaar_status: BeoordelaarStatus;
   status: GesprekStatus;
   state: OntwikkelpadenState;
   previous_gesprek_id: string | null;
@@ -51,9 +62,25 @@ interface GesprekRow {
   updated_at: string;
 }
 
+function mapListRow(row: GesprekListRow): GesprekListItem {
+  return {
+    id: row.id,
+    medewerkerNaam: row.medewerker_naam,
+    medewerkerEmail: row.medewerker_email,
+    gesprekDatum: formatDateFromDb(row.gesprek_datum),
+    status: row.status,
+    hoofdbeoordelaar: row.hoofdbeoordelaar,
+    hoofdbeoordelaarStatus: row.hoofdbeoordelaar_status,
+    medebeoordelaar: row.medebeoordelaar,
+    medebeoordelaarStatus: row.medebeoordelaar_status,
+    updatedAt: row.updated_at,
+  };
+}
+
 function metadataFromState(state: OntwikkelpadenState) {
   return {
     medewerkerNaam: state.naam,
+    wereld: state.wereld,
     bijPreconSinds: state.bijPreconSinds,
     gesprekDatum: enforceDateOrNull(state.datum),
     datumVorig: enforceDateOrNull(state.datumVorig),
@@ -68,12 +95,15 @@ function mapRow(row: GesprekRow): Gesprek {
     id: row.id,
     medewerkerNaam: row.medewerker_naam,
     medewerkerEmail: row.medewerker_email,
+    wereld: row.wereld,
     bijPreconSinds: row.bij_precon_sinds,
     gesprekDatum: formatDateFromDb(row.gesprek_datum),
     datumVorig: formatDateFromDb(row.datum_vorig),
     datumVolgend: formatDateFromDb(row.datum_volgend),
     hoofdbeoordelaar: row.hoofdbeoordelaar,
+    hoofdbeoordelaarStatus: row.hoofdbeoordelaar_status,
     medebeoordelaar: row.medebeoordelaar,
+    medebeoordelaarStatus: row.medebeoordelaar_status,
     status: row.status,
     state: row.state,
     previousGesprekId: row.previous_gesprek_id,
@@ -98,21 +128,24 @@ async function syncExtractTables(
     `;
   }
 
+  const huidigeNiveaus = berekenAlleNiveaus(state);
   for (const padId of PAD_IDS) {
     await sql`
       INSERT INTO gesprek_paden (
-        gesprek_id, pad_id, vorig_jaar_niveau, ambitie, trainingsgroep_id
+        gesprek_id, pad_id, vorig_jaar_niveau, ambitie, trainingsgroep_id, huidig_niveau
       ) VALUES (
         ${gesprekId},
         ${padId},
         ${clampPadNiveau(state.vorigJaar[padId])},
         ${state.ambities[padId]},
-        ${state.trainingsgroepen[padId]}
+        ${state.trainingsgroepen[padId]},
+        ${huidigeNiveaus[padId]}
       )
       ON CONFLICT (gesprek_id, pad_id) DO UPDATE SET
         vorig_jaar_niveau = EXCLUDED.vorig_jaar_niveau,
         ambitie = EXCLUDED.ambitie,
-        trainingsgroep_id = EXCLUDED.trainingsgroep_id
+        trainingsgroep_id = EXCLUDED.trainingsgroep_id,
+        huidig_niveau = EXCLUDED.huidig_niveau
     `;
   }
 }
@@ -125,29 +158,25 @@ export async function listGesprekken(
     isAdmin
       ? await sql`
         SELECT id, medewerker_naam, medewerker_email, gesprek_datum, status,
-               hoofdbeoordelaar, updated_at
+               hoofdbeoordelaar, hoofdbeoordelaar_status,
+               medebeoordelaar, medebeoordelaar_status, updated_at
         FROM gesprekken
         ORDER BY updated_at DESC
       `
       : await sql`
         SELECT id, medewerker_naam, medewerker_email, gesprek_datum, status,
-               hoofdbeoordelaar, updated_at
+               hoofdbeoordelaar, hoofdbeoordelaar_status,
+               medebeoordelaar, medebeoordelaar_status, updated_at
         FROM gesprekken
         WHERE created_by = ${userEmail}
            OR LOWER(medewerker_email) = LOWER(${userEmail})
+           OR LOWER(hoofdbeoordelaar) = LOWER(${userEmail})
+           OR LOWER(medebeoordelaar) = LOWER(${userEmail})
         ORDER BY updated_at DESC
       `
   ) as GesprekListRow[];
 
-  return rows.map((row) => ({
-    id: row.id,
-    medewerkerNaam: row.medewerker_naam,
-    medewerkerEmail: row.medewerker_email,
-    gesprekDatum: formatDateFromDb(row.gesprek_datum),
-    status: row.status,
-    hoofdbeoordelaar: row.hoofdbeoordelaar,
-    updatedAt: row.updated_at,
-  }));
+  return rows.map(mapListRow);
 }
 
 export async function getGesprekById(
@@ -167,6 +196,10 @@ export async function getGesprekById(
       {
         createdBy: gesprek.createdBy,
         medewerkerEmail: gesprek.medewerkerEmail,
+        hoofdbeoordelaar: gesprek.hoofdbeoordelaar,
+        hoofdbeoordelaarStatus: gesprek.hoofdbeoordelaarStatus,
+        medebeoordelaar: gesprek.medebeoordelaar,
+        medebeoordelaarStatus: gesprek.medebeoordelaarStatus,
       },
       userEmail,
       isAdmin,
@@ -183,6 +216,7 @@ export async function createGesprek(
   stateInput?: OntwikkelpadenState,
   medewerkerEmail?: string,
   previousGesprekId?: string,
+  status: GesprekStatus = "draft",
 ): Promise<Gesprek> {
   const state = stateInput
     ? mergeWithInitialState(stateInput)
@@ -191,13 +225,14 @@ export async function createGesprek(
 
   const rows = (await sql`
     INSERT INTO gesprekken (
-      medewerker_naam, medewerker_email, bij_precon_sinds,
+      medewerker_naam, medewerker_email, wereld, bij_precon_sinds,
       gesprek_datum, datum_vorig, datum_volgend,
       hoofdbeoordelaar, medebeoordelaar, state, previous_gesprek_id,
-      created_by, updated_by
+      created_by, updated_by, status
     ) VALUES (
       ${meta.medewerkerNaam},
       ${medewerkerEmail ?? null},
+      ${meta.wereld},
       ${meta.bijPreconSinds},
       ${meta.gesprekDatum},
       ${meta.datumVorig},
@@ -207,7 +242,8 @@ export async function createGesprek(
       ${state},
       ${previousGesprekId ?? null},
       ${userEmail},
-      ${userEmail}
+      ${userEmail},
+      ${status}
     )
     RETURNING *
   `) as GesprekRow[];
@@ -237,16 +273,40 @@ export async function updateGesprek(
   const nextMedewerkerEmail =
     medewerkerEmail !== undefined ? medewerkerEmail : existing.medewerkerEmail;
 
+  /**
+   * Een beoordelaar die zichzelf toevoegt via het dashboard loopt niet via deze
+   * functie (zie requestBeoordelaarKoppeling) en zet status op 'in_afwachting'.
+   * Als de medewerker hier zelf een ANDER adres invult, is dat een bewuste
+   * eigen keuze en dus meteen toegestaan. Blijft het adres ongewijzigd (bv.
+   * de periodieke autosave), dan laten we een eventuele 'in_afwachting'-status
+   * met rust — anders zou de goedkeuringseis stilzwijgend omzeild worden.
+   */
+  const hoofdbeoordelaarGewijzigd =
+    meta.hoofdbeoordelaar.trim().toLowerCase() !==
+    (existing.hoofdbeoordelaar || "").trim().toLowerCase();
+  const nextHoofdbeoordelaarStatus = hoofdbeoordelaarGewijzigd
+    ? "toegestaan"
+    : existing.hoofdbeoordelaarStatus;
+  const medebeoordelaarGewijzigd =
+    meta.medebeoordelaar.trim().toLowerCase() !==
+    (existing.medebeoordelaar || "").trim().toLowerCase();
+  const nextMedebeoordelaarStatus = medebeoordelaarGewijzigd
+    ? "toegestaan"
+    : existing.medebeoordelaarStatus;
+
   const rows = (await sql`
     UPDATE gesprekken SET
       medewerker_naam = ${meta.medewerkerNaam},
       medewerker_email = ${nextMedewerkerEmail},
+      wereld = ${meta.wereld},
       bij_precon_sinds = ${meta.bijPreconSinds},
       gesprek_datum = ${meta.gesprekDatum},
       datum_vorig = ${meta.datumVorig},
       datum_volgend = ${meta.datumVolgend},
       hoofdbeoordelaar = ${meta.hoofdbeoordelaar},
+      hoofdbeoordelaar_status = ${nextHoofdbeoordelaarStatus},
       medebeoordelaar = ${meta.medebeoordelaar},
+      medebeoordelaar_status = ${nextMedebeoordelaarStatus},
       status = ${nextStatus},
       state = ${cleanState},
       updated_by = ${userEmail},
@@ -293,4 +353,171 @@ export async function startNewCycle(
     existing.medewerkerEmail ?? undefined,
     existing.id,
   );
+}
+
+export class BeoordelaarAlGekoppeldError extends Error {
+  constructor() {
+    super("Er is al iemand als beoordelaar gekoppeld voor deze rol");
+    this.name = "BeoordelaarAlGekoppeldError";
+  }
+}
+
+export class MedewerkerNietGevondenError extends Error {
+  constructor() {
+    super(
+      "Geen eigen gesprek gevonden voor deze medewerker — diegene moet eerst zelf een keer inloggen en het eigen gesprek openen",
+    );
+    this.name = "MedewerkerNietGevondenError";
+  }
+}
+
+export class GeenToegangError extends Error {
+  constructor() {
+    super(
+      "Alleen de medewerker zelf (of een beheerder) mag dit goedkeuren of afwijzen",
+    );
+    this.name = "GeenToegangError";
+  }
+}
+
+/** Naam+e-mail van iedereen die ooit een eigen gesprek heeft geopend — voor de beoordelaar-dropdown. */
+export async function getBekendeMedewerkers(): Promise<BekendeMedewerker[]> {
+  const rows = (await sql`
+    SELECT DISTINCT ON (medewerker_email) medewerker_naam, medewerker_email
+    FROM gesprekken
+    WHERE medewerker_email IS NOT NULL AND medewerker_naam <> ''
+    ORDER BY medewerker_email, updated_at DESC
+  `) as { medewerker_naam: string; medewerker_email: string }[];
+
+  return rows
+    .map((row) => ({ naam: row.medewerker_naam, email: row.medewerker_email }))
+    .sort((a, b) => a.naam.localeCompare(b.naam));
+}
+
+/** Gesprekken van deze medewerker met een openstaand koppelingsverzoek (voor de pop-up bij inloggen). */
+export async function getPendingGoedkeuringen(
+  userEmail: string,
+): Promise<GesprekListItem[]> {
+  const rows = (await sql`
+    SELECT id, medewerker_naam, medewerker_email, gesprek_datum, status,
+           hoofdbeoordelaar, hoofdbeoordelaar_status,
+           medebeoordelaar, medebeoordelaar_status, updated_at
+    FROM gesprekken
+    WHERE LOWER(medewerker_email) = LOWER(${userEmail})
+      AND (hoofdbeoordelaar_status = 'in_afwachting' OR medebeoordelaar_status = 'in_afwachting')
+    ORDER BY updated_at DESC
+  `) as GesprekListRow[];
+
+  return rows.map(mapListRow);
+}
+
+/** De drie rubrieken voor het persoonlijke dashboard. */
+export async function getDashboardOverzicht(
+  userEmail: string,
+  isAdmin: boolean,
+): Promise<DashboardOverzicht> {
+  const alle = await listGesprekken(userEmail, isAdmin);
+  const email = userEmail.toLowerCase();
+
+  const eigen = alle.filter((g) => g.medewerkerEmail?.toLowerCase() === email);
+  const alsHoofdbeoordelaar = alle.filter(
+    (g) => g.hoofdbeoordelaar.trim().toLowerCase() === email,
+  );
+  const alsMedebeoordelaar = alle.filter(
+    (g) => g.medebeoordelaar.trim().toLowerCase() === email,
+  );
+  const pendingGoedkeuringen = await getPendingGoedkeuringen(userEmail);
+
+  return { eigen, alsHoofdbeoordelaar, alsMedebeoordelaar, pendingGoedkeuringen };
+}
+
+/**
+ * Een beoordelaar koppelt zichzelf aan een medewerker (via de naam-dropdown op
+ * het dashboard). Bewust zonder toegangscheck — dat is het hele punt: de
+ * koppeling staat op 'in_afwachting' totdat de medewerker akkoord geeft.
+ */
+export async function requestBeoordelaarKoppeling(
+  medewerkerEmail: string,
+  rol: BeoordelaarRol,
+  beoordelaarEmail: string,
+): Promise<Gesprek> {
+  const rows = (await sql`
+    SELECT * FROM gesprekken
+    WHERE LOWER(medewerker_email) = LOWER(${medewerkerEmail})
+    ORDER BY updated_at DESC
+    LIMIT 1
+  `) as GesprekRow[];
+  const row = rows[0];
+  if (!row) throw new MedewerkerNietGevondenError();
+
+  const existing = mapRow(row);
+  const huidigeWaarde =
+    rol === "hoofdbeoordelaar" ? existing.hoofdbeoordelaar : existing.medebeoordelaar;
+  if (huidigeWaarde.trim() !== "") throw new BeoordelaarAlGekoppeldError();
+
+  const updated = (
+    rol === "hoofdbeoordelaar"
+      ? await sql`
+        UPDATE gesprekken SET
+          hoofdbeoordelaar = ${beoordelaarEmail},
+          hoofdbeoordelaar_status = 'in_afwachting'
+        WHERE id = ${existing.id}
+        RETURNING *
+      `
+      : await sql`
+        UPDATE gesprekken SET
+          medebeoordelaar = ${beoordelaarEmail},
+          medebeoordelaar_status = 'in_afwachting'
+        WHERE id = ${existing.id}
+        RETURNING *
+      `
+  ) as GesprekRow[];
+
+  const updatedRow = updated[0];
+  if (!updatedRow) throw new Error("Koppelen mislukt");
+  return mapRow(updatedRow);
+}
+
+/** De medewerker zelf (of een beheerder) keurt een koppelingsverzoek goed of wijst het af. */
+export async function respondBeoordelaarKoppeling(
+  gesprekId: string,
+  userEmail: string,
+  isAdmin: boolean,
+  rol: BeoordelaarRol,
+  actie: "goedkeuren" | "afwijzen",
+): Promise<Gesprek | null> {
+  const existing = await getGesprekById(gesprekId, userEmail, isAdmin);
+  if (!existing) return null;
+
+  const isMedewerker =
+    existing.medewerkerEmail?.toLowerCase() === userEmail.toLowerCase();
+  if (!isAdmin && !isMedewerker) {
+    throw new GeenToegangError();
+  }
+
+  const rows = (
+    actie === "goedkeuren"
+      ? rol === "hoofdbeoordelaar"
+        ? await sql`
+          UPDATE gesprekken SET hoofdbeoordelaar_status = 'toegestaan'
+          WHERE id = ${gesprekId} RETURNING *
+        `
+        : await sql`
+          UPDATE gesprekken SET medebeoordelaar_status = 'toegestaan'
+          WHERE id = ${gesprekId} RETURNING *
+        `
+      : rol === "hoofdbeoordelaar"
+        ? await sql`
+          UPDATE gesprekken SET hoofdbeoordelaar = '', hoofdbeoordelaar_status = 'toegestaan'
+          WHERE id = ${gesprekId} RETURNING *
+        `
+        : await sql`
+          UPDATE gesprekken SET medebeoordelaar = '', medebeoordelaar_status = 'toegestaan'
+          WHERE id = ${gesprekId} RETURNING *
+        `
+  ) as GesprekRow[];
+
+  const row = rows[0];
+  if (!row) return null;
+  return mapRow(row);
 }

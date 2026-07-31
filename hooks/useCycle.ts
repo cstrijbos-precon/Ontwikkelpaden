@@ -13,6 +13,7 @@ interface UseCycleParams {
   setGesprekId: (id: string) => void;
   setStatus: (status: GesprekStatus) => void;
   setPreviousGesprekId: (id: string | null) => void;
+  setMedewerkerEmail: (email: string | null) => void;
   setHuidig: (index: number) => void;
   setSaveStatus: (message: string) => void;
 }
@@ -25,6 +26,7 @@ export function useCycle({
   setGesprekId,
   setStatus,
   setPreviousGesprekId,
+  setMedewerkerEmail,
   setHuidig,
   setSaveStatus,
 }: UseCycleParams) {
@@ -52,6 +54,7 @@ export function useCycle({
       setState(mergeWithInitialState(nieuw.state));
       setStatus(nieuw.status);
       setPreviousGesprekId(nieuw.previousGesprekId ?? null);
+      setMedewerkerEmail(nieuw.medewerkerEmail ?? null);
       setHuidig(0);
       setSaveStatus("✓ Nieuwe cyclus gestart");
     } catch {
@@ -65,6 +68,7 @@ export function useCycle({
     setState,
     setStatus,
     setPreviousGesprekId,
+    setMedewerkerEmail,
     setHuidig,
     setSaveStatus,
   ]);

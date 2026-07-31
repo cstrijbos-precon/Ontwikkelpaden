@@ -13,6 +13,7 @@ export function buildNextCycleState(
   return {
     ...createInitialState(),
     naam: vorige.naam,
+    wereld: vorige.wereld,
     bijPreconSinds: vorige.bijPreconSinds,
     niveauInschaling: vorige.niveauInschaling,
     datumVorig: vorige.datum,

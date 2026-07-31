@@ -1,0 +1,156 @@
+.venn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.venn-svg {
+  width: 100%;
+  max-width: 420px;
+}
+
+.venn-cirkel {
+  fill-opacity: 0.12;
+  stroke-width: 1.5;
+}
+
+.venn-straks {
+  fill: var(--oranje);
+  stroke: var(--oranje);
+}
+
+.venn-aanwezig {
+  fill: var(--blauw-accent);
+  stroke: var(--blauw-accent);
+}
+
+.venn-nodig {
+  fill: var(--groen);
+  stroke: var(--groen);
+}
+
+.venn-titel {
+  font-size: 11px;
+  font-weight: bold;
+  fill: var(--grijs);
+  text-anchor: middle;
+}
+
+.venn-inhoud {
+  font-size: 9px;
+  fill: var(--grijs);
+  text-anchor: middle;
+}
+
+.venn-leeg {
+  fill: var(--grijs-licht);
+}
+
+.venn-legenda {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
+  font-size: 11px;
+  color: var(--grijs-licht);
+}
+
+.venn-geen-data {
+  font-size: 11px;
+  color: var(--grijs-licht);
+  font-style: italic;
+}
+
+.venn-tabel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.venn-tabel th,
+.venn-tabel td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--grijs-lijn);
+}
+
+.venn-tabel th {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--grijs-licht);
+}
+
+.venn-tabel input[type="number"] {
+  border: 1.5px solid var(--grijs-lijn);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12.5px;
+}
+
+.vloot-niv-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.vloot-bol-stack {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.vloot-bol {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  transition:
+    width 0.15s ease,
+    height 0.15s ease;
+}
+
+.vloot-bol-oranje {
+  background: radial-gradient(circle at 35% 35%, #f5a55a, var(--oranje));
+  border: 2px solid #c05e10;
+  color: #fff;
+  z-index: 2;
+}
+
+.vloot-bol-grijs {
+  background: radial-gradient(circle at 35% 35%, #ccc, #888);
+  border: 2px solid #777;
+  color: #fff;
+  z-index: 1;
+}
+
+.vloot-cijfers {
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--grijs-licht);
+}
+
+.vloot-rol-naam {
+  font-size: 10px;
+  color: var(--grijs);
+  text-align: center;
+  line-height: 1.3;
+  max-width: 90%;
+}
