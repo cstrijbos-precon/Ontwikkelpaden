@@ -234,16 +234,11 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
   );
 
   const toggleAmbitie = useCallback((padId: PadId) => {
-    setState((prev) => {
-      const next = !prev.ambities[padId];
-      return {
-        ...prev,
-        ambities: { ...prev.ambities, [padId]: next },
-        trainingsgroepen: next
-          ? prev.trainingsgroepen
-          : { ...prev.trainingsgroepen, [padId]: "" },
-      };
-    });
+    // De trainingsgroep staat los van de ambitie en blijft dus staan.
+    setState((prev) => ({
+      ...prev,
+      ambities: { ...prev.ambities, [padId]: !prev.ambities[padId] },
+    }));
   }, []);
 
   const setTrainingsgroep = useCallback((padId: PadId, value: string) => {

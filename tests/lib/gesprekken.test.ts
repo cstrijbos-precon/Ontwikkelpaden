@@ -112,11 +112,7 @@ describe("getGesprekById", () => {
     sqlMock.mockResolvedValueOnce([
       gesprekRow({ hoofdbeoordelaar: "lead@precon.nl" }),
     ]);
-    const gesprek = await getGesprekById(
-      "gesprek-1",
-      "Lead@Precon.nl",
-      false,
-    );
+    const gesprek = await getGesprekById("gesprek-1", "Lead@Precon.nl", false);
     expect(gesprek?.id).toBe("gesprek-1");
   });
 
@@ -124,11 +120,7 @@ describe("getGesprekById", () => {
     sqlMock.mockResolvedValueOnce([
       gesprekRow({ medebeoordelaar: "mede@precon.nl" }),
     ]);
-    const gesprek = await getGesprekById(
-      "gesprek-1",
-      "mede@precon.nl",
-      false,
-    );
+    const gesprek = await getGesprekById("gesprek-1", "mede@precon.nl", false);
     expect(gesprek?.id).toBe("gesprek-1");
   });
 });
@@ -245,7 +237,9 @@ describe("updateGesprek", () => {
     await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
 
     const updateCall = sqlMock.mock.calls.find((call) =>
-      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken SET"),
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
     );
     expect(updateCall).toContain("toegestaan");
   });
@@ -267,7 +261,9 @@ describe("updateGesprek", () => {
     await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
 
     const updateCall = sqlMock.mock.calls.find((call) =>
-      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken SET"),
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
     );
     expect(updateCall).toContain("in_afwachting");
   });
@@ -286,7 +282,9 @@ describe("updateGesprek", () => {
     await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
 
     const updateCall = sqlMock.mock.calls.find((call) =>
-      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken SET"),
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
     );
     expect(updateCall).toContain("Learning");
   });
@@ -299,11 +297,13 @@ describe("requestBeoordelaarKoppeling", () => {
 
   it("koppelt de beoordelaar en zet status in_afwachting", async () => {
     const row = gesprekRow({ hoofdbeoordelaar: "" });
-    sqlMock
-      .mockResolvedValueOnce([row])
-      .mockResolvedValueOnce([
-        { ...row, hoofdbeoordelaar: "beoordelaar@precon.nl", hoofdbeoordelaar_status: "in_afwachting" },
-      ]);
+    sqlMock.mockResolvedValueOnce([row]).mockResolvedValueOnce([
+      {
+        ...row,
+        hoofdbeoordelaar: "beoordelaar@precon.nl",
+        hoofdbeoordelaar_status: "in_afwachting",
+      },
+    ]);
 
     const gesprek = await requestBeoordelaarKoppeling(
       "jan@precon.nl",
@@ -315,7 +315,7 @@ describe("requestBeoordelaarKoppeling", () => {
     expect(gesprek.hoofdbeoordelaarStatus).toBe("in_afwachting");
   });
 
-  it("gooit MedewerkerNietGevondenError als er geen gesprek is voor deze medewerker", async () => {
+  it("gooit MedewerkerNietGevondenError als het e-mailadres geen account is", async () => {
     sqlMock.mockResolvedValueOnce([]);
     await expect(
       requestBeoordelaarKoppeling(
@@ -324,6 +324,47 @@ describe("requestBeoordelaarKoppeling", () => {
         "b@precon.nl",
       ),
     ).rejects.toThrow(MedewerkerNietGevondenError);
+  });
+
+  it("start een concept-gesprek als de collega er nog geen heeft", async () => {
+    // Een geldig bcrypt-formaat is genoeg; parseAppUsers kijkt alleen naar $2.
+    process.env.APP_USERS = `nieuw@precon.nl:$2b$12${"$"}${"x".repeat(53)}`;
+
+    const nieuweRow = gesprekRow({
+      id: "gesprek-nieuw",
+      medewerker_email: "nieuw@precon.nl",
+      medebeoordelaar: "",
+    });
+
+    // createGesprek doet een reeks vervolgqueries; sturen op de inhoud van de
+    // query is steviger dan op de vololgorde van de aanroepen.
+    sqlMock.mockImplementation((strings: TemplateStringsArray) => {
+      const query = strings.join(" ");
+      if (query.includes("SELECT * FROM gesprekken"))
+        return Promise.resolve([]);
+      if (query.includes("INSERT INTO gesprekken"))
+        return Promise.resolve([nieuweRow]);
+      if (query.includes("UPDATE gesprekken SET"))
+        return Promise.resolve([
+          {
+            ...nieuweRow,
+            medebeoordelaar: "notulist@precon.nl",
+            medebeoordelaar_status: "in_afwachting",
+          },
+        ]);
+      return Promise.resolve([]);
+    });
+
+    const gesprek = await requestBeoordelaarKoppeling(
+      "nieuw@precon.nl",
+      "medebeoordelaar",
+      "notulist@precon.nl",
+    );
+
+    expect(gesprek.medebeoordelaar).toBe("notulist@precon.nl");
+    expect(gesprek.medebeoordelaarStatus).toBe("in_afwachting");
+
+    process.env.APP_USERS = "";
   });
 
   it("gooit BeoordelaarAlGekoppeldError als het rol-veld al gevuld is", async () => {
@@ -352,7 +393,9 @@ describe("respondBeoordelaarKoppeling", () => {
     });
     sqlMock
       .mockResolvedValueOnce([row])
-      .mockResolvedValueOnce([{ ...row, hoofdbeoordelaar_status: "toegestaan" }]);
+      .mockResolvedValueOnce([
+        { ...row, hoofdbeoordelaar_status: "toegestaan" },
+      ]);
 
     const gesprek = await respondBeoordelaarKoppeling(
       "gesprek-1",
@@ -408,7 +451,9 @@ describe("respondBeoordelaarKoppeling", () => {
     });
     sqlMock
       .mockResolvedValueOnce([row])
-      .mockResolvedValueOnce([{ ...row, hoofdbeoordelaar_status: "toegestaan" }]);
+      .mockResolvedValueOnce([
+        { ...row, hoofdbeoordelaar_status: "toegestaan" },
+      ]);
 
     const gesprek = await respondBeoordelaarKoppeling(
       "gesprek-1",

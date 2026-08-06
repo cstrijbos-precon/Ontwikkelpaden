@@ -9,6 +9,7 @@ import {
   createGesprek,
   fetchBekendeMedewerkers,
   fetchDashboard,
+  fetchKnownUserEmails,
   importGesprekDocx,
   koppelBeoordelaar,
 } from "@/services/gesprekken-client";
@@ -124,18 +125,17 @@ function Rubriek({
               {fout}
             </p>
           )}
-          {bekendeMedewerkers.length === 0 && (
-            <p
-              style={{
-                fontSize: 11,
-                color: "var(--grijs-licht)",
-                marginTop: 6,
-              }}
-            >
-              Nog geen medewerkers gevonden — iemand moet eerst zelf het eigen
-              gesprek geopend hebben voordat je diegene hier kunt vinden.
-            </p>
-          )}
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--grijs-licht)",
+              marginTop: 6,
+            }}
+          >
+            {bekendeMedewerkers.length === 0
+              ? "Nog geen collega's gevonden — er zijn geen andere accounts bekend."
+              : "Heeft de collega nog geen gesprek? Dan wordt er meteen een concept aangemaakt. Diegene moet je koppeling nog wel goedkeuren."}
+          </p>
         </>
       )}
     </div>
@@ -151,12 +151,20 @@ export function Dashboard() {
   const [importBezig, setImportBezig] = useState(false);
 
   const laad = useCallback(async () => {
-    const [dash, meds] = await Promise.all([
+    const [dash, meds, accountEmails] = await Promise.all([
       fetchDashboard(),
       fetchBekendeMedewerkers(),
+      // Accounts zonder gesprek staan niet in `meds`; zonder deze lijst kun je
+      // voor hen ook geen gesprek starten.
+      fetchKnownUserEmails().catch(() => [] as string[]),
     ]);
+    const bekend = new Set(meds.map((m) => m.email.toLowerCase()));
+    const zonderGesprek = accountEmails
+      .filter((email) => !bekend.has(email.toLowerCase()))
+      .map((email) => ({ naam: email, email }));
+
     setOverzicht(dash);
-    setMedewerkers(meds);
+    setMedewerkers([...meds, ...zonderGesprek]);
     setFoutmelding("");
   }, []);
 

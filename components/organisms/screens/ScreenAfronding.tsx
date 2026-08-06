@@ -3,8 +3,8 @@ import { useState } from "react";
 import { DateInput } from "@/components/atoms/DateInput";
 import { FormField } from "@/components/molecules/FormField";
 import { ScoreBox } from "@/components/molecules/ScoreBox";
-import { berekenNiveau } from "@/lib/bereken-niveau";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
+import { effectiefNiveau } from "@/lib/effectief-niveau";
 import { getPadColor } from "@/lib/pad-colors";
 import type { GesprekStatus } from "@/types/gesprekken";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
@@ -145,7 +145,7 @@ export function ScreenAfronding({
         <h4>Positie op de ontwikkelpaden</h4>
         {PAD_IDS.map((padId) => {
           const pad = PADEN[padId];
-          const n = berekenNiveau(padId, state.scores);
+          const n = effectiefNiveau(padId, state);
           const amb = state.ambities[padId];
           const tg = state.trainingsgroepen[padId];
 
@@ -216,10 +216,7 @@ export function ScreenAfronding({
             onSign={(naam) => {
               onUpdate("akkoordHoofdbeoordelaar", true);
               onUpdate("akkoordHoofdbeoordelaarNaam", naam);
-              onUpdate(
-                "akkoordHoofdbeoordelaarAt",
-                new Date().toISOString(),
-              );
+              onUpdate("akkoordHoofdbeoordelaarAt", new Date().toISOString());
             }}
             onWijzig={() => {
               onUpdate("akkoordHoofdbeoordelaar", false);
@@ -237,10 +234,7 @@ export function ScreenAfronding({
             onSign={(naam) => {
               onUpdate("akkoordMedebeoordelaar", true);
               onUpdate("akkoordMedebeoordelaarNaam", naam);
-              onUpdate(
-                "akkoordMedebeoordelaarAt",
-                new Date().toISOString(),
-              );
+              onUpdate("akkoordMedebeoordelaarAt", new Date().toISOString());
             }}
             onWijzig={() => {
               onUpdate("akkoordMedebeoordelaar", false);

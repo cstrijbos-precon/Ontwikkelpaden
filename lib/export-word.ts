@@ -1,4 +1,3 @@
-import { berekenNiveau } from "@/lib/bereken-niveau";
 import { COMPS } from "@/lib/data/competenties";
 import { PADEN } from "@/lib/data/paden";
 import {
@@ -157,7 +156,7 @@ export function exportWord(state: OntwikkelpadenState): void {
   html += `<h2>Ontwikkeling & POP</h2>`;
   (Object.entries(PADEN) as [PadId, (typeof PADEN)[PadId]][]).forEach(
     ([padId, pad]) => {
-      const n = berekenNiveau(padId, state.scores);
+      const n = effectiefNiveau(padId, state);
       const amb = state.ambities[padId];
       const doelN = amb && n < 5 ? n + 1 : null;
       if (!amb && n === 0) return;

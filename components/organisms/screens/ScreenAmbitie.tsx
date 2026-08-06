@@ -1,8 +1,8 @@
 import { FormField } from "@/components/molecules/FormField";
 import { ScoreBox } from "@/components/molecules/ScoreBox";
-import { berekenNiveau } from "@/lib/bereken-niveau";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { TRAININGSGROEPEN } from "@/lib/data/training-groups";
+import { effectiefNiveau } from "@/lib/effectief-niveau";
 import { getPadColor } from "@/lib/pad-colors";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
@@ -38,7 +38,7 @@ export function ScreenAmbitie({
       <div className="ambitie-grid">
         {PAD_IDS.map((padId) => {
           const pad = PADEN[padId];
-          const n = berekenNiveau(padId, state.scores);
+          const n = effectiefNiveau(padId, state);
           const heeftAmbitie = state.ambities[padId];
           const volg = n < 5 ? n + 1 : null;
 
@@ -87,41 +87,41 @@ export function ScreenAmbitie({
                   </span>
                 )}
               </div>
-              {heeftAmbitie && volg && (
-                <div style={{ marginTop: 10 }}>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: "bold",
-                      color: "var(--blauw)",
-                      marginBottom: 4,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.3px",
-                    }}
-                  >
-                    Trainingsgroep
-                  </div>
-                  <select
-                    value={state.trainingsgroepen[padId]}
-                    onChange={(e) => onSetTrainingsgroep(padId, e.target.value)}
-                    style={{
-                      width: "100%",
-                      fontFamily: "Arial, sans-serif",
-                      fontSize: 12,
-                      border: "1.5px solid var(--grijs-lijn)",
-                      borderRadius: 5,
-                      padding: "5px 8px",
-                    }}
-                  >
-                    <option value="">— Kies trainingsgroep —</option>
-                    {TRAININGSGROEPEN[padId].map((tg) => (
-                      <option key={tg.id} value={tg.id}>
-                        {tg.label}
-                      </option>
-                    ))}
-                  </select>
+              {/* Losgekoppeld van de ambitie: ook op het hoogste niveau blijf
+                  je vrij om een trainingsgroep te kiezen. */}
+              <div style={{ marginTop: 10 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: "bold",
+                    color: "var(--blauw)",
+                    marginBottom: 4,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  Trainingsgroep
                 </div>
-              )}
+                <select
+                  value={state.trainingsgroepen[padId]}
+                  onChange={(e) => onSetTrainingsgroep(padId, e.target.value)}
+                  style={{
+                    width: "100%",
+                    fontFamily: "Arial, sans-serif",
+                    fontSize: 12,
+                    border: "1.5px solid var(--grijs-lijn)",
+                    borderRadius: 5,
+                    padding: "5px 8px",
+                  }}
+                >
+                  <option value="">— Kies trainingsgroep —</option>
+                  {TRAININGSGROEPEN[padId].map((tg) => (
+                    <option key={tg.id} value={tg.id}>
+                      {tg.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           );
         })}

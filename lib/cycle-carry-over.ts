@@ -1,4 +1,4 @@
-import { berekenAlleNiveaus } from "@/lib/bereken-niveau";
+import { effectieveNiveaus } from "@/lib/effectief-niveau";
 import { createInitialState } from "@/lib/initial-state";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
@@ -19,6 +19,6 @@ export function buildNextCycleState(
     datumVorig: vorige.datum,
     scores: { ...vorige.scores },
     tCellen: [...vorige.tCellen],
-    vorigJaar: berekenAlleNiveaus(vorige),
+    vorigJaar: effectieveNiveaus(vorige),
   };
 }

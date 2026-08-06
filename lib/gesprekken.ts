@@ -1,6 +1,7 @@
-import { berekenAlleNiveaus } from "@/lib/bereken-niveau";
+import { findUserByEmail } from "@/lib/auth-users";
 import { buildNextCycleState } from "@/lib/cycle-carry-over";
 import { sql } from "@/lib/db";
+import { effectieveNiveaus } from "@/lib/effectief-niveau";
 import {
   clampPadNiveau,
   clampScore,
@@ -11,8 +12,8 @@ import type { BeoordelaarStatus } from "@/lib/gesprekken-access";
 import { canAccessGesprek } from "@/lib/gesprekken-access";
 import { createInitialState, mergeWithInitialState } from "@/lib/initial-state";
 import type {
-  BeoordelaarRol,
   BekendeMedewerker,
+  BeoordelaarRol,
   DashboardOverzicht,
   Gesprek,
   GesprekListItem,
@@ -128,7 +129,7 @@ async function syncExtractTables(
     `;
   }
 
-  const huidigeNiveaus = berekenAlleNiveaus(state);
+  const huidigeNiveaus = effectieveNiveaus(state);
   for (const padId of PAD_IDS) {
     await sql`
       INSERT INTO gesprek_paden (
@@ -428,13 +429,22 @@ export async function getDashboardOverzicht(
   );
   const pendingGoedkeuringen = await getPendingGoedkeuringen(userEmail);
 
-  return { eigen, alsHoofdbeoordelaar, alsMedebeoordelaar, pendingGoedkeuringen };
+  return {
+    eigen,
+    alsHoofdbeoordelaar,
+    alsMedebeoordelaar,
+    pendingGoedkeuringen,
+  };
 }
 
 /**
  * Een beoordelaar koppelt zichzelf aan een medewerker (via de naam-dropdown op
  * het dashboard). Bewust zonder toegangscheck — dat is het hele punt: de
  * koppeling staat op 'in_afwachting' totdat de medewerker akkoord geeft.
+ *
+ * Heeft de medewerker nog geen enkel gesprek, dan start deze actie er meteen
+ * een als concept. Zo kan een notulist het gesprek aanmaken zonder te wachten
+ * tot de medewerker zelf een keer heeft ingelogd. Het akkoord blijft nodig.
  */
 export async function requestBeoordelaarKoppeling(
   medewerkerEmail: string,
@@ -448,11 +458,20 @@ export async function requestBeoordelaarKoppeling(
     LIMIT 1
   `) as GesprekRow[];
   const row = rows[0];
-  if (!row) throw new MedewerkerNietGevondenError();
 
-  const existing = mapRow(row);
+  // Alleen voor wie ook echt kan inloggen — anders levert een typefout een
+  // gesprek op dat niemand ooit kan openen.
+  if (!row && !findUserByEmail(medewerkerEmail)) {
+    throw new MedewerkerNietGevondenError();
+  }
+
+  const existing = row
+    ? mapRow(row)
+    : await createGesprek(beoordelaarEmail, undefined, medewerkerEmail);
   const huidigeWaarde =
-    rol === "hoofdbeoordelaar" ? existing.hoofdbeoordelaar : existing.medebeoordelaar;
+    rol === "hoofdbeoordelaar"
+      ? existing.hoofdbeoordelaar
+      : existing.medebeoordelaar;
   if (huidigeWaarde.trim() !== "") throw new BeoordelaarAlGekoppeldError();
 
   const updated = (
