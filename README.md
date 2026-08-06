@@ -212,7 +212,7 @@ Verwacht:
 | Poort 3000 = andere app | Gebruik poort **3001** in Ports. |
 | Inloggen lukt niet | Nog geen account? Vul je adres in en kies een wachtwoord. Bij een oud account uit `APP_USERS`: elke `$` in de hash moet `\$` zijn in `.env.local`. |
 | "Alleen adressen van ..." | Je domein staat niet in `APP_EMAIL_DOMEINEN`. |
-| Wachtwoord vergeten | Er is geen herstelfunctie. Een beheerder verwijdert de regel uit de tabel `app_users`; daarna kun je je opnieuw registreren. |
+| Wachtwoord vergeten | Een beheerder opent op het dashboard **Accounts en wachtwoorden** en klikt op *Wachtwoord vrijgeven*. Je kiest dan bij de volgende keer inloggen een nieuw wachtwoord; je gesprekken blijven staan. |
 | `.env.local` wijziging werkt niet | Server stoppen (Ctrl+C) en opnieuw `npm run dev`. |
 
 ---

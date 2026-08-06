@@ -50,6 +50,46 @@ export async function noteerLogin(email: string): Promise<void> {
   `;
 }
 
+export interface AccountOverzicht {
+  email: string;
+  aangemaaktOp: string;
+  laatstIngelogdOp: string | null;
+}
+
+export async function listOpgeslagenAccounts(): Promise<AccountOverzicht[]> {
+  const rows = (await sql`
+    SELECT email, aangemaakt_op, laatst_ingelogd_op FROM app_users
+    ORDER BY email
+  `) as {
+    email: string;
+    aangemaakt_op: string;
+    laatst_ingelogd_op: string | null;
+  }[];
+
+  return rows.map((row) => ({
+    email: row.email,
+    aangemaaktOp: row.aangemaakt_op,
+    laatstIngelogdOp: row.laatst_ingelogd_op,
+  }));
+}
+
+/**
+ * Maakt een adres weer vrij, zodat de collega bij de volgende keer inloggen
+ * een nieuw wachtwoord kiest. De gesprekken blijven staan: die hangen aan het
+ * e-mailadres, niet aan deze rij.
+ */
+export async function verwijderOpgeslagenGebruiker(
+  email: string,
+): Promise<boolean> {
+  const rows = (await sql`
+    DELETE FROM app_users
+    WHERE email = ${email.toLowerCase().trim()}
+    RETURNING email
+  `) as { email: string }[];
+
+  return rows.length > 0;
+}
+
 export async function listOpgeslagenEmails(): Promise<string[]> {
   const rows = (await sql`
     SELECT email FROM app_users ORDER BY email

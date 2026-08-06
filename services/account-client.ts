@@ -26,6 +26,33 @@ export async function haalAccountStatus(email: string): Promise<AccountStatus> {
   return (await res.json()) as AccountStatus;
 }
 
+export interface AccountRegel {
+  email: string;
+  aangemaaktOp: string;
+  laatstIngelogdOp: string | null;
+}
+
+export async function haalAccounts(): Promise<AccountRegel[]> {
+  const res = await fetch("/api/account/beheer");
+  if (!res.ok) {
+    throw new Error(await leesFout(res, "Kon de accounts niet laden."));
+  }
+  const data = (await res.json()) as { accounts: AccountRegel[] };
+  return data.accounts;
+}
+
+export async function geefAccountVrij(email: string): Promise<void> {
+  const res = await fetch("/api/account/beheer", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await leesFout(res, "Vrijgeven mislukt."));
+  }
+}
+
 export async function maakAccount(
   email: string,
   wachtwoord: string,

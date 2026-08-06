@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
+import { AccountBeheer } from "@/components/organisms/AccountBeheer";
 import { GoedkeuringPopup } from "@/components/organisms/GoedkeuringPopup";
 import { mergeWithInitialState } from "@/lib/initial-state";
 import {
@@ -84,18 +85,23 @@ function Rubriek({
       {onToevoegen && bekendeMedewerkers && (
         <>
           <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-            <select
+            {/* Een lijst met suggesties, geen keurslijf: je kunt ook een adres
+                intypen van iemand die nog nooit heeft ingelogd. */}
+            <input
+              list="bekende-medewerkers"
+              type="email"
               value={gekozenEmail}
               onChange={(e) => setGekozenEmail(e.target.value)}
+              placeholder="Kies of typ een e-mailadres..."
               style={{ flex: 1 }}
-            >
-              <option value="">Kies een medewerker...</option>
+            />
+            <datalist id="bekende-medewerkers">
               {bekendeMedewerkers.map((m) => (
                 <option key={m.email} value={m.email}>
-                  {m.naam} ({m.email})
+                  {m.naam}
                 </option>
               ))}
-            </select>
+            </datalist>
             <button
               type="button"
               className="btn btn-t"
@@ -132,9 +138,11 @@ function Rubriek({
               marginTop: 6,
             }}
           >
-            {bekendeMedewerkers.length === 0
-              ? "Nog geen collega's gevonden — er zijn geen andere accounts bekend."
-              : "Heeft de collega nog geen gesprek? Dan wordt er meteen een concept aangemaakt. Diegene moet je koppeling nog wel goedkeuren."}
+            Heeft de collega nog geen gesprek, dan wordt er meteen een concept
+            aangemaakt. Heeft diegene nog nooit ingelogd, dan kun je er direct
+            in werken; zodra hij of zij zelf een account maakt, staat het
+            gesprek klaar. Bestaat het account al, dan moet de koppeling nog
+            worden goedgekeurd.
           </p>
         </>
       )}
@@ -346,6 +354,7 @@ export function Dashboard() {
         bekendeMedewerkers={medewerkersVoorDropdown}
         onToevoegen={(email) => koppel("medebeoordelaar", email)}
       />
+      {session?.user?.isAdmin && <AccountBeheer />}
     </>
   );
 }
