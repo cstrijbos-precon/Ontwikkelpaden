@@ -32,13 +32,20 @@ export function ScreenHoeGaatHet({ state, onUpdate }: ScreenHoeGaatHetProps) {
           onChange={(e) => onUpdate("werkdruk", e.target.value)}
         />
       </FormField>
-      <div className="sk" style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+      <div
+        className="sk"
+        style={{ display: "flex", alignItems: "baseline", gap: 10 }}
+      >
         <span>Kernwaarden: Praktisch · Betrokken · Vakkundig</span>
         <a
           href="/documents/kernwaarden-praatplaat.pdf"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ fontSize: 11, fontWeight: "normal", color: "var(--blauw-accent)" }}
+          style={{
+            fontSize: 11,
+            fontWeight: "normal",
+            color: "var(--blauw-accent)",
+          }}
         >
           📄 Bekijk de praatplaat
         </a>

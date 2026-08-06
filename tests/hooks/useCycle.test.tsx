@@ -27,9 +27,7 @@ function setup(gesprekId: string | null = "g-1") {
     const [huidig, setHuidig] = useState(3);
     const [saveStatus, setSaveStatus] = useState("");
     const [id, setGesprekId] = useState<string | null>(gesprekId);
-    const [medewerkerEmail, setMedewerkerEmail] = useState<string | null>(
-      null,
-    );
+    const [medewerkerEmail, setMedewerkerEmail] = useState<string | null>(null);
 
     const cycle = useCycle({
       gesprekId: id,
