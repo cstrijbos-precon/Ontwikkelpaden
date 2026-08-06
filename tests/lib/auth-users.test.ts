@@ -21,6 +21,34 @@ describe("parseAppUsers", () => {
     process.env.APP_USERS = "no-colon, :nohash, valid@precon.nl:notbcrypt";
     expect(parseAppUsers()).toHaveLength(0);
   });
+
+  it("vult de lijst aan met APP_USERS_EXTRA", () => {
+    process.env.APP_USERS = "alice@precon.nl:$2b$12$aaa";
+    process.env.APP_USERS_EXTRA = "nieuw@precon.nl:$2b$12$bbb";
+
+    const emails = parseAppUsers().map((u) => u.email);
+    expect(emails).toEqual(["alice@precon.nl", "nieuw@precon.nl"]);
+
+    process.env.APP_USERS_EXTRA = "";
+  });
+
+  it("werkt ook als alleen APP_USERS_EXTRA gevuld is", () => {
+    process.env.APP_USERS = "";
+    process.env.APP_USERS_EXTRA = "solo@precon.nl:$2b$12$ccc";
+    expect(parseAppUsers()).toHaveLength(1);
+    process.env.APP_USERS_EXTRA = "";
+  });
+
+  it("laat het account uit APP_USERS winnen bij een dubbel adres", () => {
+    process.env.APP_USERS = "dubbel@precon.nl:$2b$12$origineel";
+    process.env.APP_USERS_EXTRA = "dubbel@precon.nl:$2b$12$nieuwer";
+
+    const users = parseAppUsers();
+    expect(users).toHaveLength(1);
+    expect(users[0]?.passwordHash).toBe("$2b$12$origineel");
+
+    process.env.APP_USERS_EXTRA = "";
+  });
 });
 
 describe("findUserByEmail", () => {
