@@ -169,9 +169,13 @@ body {
   letter-spacing: 0.3px;
 }
 
+/* Invulvelden buiten een FormField hoorden hier ook bij: zonder deze regel
+   vallen ze terug op de browserstandaard van ongeveer twintig tekens breed. */
 .fg input,
 .fg textarea,
-.fg select {
+.fg select,
+.correctie-blok textarea,
+.reflectie-item textarea {
   width: 100%;
   font-family: Arial, sans-serif;
   font-size: 13px;
@@ -186,11 +190,15 @@ body {
 
 .fg input:focus,
 .fg textarea:focus,
-.fg select:focus {
+.fg select:focus,
+.correctie-blok textarea:focus,
+.reflectie-item textarea:focus {
   border-color: var(--blauw-accent);
 }
 
-.fg textarea {
+.fg textarea,
+.correctie-blok textarea,
+.reflectie-item textarea {
   resize: vertical;
   min-height: 80px;
 }
@@ -1361,4 +1369,22 @@ body {
 .gids-box {
   position: relative;
   z-index: 1;
+}
+
+/* --- Reflectie-item --- */
+
+.reflectie-item {
+  border: 1px solid var(--grijs-lijn);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.reflectie-item-kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }
