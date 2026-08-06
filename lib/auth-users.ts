@@ -1,3 +1,6 @@
+import { vindOpgeslagenGebruiker } from "@/lib/app-users-store";
+import { hasDatabase } from "@/lib/db";
+
 export interface AppUser {
   email: string;
   passwordHash: string;
@@ -9,11 +12,11 @@ export interface AppUser {
  * Die tweede variabele bestaat omdat `APP_USERS` in Vercel als *sensitive*
  * is opgeslagen: de waarde is daarna niet meer uit te lezen, alleen in zijn
  * geheel te overschrijven. Iemand toevoegen zou dus betekenen dat je de rest
- * van de lijst kwijtraakt en iedereen buitensluit. Met een aparte variabele
- * kun je accounts toevoegen zonder de bestaande ooit aan te raken.
+ * van de lijst kwijtraakt en iedereen buitensluit.
  *
- * Staat een adres in beide lijsten, dan wint het eerste voorkomen uit
- * `APP_USERS` — de oorspronkelijke lijst is leidend.
+ * Nieuwe accounts komen tegenwoordig in de database (zie `app-users-store`).
+ * Deze lijst blijft bestaan voor de mensen die er al in stonden: die zijn niet
+ * over te zetten, want hun hashes zijn niet meer op te vragen.
  */
 export function parseAppUsers(): AppUser[] {
   const alleParen = [process.env.APP_USERS, process.env.APP_USERS_EXTRA]
@@ -39,7 +42,28 @@ export function parseAppUsers(): AppUser[] {
     .filter((u): u is AppUser => u !== null);
 }
 
-export function findUserByEmail(email: string): AppUser | undefined {
+/** Alleen de accounts uit de omgevingsvariabelen. */
+export function findEnvUserByEmail(email: string): AppUser | undefined {
   const normalized = email.toLowerCase().trim();
   return parseAppUsers().find((u) => u.email === normalized);
+}
+
+/**
+ * Zoekt een account: eerst de zelf aangemaakte in de database, daarna de
+ * vaste lijst uit de omgevingsvariabelen. Die volgorde maakt niets uit voor
+ * bestaande gebruikers — een adres kan maar in één van beide staan, want
+ * registreren weigert adressen die al bekend zijn.
+ */
+export async function findUserByEmail(
+  email: string,
+): Promise<AppUser | undefined> {
+  const normalized = email.toLowerCase().trim();
+  if (!normalized) return undefined;
+
+  if (hasDatabase()) {
+    const opgeslagen = await vindOpgeslagenGebruiker(normalized);
+    if (opgeslagen) return opgeslagen;
+  }
+
+  return findEnvUserByEmail(normalized);
 }

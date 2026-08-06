@@ -461,7 +461,7 @@ export async function requestBeoordelaarKoppeling(
 
   // Alleen voor wie ook echt kan inloggen — anders levert een typefout een
   // gesprek op dat niemand ooit kan openen.
-  if (!row && !findUserByEmail(medewerkerEmail)) {
+  if (!row && !(await findUserByEmail(medewerkerEmail))) {
     throw new MedewerkerNietGevondenError();
   }
 

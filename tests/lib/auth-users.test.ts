@@ -58,16 +58,16 @@ describe("findUserByEmail", () => {
     process.env.APP_USERS = original;
   });
 
-  it("finds user by normalized email", () => {
+  it("finds user by normalized email", async () => {
     process.env.APP_USERS = "user@precon.nl:$2b$12$hashvaluehere";
-    expect(findUserByEmail("  USER@precon.nl ")).toEqual({
+    await expect(findUserByEmail("  USER@precon.nl ")).resolves.toEqual({
       email: "user@precon.nl",
       passwordHash: "$2b$12$hashvaluehere",
     });
   });
 
-  it("returns undefined when not found", () => {
+  it("returns undefined when not found", async () => {
     process.env.APP_USERS = "";
-    expect(findUserByEmail("missing@precon.nl")).toBeUndefined();
+    await expect(findUserByEmail("missing@precon.nl")).resolves.toBeUndefined();
   });
 });

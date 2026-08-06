@@ -21,6 +21,9 @@ const sqlMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   sql: (...args: unknown[]) => sqlMock(...args),
+  // findUserByEmail kijkt eerst in de database; die is hier niet ingesteld,
+  // dus valt de lookup terug op APP_USERS.
+  hasDatabase: () => false,
 }));
 
 function gesprekRow(overrides: Record<string, unknown> = {}) {
