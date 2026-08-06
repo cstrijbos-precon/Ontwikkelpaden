@@ -81,6 +81,7 @@ export function GesprekArchiefViewer({ gesprek }: GesprekArchiefViewerProps) {
               state={state}
               onUpdate={NOOP}
               onSetVorigJaar={NOOP}
+              onSetNiveauCorrectie={NOOP}
               onToggleTCell={NOOP}
             />
           )}

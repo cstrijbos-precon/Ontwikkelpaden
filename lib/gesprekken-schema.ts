@@ -62,6 +62,8 @@ export const ontwikkelpadenStateSchema = z.object({
   tDiepte: z.string(),
   tBreedte: z.string(),
   vorigJaar: padRecordSchema(intPadNiveau),
+  niveauCorrectie: padRecordSchema(intPadNiveau.nullable()),
+  niveauCorrectieToelichting: z.string(),
   ambities: padRecordSchema(z.boolean()),
   trainingsgroepen: padRecordSchema(z.string()),
   ambitieNotitie: z.string(),

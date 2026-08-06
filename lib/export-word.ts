@@ -1,6 +1,16 @@
 import { berekenNiveau } from "@/lib/bereken-niveau";
 import { COMPS } from "@/lib/data/competenties";
 import { PADEN } from "@/lib/data/paden";
+import {
+  actieveCorrecties,
+  effectiefNiveau,
+  effectieveNiveaus,
+} from "@/lib/effectief-niveau";
+import {
+  bepaalSenioriteit,
+  leesTProfiel,
+  SENIORITEIT_LABEL,
+} from "@/lib/senioriteit";
 import { sterSym } from "@/lib/star-display";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
@@ -92,19 +102,38 @@ export function exportWord(state: OntwikkelpadenState): void {
   <table><tr><th>Pad</th><th>Vorig jaar</th><th>Huidig niveau</th><th>Ambitie</th><th>Trainingsgroep</th></tr>
   ${(Object.entries(PADEN) as [PadId, (typeof PADEN)[PadId]][])
     .map(([padId, pad]) => {
-      const n = berekenNiveau(padId, state.scores);
+      const n = effectiefNiveau(padId, state);
       const vj = state.vorigJaar[padId];
       const amb = state.ambities[padId];
+      const handmatig = state.niveauCorrectie[padId] !== null;
       return `<tr>
       <td class="${padId}"><strong>${pad.label}</strong></td>
       <td>${vj > 0 ? `Niveau ${vj} – ${pad.rollen[vj - 1]}` : "—"}</td>
-      <td>${n > 0 ? `Niveau ${n} – ${pad.rollen[n - 1]}` : "Niet ingeschaald"}</td>
+      <td>${n > 0 ? `Niveau ${n} – ${pad.rollen[n - 1]}` : "Niet ingeschaald"}${handmatig ? " (handmatig aangepast)" : ""}</td>
       <td>${amb && n < 5 ? `Niveau ${n + 1} – ${pad.rollen[n]}` : "—"}</td>
       <td>${escapeHtml(state.trainingsgroepen[padId]) || "—"}</td>
     </tr>`;
     })
     .join("")}
   </table>`;
+
+  const correcties = actieveCorrecties(state);
+  if (correcties.length > 0) {
+    html += `<div class="kader"><div class="kader-titel">Handmatig aangepaste inschaling</div>
+    <ul>${correcties
+      .map(
+        (c) =>
+          `<li>${escapeHtml(c.padLabel)}: berekend niveau ${
+            c.berekend > 0 ? c.berekend : "—"
+          } → niveau ${c.gecorrigeerd} – ${escapeHtml(c.rol)}</li>`,
+      )
+      .join("")}</ul>
+    <p><strong>Toelichting:</strong> ${
+      state.niveauCorrectieToelichting
+        ? nl(state.niveauCorrectieToelichting)
+        : "—"
+    }</p></div>`;
+  }
 
   if (state.tDiepte || state.tBreedte) {
     html += `<h2>T-profiel</h2>`;
@@ -113,6 +142,14 @@ export function exportWord(state: OntwikkelpadenState): void {
     if (state.tBreedte)
       html += `<p><strong>Breedte (kennis van):</strong> ${escapeHtml(state.tBreedte)}</p>`;
   }
+
+  const advies = bepaalSenioriteit(
+    effectieveNiveaus(state),
+    leesTProfiel(state),
+  );
+  html += `<h2>Junior, medior, senior</h2>
+  <p><strong>Vastgestelde inschaling:</strong> ${escapeHtml(state.niveauInschaling) || "—"}</p>
+  <p><strong>Suggestie op basis van het framework:</strong> ${SENIORITEIT_LABEL[advies.suggestie]} — ${escapeHtml(advies.reden)}</p>`;
 
   if (state.ambitieNotitie)
     html += `<h2>Ambitie</h2><div class="veld"><p>${nl(state.ambitieNotitie)}</p></div>`;

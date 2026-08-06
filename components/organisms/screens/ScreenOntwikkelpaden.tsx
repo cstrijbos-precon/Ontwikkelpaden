@@ -1,7 +1,9 @@
 import { FormField } from "@/components/molecules/FormField";
 import { ScoreBox } from "@/components/molecules/ScoreBox";
 import { FrameworkOverzicht } from "@/components/organisms/FrameworkOverzicht";
+import { NiveauCorrectieBlok } from "@/components/organisms/NiveauCorrectieBlok";
 import { PadenGrid } from "@/components/organisms/PadenGrid";
+import { SenioriteitBlok } from "@/components/organisms/SenioriteitBlok";
 import { TProfielGrid } from "@/components/organisms/TProfielGrid";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
@@ -12,6 +14,7 @@ interface ScreenOntwikkelpadenProps {
     value: OntwikkelpadenState[K],
   ) => void;
   onSetVorigJaar: (padId: PadId, n: number) => void;
+  onSetNiveauCorrectie: (padId: PadId, niveau: number | null) => void;
   onToggleTCell: (r: number, k: number) => void;
 }
 
@@ -19,6 +22,7 @@ export function ScreenOntwikkelpaden({
   state,
   onUpdate,
   onSetVorigJaar,
+  onSetNiveauCorrectie,
   onToggleTCell,
 }: ScreenOntwikkelpadenProps) {
   return (
@@ -29,9 +33,25 @@ export function ScreenOntwikkelpaden({
         competentiescores
       </div>
       <ScoreBox state={state} />
-      <div style={{ overflowX: "auto", marginBottom: 20 }}>
-        <PadenGrid state={state} onSetVorigJaar={onSetVorigJaar} />
+      <div className="tip-box">
+        Sleep een oranje bolletje omhoog of omlaag om de inschaling handmatig
+        aan te passen. Het bolletje landt altijd op een heel niveau. Licht een
+        aanpassing toe in het vak dat eronder verschijnt.
       </div>
+      <div style={{ overflowX: "auto", marginBottom: 20 }}>
+        <PadenGrid
+          state={state}
+          onSetVorigJaar={onSetVorigJaar}
+          onSetNiveauCorrectie={onSetNiveauCorrectie}
+        />
+      </div>
+      <NiveauCorrectieBlok
+        state={state}
+        onHerstel={(padId) => onSetNiveauCorrectie(padId, null)}
+        onToelichting={(waarde) =>
+          onUpdate("niveauCorrectieToelichting", waarde)
+        }
+      />
       <FrameworkOverzicht state={state} />
       <div className="sk">T-profiel</div>
       <div className="tip-box">
@@ -67,13 +87,10 @@ export function ScreenOntwikkelpaden({
           />
         </FormField>
       </div>
-      <FormField label="Junior, medior of senior?">
-        <input
-          value={state.niveauInschaling}
-          placeholder="bijv. Medior"
-          onChange={(e) => onUpdate("niveauInschaling", e.target.value)}
-        />
-      </FormField>
+      <SenioriteitBlok
+        state={state}
+        onUpdate={(waarde) => onUpdate("niveauInschaling", waarde)}
+      />
     </>
   );
 }

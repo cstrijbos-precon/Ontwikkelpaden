@@ -210,6 +210,29 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     }));
   }, []);
 
+  const setNiveauCorrectie = useCallback(
+    (padId: PadId, niveau: number | null) => {
+      setState((prev) => {
+        const niveauCorrectie = {
+          ...prev.niveauCorrectie,
+          [padId]: niveau === null ? null : clampPadNiveau(niveau),
+        };
+        const nogCorrecties = Object.values(niveauCorrectie).some(
+          (n) => n !== null,
+        );
+        return {
+          ...prev,
+          niveauCorrectie,
+          // Zonder aanpassingen hoort er ook geen toelichting te blijven staan.
+          niveauCorrectieToelichting: nogCorrecties
+            ? prev.niveauCorrectieToelichting
+            : "",
+        };
+      });
+    },
+    [],
+  );
+
   const toggleAmbitie = useCallback((padId: PadId) => {
     setState((prev) => {
       const next = !prev.ambities[padId];
@@ -341,6 +364,7 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     updateOpmerking,
     setSter,
     setVorigJaar,
+    setNiveauCorrectie,
     toggleAmbitie,
     setTrainingsgroep,
     toggleTCell,

@@ -105,6 +105,7 @@ export function OntwikkelpadenApp({ gesprekId }: OntwikkelpadenAppProps = {}) {
               state={app.state}
               onUpdate={app.updateField}
               onSetVorigJaar={app.setVorigJaar}
+              onSetNiveauCorrectie={app.setNiveauCorrectie}
               onToggleTCell={app.toggleTCell}
             />
           )}
