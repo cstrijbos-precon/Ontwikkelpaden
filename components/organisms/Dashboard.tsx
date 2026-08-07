@@ -323,10 +323,10 @@ export function Dashboard() {
           <label className="btn btn-t" style={{ display: "inline-block" }}>
             {importBezig
               ? "Bezig met importeren..."
-              : "📄 Importeer oud gesprek (.docx)"}
+              : "📄 Importeer oud gesprek (.docx of .pdf)"}
             <input
               type="file"
-              accept=".docx"
+              accept=".docx,.pdf"
               style={{ display: "none" }}
               disabled={importBezig}
               onChange={(e) => {

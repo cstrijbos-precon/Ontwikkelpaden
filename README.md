@@ -210,6 +210,7 @@ Verwacht:
 | Database `connected: false` | Verkeerde `DATABASE_URL`, of tabellen ontbreken (beheerder moet de scripts uit `migrations/` in Neon draaien). |
 | “Unauthorized” bij /api/… | Niet ingelogd — ga eerst naar de loginpagina. |
 | Poort 3000 = andere app | Gebruik poort **3001** in Ports. |
+| PDF-import levert lege velden op | De PDF bevat waarschijnlijk geen tekstlaag (een scan of foto). Gebruik dan het Word-bestand. |
 | Inloggen lukt niet | Nog geen account? Vul je adres in en kies een wachtwoord. Bij een oud account uit `APP_USERS`: elke `$` in de hash moet `\$` zijn in `.env.local`. |
 | "Alleen adressen van ..." | Je domein staat niet in `APP_EMAIL_DOMEINEN`. |
 | Wachtwoord vergeten | Een beheerder opent op het dashboard **Accounts en wachtwoorden** en klikt op *Wachtwoord vrijgeven*. Je kiest dan bij de volgende keer inloggen een nieuw wachtwoord; je gesprekken blijven staan. |
