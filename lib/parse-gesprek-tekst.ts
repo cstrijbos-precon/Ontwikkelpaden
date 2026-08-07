@@ -159,6 +159,27 @@ const REQUIRED_SECTION_LABELS = [
   "6. Ambitie",
 ];
 
+/**
+ * De labels uit de koptabel van het formulier, langste eerst zodat
+ * "Datum vorig gesprek" wint van "Datum". Alleen de PDF-lezer gebruikt deze
+ * lijst: Word levert elke tabelcel als eigen alinea, een PDF plakt de hele
+ * rij aan elkaar. Houd hem gelijk met de `inline`-markers hieronder.
+ */
+export const TABEL_LABELS = [
+  "Datum vorig gesprek",
+  "Naam professional",
+  "Bij Précon sinds",
+  "Bij Precon sinds",
+  "Hoofdbeoordelaar",
+  "Medebeoordelaar",
+  // "Datum" alleen aan het begin van een regel: los komt het woord overal in
+  // lopende tekst voor, en dan zou de hele zin erachter de datum worden.
+  "^Datum",
+];
+
+/** Velden die de app als datum bewaart (JJJJ-MM-DD). */
+const DATUMVELDEN = ["datum", "datumVorig", "datumVolgend"];
+
 function matchMarker(text: string): Marker | null {
   return MARKERS.find((m) => m.pattern.test(text)) ?? null;
 }
@@ -192,8 +213,17 @@ export function parseGesprekParagrafen(
     }
 
     if (inlineNextIsValue) {
-      textFields[inlineNextIsValue] = [text];
+      // Eerste vondst wint. In een PDF komt een label soms nog een keer voor
+      // (bijvoorbeeld in het ondertekeningsblok); dat mag de echte waarde
+      // uit de kop niet overschrijven.
+      if (!textFields[inlineNextIsValue]) {
+        textFields[inlineNextIsValue] = [text];
+      }
       inlineNextIsValue = null;
+      // Een label/waarde-paar is hiermee klaar. Zonder deze regel bleef alles
+      // wat erna kwam aan dit veld geplakt worden tot het volgende kopje —
+      // in Word onzichtbaar, in een PDF goed voor een naamveld vol tekst.
+      current = { kind: "skip" };
       continue;
     }
 
@@ -238,7 +268,17 @@ export function parseGesprekParagrafen(
   const state: Partial<OntwikkelpadenState> = {};
   for (const [key, lines] of Object.entries(textFields)) {
     const value = (lines ?? []).join(opties.regelScheiding).trim();
-    if (value) (state as Record<string, unknown>)[key] = value;
+    if (!value) continue;
+
+    // De formulieren schrijven datums als 9-6-2026; de app bewaart ze als
+    // 2026-06-09. Zonder deze omzetting valt de waarde bij het opslaan weg.
+    if (DATUMVELDEN.includes(key)) {
+      const omgezet = parseDutchDate(value);
+      if (omgezet) (state as Record<string, unknown>)[key] = omgezet;
+      continue;
+    }
+
+    (state as Record<string, unknown>)[key] = value;
   }
   if (situaties.some((s) => s.length > 0)) {
     state.situaties = situaties.map((lines) =>

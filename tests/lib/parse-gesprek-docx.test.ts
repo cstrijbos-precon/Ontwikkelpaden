@@ -45,8 +45,22 @@ describe("parseGesprekDocx", () => {
 
     expect(state.naam).toBe("Chantal de Vries");
     expect(state.bijPreconSinds).toBe("januari 2022");
-    expect(state.datumVorig).toBe("1-6-2025");
+    // De formulieren schrijven datums als 1-6-2025, maar de app bewaart ze als
+    // JJJJ-MM-DD. Zonder omzetting gooide enforceDate de waarde bij het opslaan
+    // weg, en verdween de datum zonder melding.
+    expect(state.datumVorig).toBe("2025-06-01");
     expect(state.hoofdbeoordelaar).toBe("Eva van Kouwen");
+    expect(state.medebeoordelaar).toBe("Jan Jansen");
+  });
+
+  it("plakt geen losse tekst meer achter een inline veld", async () => {
+    const buffer = await buildDocx([
+      "Medebeoordelaar",
+      "Jan Jansen",
+      "Een losse regel die er niet bij hoort.",
+    ]);
+
+    const { state } = await parseGesprekDocx(buffer);
     expect(state.medebeoordelaar).toBe("Jan Jansen");
   });
 
