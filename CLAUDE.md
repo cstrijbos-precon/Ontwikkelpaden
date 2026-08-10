@@ -38,8 +38,12 @@ README.md               # Gebruikershandleiding (hoofddocument)
 ## Inloggen
 
 Collega's maken zelf een account op het inlogscherm: adres invullen, wachtwoord
-bedenken. Alleen domeinen uit `APP_EMAIL_DOMEINEN` mogen dat (standaard
-`precongroup.com` en `tal-leadership.nl`); er is geen verificatiemail. Accounts
+bedenken, en dan de link uit de verificatiemail volgen. Zonder die bevestiging
+geeft het account geen toegang, en mag een onbevestigde registratie door de
+echte eigenaar overschreven worden. Alleen domeinen uit `APP_EMAIL_DOMEINEN`
+mogen zich aanmelden (standaard `precongroup.com` en `tal-leadership.nl`).
+Verzenden gaat via `RESEND_API_KEY` of `SMTP_*`; zonder kanaal is aanmelden
+geblokkeerd. Accounts
 staan in `app_users`; de oude lijst in `APP_USERS`/`APP_USERS_EXTRA` blijft als
 terugval bestaan omdat die in Vercel niet meer uit te lezen is.
 

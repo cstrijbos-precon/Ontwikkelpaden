@@ -87,6 +87,9 @@ export function AccountBeheer() {
                 <span
                   style={{ display: "flex", alignItems: "center", gap: 10 }}
                 >
+                  {!account.geverifieerd && (
+                    <span className="badge badge-wacht">Niet bevestigd</span>
+                  )}
                   <span style={{ fontSize: 11, color: "var(--grijs-licht)" }}>
                     laatst ingelogd: {datum(account.laatstIngelogdOp)}
                   </span>

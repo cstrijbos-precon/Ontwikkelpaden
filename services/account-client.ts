@@ -30,6 +30,7 @@ export interface AccountRegel {
   email: string;
   aangemaaktOp: string;
   laatstIngelogdOp: string | null;
+  geverifieerd: boolean;
 }
 
 export async function haalAccounts(): Promise<AccountRegel[]> {
@@ -66,5 +67,18 @@ export async function maakAccount(
 
   if (!res.ok) {
     throw new Error(await leesFout(res, "Account aanmaken mislukt."));
+  }
+}
+
+/** Wisselt de link uit de verificatiemail in voor een bevestigd account. */
+export async function bevestigEmail(token: string): Promise<void> {
+  const res = await fetch("/api/account/verifieer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await leesFout(res, "Bevestigen is mislukt."));
   }
 }

@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { maakOpgeslagenGebruiker } from "@/lib/app-users-store";
+import { maakOnbevestigdAccount } from "@/lib/app-users-store";
 import { findUserByEmail } from "@/lib/auth-users";
 import { hasDatabase } from "@/lib/db";
+import { mailIsIngesteld } from "@/lib/mailer";
 import {
   domeinIsToegestaan,
   isGeldigEmail,
@@ -10,6 +11,7 @@ import {
   toegestaneDomeinen,
   wachtwoordProbleem,
 } from "@/lib/registratie";
+import { stuurVerificatiemail } from "@/lib/verificatiemail";
 
 const bodySchema = z
   .object({
@@ -19,10 +21,24 @@ const bodySchema = z
   })
   .strict();
 
-/** Een collega maakt zelf een account aan bij de eerste keer inloggen. */
+/**
+ * Een collega meldt zich aan. Het account wordt aangemaakt maar geeft nog geen
+ * toegang: dat gebeurt pas als de link uit de verificatiemail is gevolgd.
+ * Zonder die stap is een e-mailadres geen bewijs van identiteit.
+ */
 export async function POST(request: Request) {
   if (!hasDatabase()) {
     return Response.json({ error: "Database not configured" }, { status: 503 });
+  }
+
+  if (!mailIsIngesteld()) {
+    return Response.json(
+      {
+        error:
+          "Aanmelden kan nu niet: de app kan geen verificatiemail versturen. Neem contact op met de beheerder.",
+      },
+      { status: 503 },
+    );
   }
 
   let body: unknown;
@@ -67,7 +83,7 @@ export async function POST(request: Request) {
     return Response.json({ error: probleem }, { status: 400 });
   }
 
-  // Bestaat het adres al, dan is dit geen registratie maar een inlogpoging.
+  // Een bevestigd account hoort hier niet opnieuw langs te komen.
   if (await findUserByEmail(email)) {
     return Response.json(
       { error: "Dit adres heeft al een account. Log in met je wachtwoord." },
@@ -76,15 +92,26 @@ export async function POST(request: Request) {
   }
 
   const hash = await bcrypt.hash(parsed.data.wachtwoord, 12);
-  const aangemaakt = await maakOpgeslagenGebruiker(email, hash);
-
-  if (!aangemaakt) {
-    // Twee registraties tegelijk; de eerste wint.
+  if (!(await maakOnbevestigdAccount(email, hash))) {
     return Response.json(
       { error: "Dit adres heeft al een account. Log in met je wachtwoord." },
       { status: 409 },
     );
   }
 
-  return Response.json({ email }, { status: 201 });
+  try {
+    await stuurVerificatiemail(email);
+  } catch {
+    // Het account staat er wel, maar zonder mail is het onbruikbaar. Beter een
+    // eerlijke fout dan iemand laten wachten op een bericht dat nooit komt.
+    return Response.json(
+      {
+        error:
+          "Het versturen van de verificatiemail is mislukt. Probeer het later opnieuw of neem contact op met de beheerder.",
+      },
+      { status: 502 },
+    );
+  }
+
+  return Response.json({ email, verificatieVerstuurd: true }, { status: 201 });
 }

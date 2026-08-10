@@ -12,7 +12,7 @@ import {
   maakAccount,
 } from "@/services/account-client";
 
-type Stap = "email" | "inloggen" | "registreren";
+type Stap = "email" | "inloggen" | "registreren" | "checkJeMail";
 
 export function LoginForm() {
   const [stap, setStap] = useState<Stap>("email");
@@ -94,12 +94,36 @@ export function LoginForm() {
 
     try {
       await maakAccount(email, password, code || undefined);
-      await login();
+      // Nog niet inloggen: het account werkt pas na de link uit de mail.
+      setStap("checkJeMail");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er ging iets mis.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (stap === "checkJeMail") {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-slate-700">
+          We hebben een mail gestuurd naar <strong>{email}</strong>. Klik op de
+          link erin om je adres te bevestigen; daarna kun je inloggen met het
+          wachtwoord dat je net hebt gekozen.
+        </p>
+        <p className="text-xs text-slate-500">
+          Geen mail ontvangen? Kijk even in je ongewenste post. De link is 24
+          uur geldig.
+        </p>
+        <button
+          type="button"
+          onClick={terugNaarEmail}
+          className="text-xs text-blue-600 underline"
+        >
+          Een ander adres gebruiken
+        </button>
+      </div>
+    );
   }
 
   if (stap === "email") {
@@ -119,8 +143,8 @@ export function LoginForm() {
           {loading ? "Bezig..." : "Verder"}
         </Button>
         <p className="text-xs text-slate-500">
-          Nog geen account? Vul je werkadres in — je kiest dan meteen een
-          wachtwoord.
+          Nog geen account? Vul je werkadres in — je kiest een wachtwoord en
+          krijgt een mail om je adres te bevestigen.
         </p>
       </div>
     );
@@ -182,7 +206,7 @@ export function LoginForm() {
           )}
           <p className="text-xs text-slate-500">
             Minstens {MINIMALE_WACHTWOORDLENGTE} tekens, met een letter en een
-            cijfer. Bewaar het goed: je kunt het later niet zelf wijzigen.
+            cijfer. Je krijgt hierna een mail om je adres te bevestigen.
           </p>
         </>
       )}
@@ -194,11 +218,7 @@ export function LoginForm() {
         disabled={loading}
         className="w-full"
       >
-        {loading
-          ? "Bezig..."
-          : registreren
-            ? "Account aanmaken en inloggen"
-            : "Inloggen"}
+        {loading ? "Bezig..." : registreren ? "Account aanmaken" : "Inloggen"}
       </Button>
     </div>
   );

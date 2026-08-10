@@ -119,8 +119,35 @@ gesprekken en die waarvan hij beoordelaar is.
 #### Een account: dat maak je zelf aan
 
 Je hoeft geen `APP_USERS` meer in te vullen. Vul op het inlogscherm je werkadres
-in; is dat nog niet bekend, dan vraagt de app meteen om een wachtwoord te
-bedenken. Het account komt in de tabel `app_users` in de database te staan.
+in; is dat nog niet bekend, dan kies je een wachtwoord en krijg je een mail met
+een bevestigingslink. Pas als je die hebt gevolgd, werkt je account. Het staat
+in de tabel `app_users` in de database.
+
+#### `RESEND_API_KEY` of `SMTP_*` — verplicht
+
+De app moet die verificatiemail kunnen versturen. Is er geen kanaal ingesteld,
+dan kan niemand zich aanmelden en zegt het inlogscherm dat ook. Kies één:
+
+```env
+RESEND_API_KEY=re_xxxxxxxxxxxx
+```
+
+of
+
+```env
+SMTP_HOST=smtp.office365.com
+SMTP_PORT=587
+SMTP_USER=noreply@precongroup.com
+SMTP_PASS=app-wachtwoord
+```
+
+Zet er ook bij wie de afzender is, en op welk adres de app draait — dat laatste
+komt in de link te staan:
+
+```env
+MAIL_AFZENDER=Ontwikkelpaden <noreply@precongroup.com>
+APP_URL=https://ontwikkelpaden-precon.vercel.app
+```
 
 Alleen adressen van `precongroup.com` en `tal-leadership.nl` kunnen een account
 maken. Een andere lijst instellen kan met `APP_EMAIL_DOMEINEN`:
@@ -136,10 +163,10 @@ dan `APP_REGISTRATIECODE`. Laat je die leeg, dan is het adres de enige drempel.
 APP_REGISTRATIECODE=een-code-die-intern-rondgaat
 ```
 
-> **Let op:** er wordt geen verificatiemail gestuurd. Iedereen met een adres in
-> een toegestaan domein kan zich registreren — ook op een adres dat niet van
-> hem is, zolang de eigenaar dat zelf nog niet heeft gedaan. De registratiecode
-> is de manier om dat af te schermen.
+Iemand die een adres invult dat niet van hem is, komt niet ver: de mail gaat
+naar de echte eigenaar, en zonder de link blijft het account onbevestigd en
+geeft het geen toegang. De eigenaar kan zich daarna gewoon zelf aanmelden — een
+onbevestigde registratie wordt dan overschreven.
 
 #### Bestaande accounts uit `APP_USERS`
 
@@ -174,8 +201,8 @@ Je komt op de **loginpagina**.
 ## Stap 6 — Inloggen
 
 1. Vul je werkadres in en klik **Verder**.
-2. Ken de app je nog niet, dan bedenk je meteen een wachtwoord. Anders vul je je bestaande wachtwoord in.
-3. Inloggen → je ziet het formulier met 9 schermen.
+2. Ken de app je nog niet, dan kies je een wachtwoord en krijg je een mail. Klik op de link daarin.
+3. Daarna inloggen met je wachtwoord → je ziet het formulier met 9 schermen.
 
 ---
 
@@ -213,6 +240,8 @@ Verwacht:
 | PDF-import levert lege velden op | De PDF bevat waarschijnlijk geen tekstlaag (een scan of foto). Gebruik dan het Word-bestand. |
 | Inloggen lukt niet | Nog geen account? Vul je adres in en kies een wachtwoord. Bij een oud account uit `APP_USERS`: elke `$` in de hash moet `\$` zijn in `.env.local`. |
 | "Alleen adressen van ..." | Je domein staat niet in `APP_EMAIL_DOMEINEN`. |
+| Geen verificatiemail gekregen | Kijk in je ongewenste post. De link is 24 uur geldig; daarna meld je je opnieuw aan. Blijft het uit, dan is er waarschijnlijk geen mailkanaal ingesteld — vraag het de beheerder. |
+| "Aanmelden kan nu niet" | Er is geen `RESEND_API_KEY` of `SMTP_HOST` ingesteld. |
 | Wachtwoord vergeten | Een beheerder opent op het dashboard **Accounts en wachtwoorden** en klikt op *Wachtwoord vrijgeven*. Je kiest dan bij de volgende keer inloggen een nieuw wachtwoord; je gesprekken blijven staan. |
 | `.env.local` wijziging werkt niet | Server stoppen (Ctrl+C) en opnieuw `npm run dev`. |
 
@@ -225,8 +254,8 @@ Verwacht:
 Als dit **nog niet** is gedaan:
 
 1. [Neon Console](https://console.neon.tech) → SQL Editor.
-2. Voer de bestanden uit `migrations/` op volgorde uit (001 t/m 006).
-3. `006_app_users.sql` is nodig voor het inloggen; zonder die tabel kan niemand een account aanmaken.
+2. Voer de bestanden uit `migrations/` op volgorde uit (001 t/m 007).
+3. `006_app_users.sql` en `007_email_verificatie.sql` zijn nodig voor het inloggen; zonder die tabellen kan niemand een account aanmaken.
 
 Daarna hoeven andere gebruikers **alleen** de `DATABASE_URL` in hun `.env.local` te zetten.
 
@@ -234,7 +263,7 @@ Daarna hoeven andere gebruikers **alleen** de `DATABASE_URL` in hun `.env.local`
 
 1. Project **ontwikkelpaden** koppelen aan deze repo.
 2. Neon-integratie → `DATABASE_URL` in Vercel Environment Variables.
-3. Ook `AUTH_SECRET` en `APP_ADMINS` zetten, en eventueel `APP_EMAIL_DOMEINEN` en `APP_REGISTRATIECODE`.
+3. Ook `AUTH_SECRET`, `APP_ADMINS`, `APP_URL` en een mailkanaal (`RESEND_API_KEY` of `SMTP_*`) zetten, en eventueel `APP_EMAIL_DOMEINEN` en `APP_REGISTRATIECODE`.
 4. Deel `DATABASE_URL` veilig met gebruikers voor Codespaces.
 
 **Tip:** bij `vercel env pull` nooit een bestaande `.env.local` overschrijven zonder backup — anders verdwijnen `APP_USERS` en `AUTH_SECRET`.

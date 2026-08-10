@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { findUserByEmail } from "@/lib/auth-users";
 import { hasDatabase } from "@/lib/db";
+import { mailIsIngesteld } from "@/lib/mailer";
 import {
   domeinIsToegestaan,
   isGeldigEmail,
@@ -54,8 +55,8 @@ export async function POST(request: Request) {
 
   return Response.json({
     bekend: Boolean(bestaand),
-    // Zonder database kan er niets nieuws bij; dan alleen de vaste lijst.
-    registrerenMogelijk: hasDatabase(),
+    // Aanmelden kan alleen als er ook een verificatiemail verstuurd kan worden.
+    registrerenMogelijk: hasDatabase() && mailIsIngesteld(),
     codeNodig: !bestaand && registratiecodeVereist(),
   });
 }

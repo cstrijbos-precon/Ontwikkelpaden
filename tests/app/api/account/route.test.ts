@@ -10,9 +10,21 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/app-users-store", () => ({
-  maakOpgeslagenGebruiker: (...args: unknown[]) => maakMock(...args),
+  maakOnbevestigdAccount: (...args: unknown[]) => maakMock(...args),
   vindOpgeslagenGebruiker: (...args: unknown[]) => vindMock(...args),
 }));
+
+const mailMock = vi.fn();
+
+vi.mock("@/lib/mailer", () => ({
+  mailIsIngesteld: () => mailIngesteld,
+}));
+
+vi.mock("@/lib/verificatiemail", () => ({
+  stuurVerificatiemail: (...args: unknown[]) => mailMock(...args),
+}));
+
+let mailIngesteld = true;
 
 function verzoek(body: unknown) {
   return new Request("http://localhost/api/account", {
@@ -27,6 +39,8 @@ const origineleCode = process.env.APP_REGISTRATIECODE;
 beforeEach(() => {
   maakMock.mockReset().mockResolvedValue(true);
   vindMock.mockReset().mockResolvedValue(undefined);
+  mailMock.mockReset().mockResolvedValue(undefined);
+  mailIngesteld = true;
   process.env.APP_USERS = "";
   process.env.APP_REGISTRATIECODE = "";
 });
@@ -37,7 +51,7 @@ afterEach(() => {
 });
 
 describe("POST /api/account", () => {
-  it("maakt een account aan voor een Précon-adres", async () => {
+  it("maakt een account aan en stuurt een verificatiemail", async () => {
     const res = await POST(
       verzoek({
         email: "Roos@precongroup.com",
@@ -46,6 +60,7 @@ describe("POST /api/account", () => {
     );
 
     expect(res.status).toBe(201);
+    expect(mailMock).toHaveBeenCalledWith("roos@precongroup.com");
     expect(maakMock).toHaveBeenCalled();
     // Het adres wordt genormaliseerd opgeslagen.
     expect(maakMock.mock.calls[0]?.[0]).toBe("roos@precongroup.com");
@@ -104,6 +119,27 @@ describe("POST /api/account", () => {
     );
 
     expect(res.status).toBe(409);
+  });
+
+  it("weigert aanmelden als er geen mail verstuurd kan worden", async () => {
+    mailIngesteld = false;
+
+    const res = await POST(
+      verzoek({ email: "roos@precongroup.com", wachtwoord: "Ontwikkel2026" }),
+    );
+
+    expect(res.status).toBe(503);
+    expect(maakMock).not.toHaveBeenCalled();
+  });
+
+  it("meldt het als de verificatiemail niet verstuurd kan worden", async () => {
+    mailMock.mockRejectedValue(new Error("smtp weg"));
+
+    const res = await POST(
+      verzoek({ email: "roos@precongroup.com", wachtwoord: "Ontwikkel2026" }),
+    );
+
+    expect(res.status).toBe(502);
   });
 
   it("eist de registratiecode zodra die is ingesteld", async () => {
