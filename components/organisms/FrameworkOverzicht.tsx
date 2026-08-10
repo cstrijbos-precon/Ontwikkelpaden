@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { berekenNiveau } from "@/lib/bereken-niveau";
 import { COMPS } from "@/lib/data/competenties";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
+import { effectiefNiveau } from "@/lib/effectief-niveau";
 import { getPadColor } from "@/lib/pad-colors";
 import { sterSym } from "@/lib/star-display";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
@@ -40,7 +40,7 @@ export function FrameworkOverzicht({ state }: FrameworkOverzichtProps) {
         <div style={{ background: "#fff", padding: 0 }}>
           {PAD_IDS.map((padId) => {
             const pad = PADEN[padId];
-            const nHuidig = berekenNiveau(padId, state.scores);
+            const nHuidig = effectiefNiveau(padId, state);
             const padOpen = openPads.has(padId);
             const relevantComps = COMPS.filter(
               (c) => !c.trainerOnly || padId === "trainer",

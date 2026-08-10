@@ -35,6 +35,24 @@ docs/SETUP.md           # Verwijzing naar README
 README.md               # Gebruikershandleiding (hoofddocument)
 ```
 
+## Inloggen
+
+Collega's maken zelf een account op het inlogscherm: adres invullen, wachtwoord
+bedenken, en dan de link uit de verificatiemail volgen. Zonder die bevestiging
+geeft het account geen toegang, en mag een onbevestigde registratie door de
+echte eigenaar overschreven worden. Alleen domeinen uit `APP_EMAIL_DOMEINEN`
+mogen zich aanmelden (standaard `precongroup.com` en `tal-leadership.nl`).
+Verzenden gaat via `RESEND_API_KEY` of `SMTP_*`; zonder kanaal is aanmelden
+geblokkeerd. `APP_VERIFICATIE_UITZONDERINGEN` bevat losse adressen die tijdelijk
+zonder verificatie door mogen — bedoeld om te testen, hoort weg zodra mail werkt. Accounts
+staan in `app_users`; de oude lijst in `APP_USERS`/`APP_USERS_EXTRA` blijft als
+terugval bestaan omdat die in Vercel niet meer uit te lezen is.
+
+Een beoordelaar mag een medewerker koppelen die nog nooit heeft ingelogd. In dat
+geval staat de koppeling meteen open — er is dan niemand om toestemming aan te
+vragen. Bestaat het account wel, dan blijft de koppeling op `in_afwachting`
+staan tot de medewerker akkoord geeft.
+
 ## Dataopslag
 
 Formuliergegevens worden opgeslagen in **Neon Postgres** (tabel `gesprekken`), niet meer in localStorage. Autosave elke 5 minuten + bij navigatie en handmatig opslaan.

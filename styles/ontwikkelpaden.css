@@ -131,7 +131,7 @@ body {
 
 .scherm {
   padding: 24px 28px;
-  max-width: 900px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
@@ -169,9 +169,13 @@ body {
   letter-spacing: 0.3px;
 }
 
+/* Invulvelden buiten een FormField hoorden hier ook bij: zonder deze regel
+   vallen ze terug op de browserstandaard van ongeveer twintig tekens breed. */
 .fg input,
 .fg textarea,
-.fg select {
+.fg select,
+.correctie-blok textarea,
+.reflectie-item textarea {
   width: 100%;
   font-family: Arial, sans-serif;
   font-size: 13px;
@@ -186,11 +190,15 @@ body {
 
 .fg input:focus,
 .fg textarea:focus,
-.fg select:focus {
+.fg select:focus,
+.correctie-blok textarea:focus,
+.reflectie-item textarea:focus {
   border-color: var(--blauw-accent);
 }
 
-.fg textarea {
+.fg textarea,
+.correctie-blok textarea,
+.reflectie-item textarea {
   resize: vertical;
   min-height: 80px;
 }
@@ -1035,4 +1043,348 @@ body {
   width: 100%;
   max-height: 80vh;
   overflow-y: auto;
+}
+
+/* --- Verschuifbaar niveaubolletje --- */
+
+.niv-baan {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  touch-action: none;
+}
+
+.bol.sleepbaar,
+.bol.plaatsbaar {
+  padding: 0;
+  cursor: grab;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.bol.sleepbaar:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 4px rgba(224, 122, 26, 0.18);
+}
+
+.bol.sleepbaar:focus-visible,
+.bol.plaatsbaar:focus-visible {
+  outline: 3px solid var(--blauw-accent);
+  outline-offset: 2px;
+}
+
+.bol.sleepbaar.sleept {
+  cursor: grabbing;
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+}
+
+.bol.sleepbaar.verschoven {
+  border-style: dashed;
+  border-color: var(--blauw);
+}
+
+.bol.plaatsbaar {
+  background: transparent;
+  border: 2px dashed var(--grijs-licht);
+  opacity: 0.7;
+}
+
+.bol.plaatsbaar:hover {
+  opacity: 1;
+  border-color: var(--oranje);
+}
+
+/* --- Toelichting bij een handmatige aanpassing --- */
+
+.correctie-blok {
+  border: 1px solid var(--blauw-accent);
+  border-left: 4px solid var(--blauw-accent);
+  border-radius: 8px;
+  background: var(--blauw-licht);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.correctie-blok.onaf {
+  border-color: var(--oranje);
+  border-left-color: var(--oranje);
+  background: var(--oranje-licht);
+}
+
+.correctie-kop {
+  font-weight: bold;
+  font-size: 12.5px;
+  color: var(--blauw);
+  margin-bottom: 8px;
+}
+
+.correctie-blok.onaf .correctie-kop {
+  color: #c05e10;
+}
+
+.correctie-lijst {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+
+.correctie-lijst li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.correctie-lijst li:last-child {
+  border-bottom: none;
+}
+
+.correctie-pad {
+  font-weight: bold;
+  min-width: 84px;
+}
+
+.correctie-verschil {
+  color: var(--grijs);
+  flex: 1;
+}
+
+.correctie-herstel {
+  background: none;
+  border: 1px solid var(--grijs-lijn);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--grijs);
+  cursor: pointer;
+}
+
+.correctie-herstel:hover {
+  border-color: var(--blauw-accent);
+  color: var(--blauw-accent);
+}
+
+.correctie-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: bold;
+  color: var(--grijs);
+  margin-bottom: 4px;
+}
+
+.correctie-verplicht {
+  font-weight: normal;
+  color: var(--oranje);
+}
+
+.correctie-waarschuwing {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #c05e10;
+}
+
+/* --- Junior / medior / senior --- */
+
+.senioriteit-blok {
+  border-top: 1px solid var(--grijs-lijn);
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.senioriteit-kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.gids-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--blauw-accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.senioriteit-suggestie {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--grijs-lijn);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.senioriteit-badge {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-weight: bold;
+  font-size: 12.5px;
+  color: #fff;
+}
+
+.senioriteit-badge.junior {
+  background: var(--grijs-licht);
+}
+
+.senioriteit-badge.medior {
+  background: var(--blauw-accent);
+}
+
+.senioriteit-badge.senior {
+  background: var(--groen);
+}
+
+.senioriteit-tekst {
+  font-size: 12px;
+  color: var(--grijs);
+  line-height: 1.5;
+}
+
+.senioriteit-stap {
+  margin-top: 4px;
+  color: var(--blauw);
+}
+
+.senioriteit-tprofiel {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--grijs-licht);
+}
+
+.senioriteit-overnemen {
+  margin-top: 8px;
+  background: none;
+  border: 1px solid var(--blauw-accent);
+  color: var(--blauw-accent);
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.senioriteit-overnemen:hover {
+  background: var(--blauw-licht);
+}
+
+/* --- Gids-popup --- */
+
+.gids-box {
+  max-width: 640px;
+  border: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.gids-hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gids-hdr h2 {
+  font-size: 17px;
+  color: var(--blauw);
+  margin: 0;
+}
+
+.gids-sluit {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--grijs-licht);
+  cursor: pointer;
+}
+
+.gids-intro {
+  color: var(--grijs);
+  margin: 6px 0 14px;
+}
+
+.gids-sectie {
+  margin-bottom: 14px;
+}
+
+.gids-sectie h3 {
+  font-size: 13.5px;
+  color: var(--blauw-accent);
+  margin: 0 0 4px;
+}
+
+.gids-sectie p {
+  margin: 0 0 6px;
+}
+
+.gids-sectie ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.gids-sectie li {
+  margin-bottom: 3px;
+}
+
+.gids-letop,
+.gids-toepassing {
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+.gids-letop {
+  background: var(--oranje-licht);
+  color: var(--grijs);
+}
+
+.gids-toepassing {
+  background: var(--blauw-licht);
+  color: var(--grijs);
+}
+
+.modal-achtergrond {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.gids-box {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Reflectie-item --- */
+
+.reflectie-item {
+  border: 1px solid var(--grijs-lijn);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.reflectie-item-kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }

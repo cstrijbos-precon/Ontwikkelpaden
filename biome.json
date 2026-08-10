@@ -38,7 +38,9 @@
       "!.next",
       "!coverage",
       "!docs",
-      "!.claude"
+      "!.claude",
+      "!.agents",
+      "!.vercel"
     ]
   }
 }

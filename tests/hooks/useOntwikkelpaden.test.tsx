@@ -150,6 +150,23 @@ describe("useOntwikkelpaden", () => {
     expect(result.current.state.trainingsgroepen.adviseur).toBe("groep-1");
     expect(result.current.state.tCellen).toContain("1-2");
 
+    // De trainingsgroep staat los van de ambitie en blijft dus staan.
+    act(() => {
+      result.current.toggleAmbitie("adviseur");
+    });
+    expect(result.current.state.ambities.adviseur).toBe(false);
+    expect(result.current.state.trainingsgroepen.adviseur).toBe("groep-1");
+
+    // Een verschoven bolletje kan hersteld worden naar de berekening.
+    act(() => {
+      result.current.setNiveauCorrectie("leider", 4);
+    });
+    expect(result.current.state.niveauCorrectie.leider).toBe(4);
+    act(() => {
+      result.current.setNiveauCorrectie("leider", null);
+    });
+    expect(result.current.state.niveauCorrectie.leider).toBeNull();
+
     await act(async () => {
       result.current.volgende();
     });
@@ -267,7 +284,10 @@ describe("useOntwikkelpaden", () => {
     const { result } = renderHook(() => useOntwikkelpaden());
     await waitFor(() => expect(result.current.hydrated).toBe(true));
     await waitFor(() =>
-      expect(result.current.knownEmails).toEqual(["a@precon.nl", "b@precon.nl"]),
+      expect(result.current.knownEmails).toEqual([
+        "a@precon.nl",
+        "b@precon.nl",
+      ]),
     );
 
     await act(async () => {

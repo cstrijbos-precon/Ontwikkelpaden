@@ -231,7 +231,9 @@ describe("gesprekken-client", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
-          Promise.resolve({ medewerkers: [{ naam: "Jan", email: "jan@precon.nl" }] }),
+          Promise.resolve({
+            medewerkers: [{ naam: "Jan", email: "jan@precon.nl" }],
+          }),
       }),
     );
 
@@ -249,14 +251,17 @@ describe("gesprekken-client", () => {
 
     await koppelBeoordelaar("jan@precon.nl", "hoofdbeoordelaar");
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/medewerkers/koppel-beoordelaar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        medewerkerEmail: "jan@precon.nl",
-        rol: "hoofdbeoordelaar",
-      }),
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/medewerkers/koppel-beoordelaar",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          medewerkerEmail: "jan@precon.nl",
+          rol: "hoofdbeoordelaar",
+        }),
+      },
+    );
   });
 
   it("respondBeoordelaarKoppeling posts rol and actie", async () => {
@@ -266,7 +271,11 @@ describe("gesprekken-client", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await respondBeoordelaarKoppeling("gesprek-1", "hoofdbeoordelaar", "goedkeuren");
+    await respondBeoordelaarKoppeling(
+      "gesprek-1",
+      "hoofdbeoordelaar",
+      "goedkeuren",
+    );
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/gesprekken/gesprek-1/beoordelaar-status",

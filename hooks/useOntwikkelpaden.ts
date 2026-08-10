@@ -210,17 +210,35 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     }));
   }, []);
 
+  const setNiveauCorrectie = useCallback(
+    (padId: PadId, niveau: number | null) => {
+      setState((prev) => {
+        const niveauCorrectie = {
+          ...prev.niveauCorrectie,
+          [padId]: niveau === null ? null : clampPadNiveau(niveau),
+        };
+        const nogCorrecties = Object.values(niveauCorrectie).some(
+          (n) => n !== null,
+        );
+        return {
+          ...prev,
+          niveauCorrectie,
+          // Zonder aanpassingen hoort er ook geen toelichting te blijven staan.
+          niveauCorrectieToelichting: nogCorrecties
+            ? prev.niveauCorrectieToelichting
+            : "",
+        };
+      });
+    },
+    [],
+  );
+
   const toggleAmbitie = useCallback((padId: PadId) => {
-    setState((prev) => {
-      const next = !prev.ambities[padId];
-      return {
-        ...prev,
-        ambities: { ...prev.ambities, [padId]: next },
-        trainingsgroepen: next
-          ? prev.trainingsgroepen
-          : { ...prev.trainingsgroepen, [padId]: "" },
-      };
-    });
+    // De trainingsgroep staat los van de ambitie en blijft dus staan.
+    setState((prev) => ({
+      ...prev,
+      ambities: { ...prev.ambities, [padId]: !prev.ambities[padId] },
+    }));
   }, []);
 
   const setTrainingsgroep = useCallback((padId: PadId, value: string) => {
@@ -341,6 +359,7 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     updateOpmerking,
     setSter,
     setVorigJaar,
+    setNiveauCorrectie,
     toggleAmbitie,
     setTrainingsgroep,
     toggleTCell,

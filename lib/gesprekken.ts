@@ -1,6 +1,7 @@
-import { berekenAlleNiveaus } from "@/lib/bereken-niveau";
+import { findUserByEmail } from "@/lib/auth-users";
 import { buildNextCycleState } from "@/lib/cycle-carry-over";
 import { sql } from "@/lib/db";
+import { effectieveNiveaus } from "@/lib/effectief-niveau";
 import {
   clampPadNiveau,
   clampScore,
@@ -10,9 +11,10 @@ import {
 import type { BeoordelaarStatus } from "@/lib/gesprekken-access";
 import { canAccessGesprek } from "@/lib/gesprekken-access";
 import { createInitialState, mergeWithInitialState } from "@/lib/initial-state";
+import { domeinIsToegestaan } from "@/lib/registratie";
 import type {
-  BeoordelaarRol,
   BekendeMedewerker,
+  BeoordelaarRol,
   DashboardOverzicht,
   Gesprek,
   GesprekListItem,
@@ -128,7 +130,7 @@ async function syncExtractTables(
     `;
   }
 
-  const huidigeNiveaus = berekenAlleNiveaus(state);
+  const huidigeNiveaus = effectieveNiveaus(state);
   for (const padId of PAD_IDS) {
     await sql`
       INSERT INTO gesprek_paden (
@@ -428,13 +430,27 @@ export async function getDashboardOverzicht(
   );
   const pendingGoedkeuringen = await getPendingGoedkeuringen(userEmail);
 
-  return { eigen, alsHoofdbeoordelaar, alsMedebeoordelaar, pendingGoedkeuringen };
+  return {
+    eigen,
+    alsHoofdbeoordelaar,
+    alsMedebeoordelaar,
+    pendingGoedkeuringen,
+  };
 }
 
 /**
  * Een beoordelaar koppelt zichzelf aan een medewerker (via de naam-dropdown op
- * het dashboard). Bewust zonder toegangscheck — dat is het hele punt: de
- * koppeling staat op 'in_afwachting' totdat de medewerker akkoord geeft.
+ * het dashboard). Bewust zonder toegangscheck — de koppeling wacht normaal op
+ * akkoord van de medewerker zelf.
+ *
+ * Heeft de medewerker nog geen enkel gesprek, dan start deze actie er meteen
+ * een als concept.
+ *
+ * Heeft de medewerker nog geen account, dan staat de koppeling direct open.
+ * Er is dan namelijk niemand om toestemming aan te vragen, en wachten zou
+ * betekenen dat het gesprek onbruikbaar blijft tot die collega een keer
+ * inlogt. Zodra iemand zich met dat adres registreert, ziet die het gesprek
+ * gewoon staan: toegang hangt aan het e-mailadres, niet aan het account.
  */
 export async function requestBeoordelaarKoppeling(
   medewerkerEmail: string,
@@ -448,11 +464,25 @@ export async function requestBeoordelaarKoppeling(
     LIMIT 1
   `) as GesprekRow[];
   const row = rows[0];
-  if (!row) throw new MedewerkerNietGevondenError();
 
-  const existing = mapRow(row);
+  // Een typefout mag geen gesprek opleveren op een adres dat nooit kan
+  // inloggen. Het domein is nu de grens, niet het bestaan van een account.
+  if (!row && !domeinIsToegestaan(medewerkerEmail)) {
+    throw new MedewerkerNietGevondenError();
+  }
+
+  const heeftAccount = Boolean(await findUserByEmail(medewerkerEmail));
+  const nieuweStatus: BeoordelaarStatus = heeftAccount
+    ? "in_afwachting"
+    : "toegestaan";
+
+  const existing = row
+    ? mapRow(row)
+    : await createGesprek(beoordelaarEmail, undefined, medewerkerEmail);
   const huidigeWaarde =
-    rol === "hoofdbeoordelaar" ? existing.hoofdbeoordelaar : existing.medebeoordelaar;
+    rol === "hoofdbeoordelaar"
+      ? existing.hoofdbeoordelaar
+      : existing.medebeoordelaar;
   if (huidigeWaarde.trim() !== "") throw new BeoordelaarAlGekoppeldError();
 
   const updated = (
@@ -460,14 +490,14 @@ export async function requestBeoordelaarKoppeling(
       ? await sql`
         UPDATE gesprekken SET
           hoofdbeoordelaar = ${beoordelaarEmail},
-          hoofdbeoordelaar_status = 'in_afwachting'
+          hoofdbeoordelaar_status = ${nieuweStatus}
         WHERE id = ${existing.id}
         RETURNING *
       `
       : await sql`
         UPDATE gesprekken SET
           medebeoordelaar = ${beoordelaarEmail},
-          medebeoordelaar_status = 'in_afwachting'
+          medebeoordelaar_status = ${nieuweStatus}
         WHERE id = ${existing.id}
         RETURNING *
       `

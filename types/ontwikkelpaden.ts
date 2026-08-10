@@ -82,6 +82,10 @@ export interface OntwikkelpadenState {
   tDiepte: string;
   tBreedte: string;
   vorigJaar: Record<PadId, number>;
+  /** Handmatig verschoven niveau per pad; null = volg de berekening. */
+  niveauCorrectie: Record<PadId, number | null>;
+  /** Verplichte toelichting zodra een niveau handmatig is verschoven. */
+  niveauCorrectieToelichting: string;
   ambities: Record<PadId, boolean>;
   trainingsgroepen: Record<PadId, string>;
   ambitieNotitie: string;

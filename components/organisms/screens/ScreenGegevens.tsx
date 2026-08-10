@@ -43,8 +43,8 @@ function BeoordelaarEmailField({
       />
       {normalized !== "" && !bekend && (
         <p style={{ fontSize: 11, color: "var(--oranje)", marginTop: 4 }}>
-          ⚠ Geen account gevonden met dit e-mailadres — deze persoon krijgt
-          pas toegang tot dit dossier zodra er een account voor bestaat.
+          ⚠ Geen account gevonden met dit e-mailadres — deze persoon krijgt pas
+          toegang tot dit dossier zodra er een account voor bestaat.
         </p>
       )}
     </FormField>
@@ -98,9 +98,7 @@ export function ScreenGegevens({
             <button
               type="button"
               className="btn btn-v"
-              onClick={() =>
-                sessionEmail && onSetMedewerkerEmail(sessionEmail)
-              }
+              onClick={() => sessionEmail && onSetMedewerkerEmail(sessionEmail)}
             >
               Ja
             </button>
@@ -122,8 +120,8 @@ export function ScreenGegevens({
             margin: "0 0 16px",
           }}
         >
-          Dit is jouw eigen functioneringsgesprek — je kunt op scherm
-          Afronding voor akkoord tekenen als professional.
+          Dit is jouw eigen functioneringsgesprek — je kunt op scherm Afronding
+          voor akkoord tekenen als professional.
         </p>
       )}
       <div className="form-rij" style={{ alignItems: "center" }}>

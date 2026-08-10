@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { noteerLogin } from "@/lib/app-users-store";
 import { findUserByEmail } from "@/lib/auth-users";
+import { hasDatabase } from "@/lib/db";
 import { isAdmin } from "@/lib/is-admin";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -21,11 +23,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = String(credentials?.password || "");
         if (!email || !password) return null;
 
-        const user = findUserByEmail(email);
+        const user = await findUserByEmail(email);
         if (!user) return null;
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
+
+        // Best-effort: mislukt dit, dan is inloggen zelf niet het probleem.
+        if (hasDatabase()) {
+          await noteerLogin(user.email).catch(() => {});
+        }
 
         return { id: user.email, email: user.email, name: user.email };
       },

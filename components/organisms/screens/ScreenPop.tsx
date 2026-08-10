@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { FormField } from "@/components/molecules/FormField";
 import { ReflectieItem } from "@/components/molecules/ReflectieItem";
-import { berekenNiveau } from "@/lib/bereken-niveau";
 import { COMPS } from "@/lib/data/competenties";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
+import { effectiefNiveau } from "@/lib/effectief-niveau";
 import type { GesprekStatus } from "@/types/gesprekken";
 import type {
   OntwikkelpadenState,
@@ -98,7 +98,7 @@ export function ScreenPop({
   onStartNewCycle,
 }: ScreenPopProps) {
   const actief = PAD_IDS.filter(
-    (padId) => state.ambities[padId] || berekenNiveau(padId, state.scores) > 0,
+    (padId) => state.ambities[padId] || effectiefNiveau(padId, state) > 0,
   );
 
   return (
@@ -109,7 +109,7 @@ export function ScreenPop({
       </div>
       {actief.map((padId) => {
         const pad = PADEN[padId];
-        const n = berekenNiveau(padId, state.scores);
+        const n = effectiefNiveau(padId, state);
         const heeftAmbitie = state.ambities[padId];
         const doelN = heeftAmbitie && n < 5 ? n + 1 : null;
         const vereist = doelN ? pad.vereisten[doelN - 1] : null;

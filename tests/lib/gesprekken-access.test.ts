@@ -39,9 +39,7 @@ describe("canAccessGesprek", () => {
     expect(canAccessGesprek(withReviewers, "Hoofd@Precon.nl", false)).toBe(
       true,
     );
-    expect(canAccessGesprek(withReviewers, "MEDE@precon.nl", false)).toBe(
-      true,
-    );
+    expect(canAccessGesprek(withReviewers, "MEDE@precon.nl", false)).toBe(true);
     expect(canAccessGesprek(withReviewers, "stranger@precon.nl", false)).toBe(
       false,
     );

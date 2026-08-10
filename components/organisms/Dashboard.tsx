@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
+import { AccountBeheer } from "@/components/organisms/AccountBeheer";
 import { GoedkeuringPopup } from "@/components/organisms/GoedkeuringPopup";
 import { mergeWithInitialState } from "@/lib/initial-state";
 import {
   createGesprek,
   fetchBekendeMedewerkers,
   fetchDashboard,
+  fetchKnownUserEmails,
   importGesprekDocx,
   koppelBeoordelaar,
 } from "@/services/gesprekken-client";
@@ -83,18 +85,23 @@ function Rubriek({
       {onToevoegen && bekendeMedewerkers && (
         <>
           <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-            <select
+            {/* Een lijst met suggesties, geen keurslijf: je kunt ook een adres
+                intypen van iemand die nog nooit heeft ingelogd. */}
+            <input
+              list="bekende-medewerkers"
+              type="email"
               value={gekozenEmail}
               onChange={(e) => setGekozenEmail(e.target.value)}
+              placeholder="Kies of typ een e-mailadres..."
               style={{ flex: 1 }}
-            >
-              <option value="">Kies een medewerker...</option>
+            />
+            <datalist id="bekende-medewerkers">
               {bekendeMedewerkers.map((m) => (
                 <option key={m.email} value={m.email}>
-                  {m.naam} ({m.email})
+                  {m.naam}
                 </option>
               ))}
-            </select>
+            </datalist>
             <button
               type="button"
               className="btn btn-t"
@@ -124,18 +131,19 @@ function Rubriek({
               {fout}
             </p>
           )}
-          {bekendeMedewerkers.length === 0 && (
-            <p
-              style={{
-                fontSize: 11,
-                color: "var(--grijs-licht)",
-                marginTop: 6,
-              }}
-            >
-              Nog geen medewerkers gevonden — iemand moet eerst zelf het eigen
-              gesprek geopend hebben voordat je diegene hier kunt vinden.
-            </p>
-          )}
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--grijs-licht)",
+              marginTop: 6,
+            }}
+          >
+            Heeft de collega nog geen gesprek, dan wordt er meteen een concept
+            aangemaakt. Heeft diegene nog nooit ingelogd, dan kun je er direct
+            in werken; zodra hij of zij zelf een account maakt, staat het
+            gesprek klaar. Bestaat het account al, dan moet de koppeling nog
+            worden goedgekeurd.
+          </p>
         </>
       )}
     </div>
@@ -151,12 +159,20 @@ export function Dashboard() {
   const [importBezig, setImportBezig] = useState(false);
 
   const laad = useCallback(async () => {
-    const [dash, meds] = await Promise.all([
+    const [dash, meds, accountEmails] = await Promise.all([
       fetchDashboard(),
       fetchBekendeMedewerkers(),
+      // Accounts zonder gesprek staan niet in `meds`; zonder deze lijst kun je
+      // voor hen ook geen gesprek starten.
+      fetchKnownUserEmails().catch(() => [] as string[]),
     ]);
+    const bekend = new Set(meds.map((m) => m.email.toLowerCase()));
+    const zonderGesprek = accountEmails
+      .filter((email) => !bekend.has(email.toLowerCase()))
+      .map((email) => ({ naam: email, email }));
+
     setOverzicht(dash);
-    setMedewerkers(meds);
+    setMedewerkers([...meds, ...zonderGesprek]);
     setFoutmelding("");
   }, []);
 
@@ -307,10 +323,10 @@ export function Dashboard() {
           <label className="btn btn-t" style={{ display: "inline-block" }}>
             {importBezig
               ? "Bezig met importeren..."
-              : "📄 Importeer oud gesprek (.docx)"}
+              : "📄 Importeer oud gesprek (.docx of .pdf)"}
             <input
               type="file"
-              accept=".docx"
+              accept=".docx,.pdf"
               style={{ display: "none" }}
               disabled={importBezig}
               onChange={(e) => {
@@ -338,6 +354,7 @@ export function Dashboard() {
         bekendeMedewerkers={medewerkersVoorDropdown}
         onToevoegen={(email) => koppel("medebeoordelaar", email)}
       />
+      {session?.user?.isAdmin && <AccountBeheer />}
     </>
   );
 }

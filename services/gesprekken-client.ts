@@ -1,6 +1,6 @@
 import type {
-  BeoordelaarRol,
   BekendeMedewerker,
+  BeoordelaarRol,
   DashboardOverzicht,
   Gesprek,
   GesprekListItem,

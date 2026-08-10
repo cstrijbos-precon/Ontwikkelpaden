@@ -18,7 +18,13 @@ const PADEN = {
   vakexpert: {
     rol: "A",
     werelden: { Food: "B", RA: "C", NF: "D" },
-    rollen: ["Consultant", "Deskundige", "Vakdeskundige", "Inhoudsdeskundige", "Visionair"],
+    rollen: [
+      "Consultant",
+      "Deskundige",
+      "Vakdeskundige",
+      "Inhoudsdeskundige",
+      "Visionair",
+    ],
   },
   adviseur: {
     rol: "I",
@@ -120,8 +126,11 @@ async function parseStrategischePlanningSheet(filePath) {
   const wb = parser.parse(await zip.file("xl/workbook.xml").async("string"));
   let sheets = wb.workbook.sheets.sheet;
   if (!Array.isArray(sheets)) sheets = [sheets];
-  const sheet = sheets.find((s) => s["@_name"] === "Strategische personeelsplanning");
-  if (!sheet) throw new Error('Tabblad "Strategische personeelsplanning" niet gevonden');
+  const sheet = sheets.find(
+    (s) => s["@_name"] === "Strategische personeelsplanning",
+  );
+  if (!sheet)
+    throw new Error('Tabblad "Strategische personeelsplanning" niet gevonden');
 
   const rels = parser.parse(
     await zip.file("xl/_rels/workbook.xml.rels").async("string"),
@@ -172,7 +181,9 @@ async function parseStrategischePlanningSheet(filePath) {
 
       const niveau = bepaalNiveau(padId, rolLabel);
       if (niveau === null || niveau < 1 || niveau > 5) {
-        problemen.push(`${padId} rij ${rowNum}: kon niveau niet bepalen uit rol "${rolLabel}"`);
+        problemen.push(
+          `${padId} rij ${rowNum}: kon niveau niet bepalen uit rol "${rolLabel}"`,
+        );
         continue;
       }
 
@@ -202,7 +213,8 @@ async function main() {
     process.exit(1);
   }
 
-  const { resultaten, problemen } = await parseStrategischePlanningSheet(excelPad);
+  const { resultaten, problemen } =
+    await parseStrategischePlanningSheet(excelPad);
   console.log(`${resultaten.length} (pad, niveau, wereld)-cellen gevonden.`);
   if (problemen.length > 0) {
     console.log("Let op, niet herkend:");
@@ -211,7 +223,9 @@ async function main() {
 
   if (vlag === "--dry-run") {
     console.log("Dry run — geen database-schrijfacties.");
-    console.table(resultaten.map(({ rolLabel, ...r }) => ({ ...r, rol: rolLabel })));
+    console.table(
+      resultaten.map(({ rolLabel, ...r }) => ({ ...r, rol: rolLabel })),
+    );
     return;
   }
 
@@ -229,7 +243,9 @@ async function main() {
         [r.padId, r.niveau, r.wereld, r.nodigNu, importerEmail],
       );
     }
-    console.log(`${resultaten.length} cellen weggeschreven naar vlootschouw_planning.`);
+    console.log(
+      `${resultaten.length} cellen weggeschreven naar vlootschouw_planning.`,
+    );
   } finally {
     await client.end();
   }
