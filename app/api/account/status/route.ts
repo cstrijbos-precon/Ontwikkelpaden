@@ -7,6 +7,7 @@ import {
   isGeldigEmail,
   registratiecodeVereist,
   toegestaneDomeinen,
+  verificatieUitzondering,
 } from "@/lib/registratie";
 
 const bodySchema = z.object({ email: z.string() }).strict();
@@ -52,11 +53,14 @@ export async function POST(request: Request) {
   }
 
   const bestaand = await findUserByEmail(email);
+  const uitgezonderd = verificatieUitzondering(email);
 
   return Response.json({
     bekend: Boolean(bestaand),
-    // Aanmelden kan alleen als er ook een verificatiemail verstuurd kan worden.
-    registrerenMogelijk: hasDatabase() && mailIsIngesteld(),
+    // Aanmelden kan alleen als er een verificatiemail verstuurd kan worden —
+    // of als dit adres daar expliciet van is uitgezonderd.
+    registrerenMogelijk: hasDatabase() && (mailIsIngesteld() || uitgezonderd),
     codeNodig: !bestaand && registratiecodeVereist(),
+    verificatieNodig: !uitgezonderd,
   });
 }

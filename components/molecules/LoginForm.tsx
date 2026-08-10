@@ -94,8 +94,14 @@ export function LoginForm() {
 
     try {
       await maakAccount(email, password, code || undefined);
-      // Nog niet inloggen: het account werkt pas na de link uit de mail.
-      setStap("checkJeMail");
+
+      // Staat dit adres op de uitzonderingslijst, dan is er geen mail om op te
+      // wachten en kan er meteen ingelogd worden.
+      if (status && !status.verificatieNodig) {
+        await login();
+      } else {
+        setStap("checkJeMail");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er ging iets mis.");
     } finally {
@@ -206,7 +212,10 @@ export function LoginForm() {
           )}
           <p className="text-xs text-slate-500">
             Minstens {MINIMALE_WACHTWOORDLENGTE} tekens, met een letter en een
-            cijfer. Je krijgt hierna een mail om je adres te bevestigen.
+            cijfer.{" "}
+            {status?.verificatieNodig === false
+              ? "Je kunt daarna meteen inloggen."
+              : "Je krijgt hierna een mail om je adres te bevestigen."}
           </p>
         </>
       )}

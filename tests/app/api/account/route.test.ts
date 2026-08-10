@@ -9,9 +9,12 @@ vi.mock("@/lib/db", () => ({
   hasDatabase: () => true,
 }));
 
+const bevestigMock = vi.fn();
+
 vi.mock("@/lib/app-users-store", () => ({
   maakOnbevestigdAccount: (...args: unknown[]) => maakMock(...args),
   vindOpgeslagenGebruiker: (...args: unknown[]) => vindMock(...args),
+  bevestigDirect: (...args: unknown[]) => bevestigMock(...args),
 }));
 
 const mailMock = vi.fn();
@@ -35,19 +38,23 @@ function verzoek(body: unknown) {
 
 const origineleUsers = process.env.APP_USERS;
 const origineleCode = process.env.APP_REGISTRATIECODE;
+const origineleUitzonderingen = process.env.APP_VERIFICATIE_UITZONDERINGEN;
 
 beforeEach(() => {
   maakMock.mockReset().mockResolvedValue(true);
   vindMock.mockReset().mockResolvedValue(undefined);
   mailMock.mockReset().mockResolvedValue(undefined);
+  bevestigMock.mockReset().mockResolvedValue(undefined);
   mailIngesteld = true;
   process.env.APP_USERS = "";
   process.env.APP_REGISTRATIECODE = "";
+  process.env.APP_VERIFICATIE_UITZONDERINGEN = "";
 });
 
 afterEach(() => {
   process.env.APP_USERS = origineleUsers;
   process.env.APP_REGISTRATIECODE = origineleCode;
+  process.env.APP_VERIFICATIE_UITZONDERINGEN = origineleUitzonderingen;
 });
 
 describe("POST /api/account", () => {
@@ -140,6 +147,39 @@ describe("POST /api/account", () => {
     );
 
     expect(res.status).toBe(502);
+  });
+
+  it("laat een uitgezonderd adres direct door, zonder mail", async () => {
+    process.env.APP_VERIFICATIE_UITZONDERINGEN = "snackaerts@precongroup.com";
+    mailIngesteld = false;
+
+    const res = await POST(
+      verzoek({
+        email: "snackaerts@precongroup.com",
+        wachtwoord: "Ontwikkel2026",
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ verificatieVerstuurd: false });
+    expect(bevestigMock).toHaveBeenCalledWith("snackaerts@precongroup.com");
+    expect(mailMock).not.toHaveBeenCalled();
+  });
+
+  it("houdt de eis overeind voor wie niet op de lijst staat", async () => {
+    process.env.APP_VERIFICATIE_UITZONDERINGEN = "snackaerts@precongroup.com";
+    mailIngesteld = false;
+
+    const res = await POST(
+      verzoek({
+        email: "iemand.anders@precongroup.com",
+        wachtwoord: "Ontwikkel2026",
+      }),
+    );
+
+    expect(res.status).toBe(503);
+    expect(maakMock).not.toHaveBeenCalled();
+    expect(bevestigMock).not.toHaveBeenCalled();
   });
 
   it("eist de registratiecode zodra die is ingesteld", async () => {

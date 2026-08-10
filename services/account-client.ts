@@ -2,6 +2,8 @@ export interface AccountStatus {
   bekend: boolean;
   registrerenMogelijk: boolean;
   codeNodig: boolean;
+  /** Onwaar voor adressen op de uitzonderingslijst: die kunnen direct door. */
+  verificatieNodig: boolean;
 }
 
 async function leesFout(res: Response, standaard: string): Promise<string> {

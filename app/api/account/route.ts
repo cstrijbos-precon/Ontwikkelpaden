@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { maakOnbevestigdAccount } from "@/lib/app-users-store";
+import { bevestigDirect, maakOnbevestigdAccount } from "@/lib/app-users-store";
 import { findUserByEmail } from "@/lib/auth-users";
 import { hasDatabase } from "@/lib/db";
 import { mailIsIngesteld } from "@/lib/mailer";
@@ -9,6 +9,7 @@ import {
   isGeldigEmail,
   registratiecodeKlopt,
   toegestaneDomeinen,
+  verificatieUitzondering,
   wachtwoordProbleem,
 } from "@/lib/registratie";
 import { stuurVerificatiemail } from "@/lib/verificatiemail";
@@ -31,16 +32,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "Database not configured" }, { status: 503 });
   }
 
-  if (!mailIsIngesteld()) {
-    return Response.json(
-      {
-        error:
-          "Aanmelden kan nu niet: de app kan geen verificatiemail versturen. Neem contact op met de beheerder.",
-      },
-      { status: 503 },
-    );
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -54,6 +45,17 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email.toLowerCase().trim();
+  const uitgezonderd = verificatieUitzondering(email);
+
+  if (!mailIsIngesteld() && !uitgezonderd) {
+    return Response.json(
+      {
+        error:
+          "Aanmelden kan nu niet: de app kan geen verificatiemail versturen. Neem contact op met de beheerder.",
+      },
+      { status: 503 },
+    );
+  }
 
   if (!isGeldigEmail(email)) {
     return Response.json(
@@ -96,6 +98,15 @@ export async function POST(request: Request) {
     return Response.json(
       { error: "Dit adres heeft al een account. Log in met je wachtwoord." },
       { status: 409 },
+    );
+  }
+
+  if (uitgezonderd) {
+    // Geen mail om op te wachten: dit adres kan meteen inloggen.
+    await bevestigDirect(email);
+    return Response.json(
+      { email, verificatieVerstuurd: false },
+      { status: 201 },
     );
   }
 

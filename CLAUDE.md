@@ -43,7 +43,8 @@ geeft het account geen toegang, en mag een onbevestigde registratie door de
 echte eigenaar overschreven worden. Alleen domeinen uit `APP_EMAIL_DOMEINEN`
 mogen zich aanmelden (standaard `precongroup.com` en `tal-leadership.nl`).
 Verzenden gaat via `RESEND_API_KEY` of `SMTP_*`; zonder kanaal is aanmelden
-geblokkeerd. Accounts
+geblokkeerd. `APP_VERIFICATIE_UITZONDERINGEN` bevat losse adressen die tijdelijk
+zonder verificatie door mogen — bedoeld om te testen, hoort weg zodra mail werkt. Accounts
 staan in `app_users`; de oude lijst in `APP_USERS`/`APP_USERS_EXTRA` blijft als
 terugval bestaan omdat die in Vercel niet meer uit te lezen is.
 

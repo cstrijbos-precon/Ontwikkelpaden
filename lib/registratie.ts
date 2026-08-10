@@ -30,6 +30,25 @@ export function domeinIsToegestaan(email: string): boolean {
   return toegestaneDomeinen().includes(domein);
 }
 
+/**
+ * Adressen die zonder verificatiemail een account mogen maken, uit
+ * `APP_VERIFICATIE_UITZONDERINGEN`. Bedoeld om te kunnen testen zolang er nog
+ * geen mailkanaal is ingesteld.
+ *
+ * Let op wat dit betekent: voor precies deze adressen geldt weer dat wie het
+ * adres kent zich ermee kan aanmelden. Houd de lijst dus kort en haal hem weg
+ * zodra het versturen werkt. Losse adressen, geen domeinen — een domein hier
+ * zou de beveiliging voor iedereen uitschakelen.
+ */
+export function verificatieUitzondering(email: string): boolean {
+  const adres = email.toLowerCase().trim();
+  return (process.env.APP_VERIFICATIE_UITZONDERINGEN || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.includes("@"))
+    .includes(adres);
+}
+
 /** Een gedeelde code die intern rondgaat; leeg laten schakelt de eis uit. */
 export function registratiecodeVereist(): boolean {
   return (process.env.APP_REGISTRATIECODE || "").trim() !== "";

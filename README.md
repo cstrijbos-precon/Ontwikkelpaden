@@ -163,6 +163,19 @@ dan `APP_REGISTRATIECODE`. Laat je die leeg, dan is het adres de enige drempel.
 APP_REGISTRATIECODE=een-code-die-intern-rondgaat
 ```
 
+#### Tijdelijk zonder verificatie testen
+
+Zolang er nog geen mailkanaal is, kun je losse adressen uitzonderen:
+
+```env
+APP_VERIFICATIE_UITZONDERINGEN=collega@precongroup.com,ander@precongroup.com
+```
+
+Die adressen kunnen zich aanmelden en meteen inloggen, zonder mail. Voor de
+rest verandert er niets. **Haal deze regel weg zodra het versturen werkt** — voor
+de adressen die erop staan geldt namelijk weer dat wie het adres kent zich ermee
+kan aanmelden. Een heel domein invullen werkt bewust niet.
+
 Iemand die een adres invult dat niet van hem is, komt niet ver: de mail gaat
 naar de echte eigenaar, en zonder de link blijft het account onbevestigd en
 geeft het geen toegang. De eigenaar kan zich daarna gewoon zelf aanmelden — een
@@ -241,7 +254,7 @@ Verwacht:
 | Inloggen lukt niet | Nog geen account? Vul je adres in en kies een wachtwoord. Bij een oud account uit `APP_USERS`: elke `$` in de hash moet `\$` zijn in `.env.local`. |
 | "Alleen adressen van ..." | Je domein staat niet in `APP_EMAIL_DOMEINEN`. |
 | Geen verificatiemail gekregen | Kijk in je ongewenste post. De link is 24 uur geldig; daarna meld je je opnieuw aan. Blijft het uit, dan is er waarschijnlijk geen mailkanaal ingesteld — vraag het de beheerder. |
-| "Aanmelden kan nu niet" | Er is geen `RESEND_API_KEY` of `SMTP_HOST` ingesteld. |
+| "Aanmelden kan nu niet" | Er is geen `RESEND_API_KEY` of `SMTP_HOST` ingesteld, en dit adres staat niet in `APP_VERIFICATIE_UITZONDERINGEN`. |
 | Wachtwoord vergeten | Een beheerder opent op het dashboard **Accounts en wachtwoorden** en klikt op *Wachtwoord vrijgeven*. Je kiest dan bij de volgende keer inloggen een nieuw wachtwoord; je gesprekken blijven staan. |
 | `.env.local` wijziging werkt niet | Server stoppen (Ctrl+C) en opnieuw `npm run dev`. |
 

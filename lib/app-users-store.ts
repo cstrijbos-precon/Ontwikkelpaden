@@ -57,6 +57,18 @@ export async function maakOnbevestigdAccount(
   return rows.length > 0;
 }
 
+/**
+ * Zet een account meteen op bevestigd. Alleen voor adressen uit de
+ * uitzonderingslijst: die krijgen geen verificatiemail, dus er is niets om
+ * op te wachten.
+ */
+export async function bevestigDirect(email: string): Promise<void> {
+  await sql`
+    UPDATE app_users SET geverifieerd_op = now()
+    WHERE email = ${email.toLowerCase().trim()} AND geverifieerd_op IS NULL
+  `;
+}
+
 export async function noteerLogin(email: string): Promise<void> {
   await sql`
     UPDATE app_users SET laatst_ingelogd_op = now()
