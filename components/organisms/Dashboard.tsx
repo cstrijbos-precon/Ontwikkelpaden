@@ -21,6 +21,9 @@ import type {
   GesprekListItem,
 } from "@/types/gesprekken";
 
+/** Verbeterplanning draait als losse app, met een eigen inlog. */
+const VERBETERPLANNING_URL = "https://verbeterplanning.vercel.app";
+
 const STATUS_LABEL: Record<GesprekListItem["status"], string> = {
   draft: "Concept",
   completed: "Afgerond",
@@ -280,9 +283,18 @@ export function Dashboard() {
             <Link href="/vlootschouw" className="btn btn-ghost-header">
               Vlootschouw
             </Link>
-            <Link href="/verbeterplanning" className="btn btn-ghost-header">
-              Verbeterplanning
-            </Link>
+            {/* Verbeterplanning heeft een eigen app met een eigen inlog en een
+                eigen database. Binnen Ontwikkelpaden staat nog wel de code en
+                een kopie van de gegevens, maar die loopt vanaf nu achter — dus
+                verwijzen we naar de plek waar het echt wordt bijgehouden. */}
+            <a
+              href={VERBETERPLANNING_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-ghost-header"
+            >
+              Verbeterplanning ↗
+            </a>
             <span className="save-status">{session?.user?.email}</span>
             <button
               type="button"

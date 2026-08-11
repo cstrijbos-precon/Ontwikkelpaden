@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import VerbeterplanningApp from "@/components/organisms/VerbeterplanningApp";
-import { hasDatabase } from "@/lib/db";
 
-export default async function VerbeterplanningPage() {
-  const session = await auth();
-  if (!session?.user?.email) redirect("/login");
-
-  if (!hasDatabase()) {
-    return <div style={{ padding: 40 }}>Database niet ingesteld.</div>;
-  }
-
-  return <VerbeterplanningApp />;
+/**
+ * Verbeterplanning draait als losse app, met een eigen inlog en een eigen
+ * database. De code en een kopie van de gegevens staan hier nog wel, maar die
+ * kopie loopt achter zodra er in de losse app iets wijzigt. Om te voorkomen
+ * dat iemand via een oude link op verouderde cijfers uitkomt, sturen we door
+ * naar de plek waar het echt wordt bijgehouden.
+ *
+ * Wil je Verbeterplanning ooit weer binnen deze app halen, haal dan deze
+ * doorverwijzing weg — `VerbeterplanningApp` staat er nog.
+ */
+export default function VerbeterplanningPage() {
+  redirect("https://verbeterplanning.vercel.app");
 }
