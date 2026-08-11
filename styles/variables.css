@@ -1,21 +1,39 @@
+/*
+ * Kleuren uit de Précon-huisstijl (Template_Presentatie_05-08.potx).
+ * De namen zijn hetzelfde gebleven, zodat de rest van de stylesheets ongewijzigd
+ * werkt; alleen de waarden volgen nu het thema uit de presentatiesjabloon.
+ */
 :root {
-  --blauw: #003366;
-  --blauw-mid: #1a4d80;
-  --blauw-licht: #e8f0f8;
-  --blauw-accent: #0066cc;
-  --oranje: #e87722;
-  --oranje-licht: #fef3ea;
-  --grijs: #4a4a4a;
-  --grijs-licht: #9a9a9a;
-  --grijs-lijn: #dde3ea;
-  --grijs-bg: #f4f6f9;
-  --wit: #fff;
-  --groen: #1a6b3a;
-  --groen-licht: #e8f5ed;
-  --rood: #cc2222;
+  /* Donkerblauw uit het thema (dk1/dk2 en de linkkleur). */
+  --blauw: #003855;
+  --blauw-mid: #1a5372;
+  --blauw-licht: #eff0f5; /* lt1/lt2 uit het thema */
+  --blauw-accent: #14688f;
 
-  --pad-vakexpert: #7b1d2a;
-  --pad-adviseur: #1d6b3a;
-  --pad-leider: #1a3a6b;
-  --pad-trainer: #6b4a1a;
+  /* accent1 */
+  --oranje: #ff7f00;
+  --oranje-licht: #fff4e6;
+
+  --grijs: #3d4a52;
+  --grijs-licht: #8a97a0;
+  --grijs-lijn: #dfe3e9;
+  --grijs-bg: #eff0f5;
+  --wit: #fff;
+
+  /* accent6 */
+  --groen: #4ea72e;
+  --groen-licht: #eef7e9;
+
+  --rood: #c02b2b;
+
+  /* Vier paden, elk een eigen accent uit het thema zodat ze uit elkaar te
+     houden blijven: paars, groen, blauw en geel. */
+  --pad-vakexpert: #722392; /* accent4 */
+  --pad-adviseur: #4ea72e; /* accent6 */
+  --pad-leider: #003855; /* dk1 */
+  --pad-trainer: #b07d00; /* accent2, donkerder voor leesbaarheid op wit */
+
+  /* Lettertypen uit het thema; via next/font geladen in app/layout.tsx. */
+  --font-kop: var(--font-libre-baskerville), Georgia, serif;
+  --font-tekst: var(--font-overpass), Arial, Helvetica, sans-serif;
 }

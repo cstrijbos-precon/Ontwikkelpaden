@@ -8,7 +8,7 @@
 
 body {
   background: var(--grijs-bg);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-tekst);
   color: var(--grijs);
   font-size: 14px;
   min-height: 100vh;
@@ -42,6 +42,7 @@ body {
 }
 
 .header-brand-title {
+  font-family: var(--font-kop);
   font-size: 16px;
   font-weight: bold;
   color: #fff;
@@ -61,6 +62,7 @@ body {
 }
 
 .header-bottom h1 {
+  font-family: var(--font-kop);
   font-size: 16px;
   font-weight: bold;
   color: #fff;
@@ -95,7 +97,7 @@ body {
   margin-bottom: -3px;
   white-space: nowrap;
   transition: all 0.15s;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-tekst);
   background: transparent;
 }
 
@@ -136,6 +138,7 @@ body {
 }
 
 .scherm-titel {
+  font-family: var(--font-kop);
   font-size: 20px;
   font-weight: bold;
   color: var(--blauw);
@@ -177,7 +180,7 @@ body {
 .correctie-blok textarea,
 .reflectie-item textarea {
   width: 100%;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-tekst);
   font-size: 13px;
   color: var(--grijs);
   border: 1.5px solid var(--grijs-lijn);
@@ -204,6 +207,7 @@ body {
 }
 
 .sk {
+  font-family: var(--font-kop);
   font-size: 13px;
   font-weight: bold;
   color: var(--blauw);
@@ -379,7 +383,7 @@ body {
 }
 
 .selecteer-btn {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-tekst);
   font-size: 11px;
   padding: 6px 14px;
   border-radius: 4px;
@@ -412,7 +416,7 @@ body {
 
 .opm-veld textarea {
   width: 100%;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-tekst);
   font-size: 12px;
   border: 1.5px solid var(--grijs-lijn);
   border-radius: 5px;
@@ -852,7 +856,7 @@ body {
 }
 
 .btn {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-tekst);
   font-size: 13px;
   padding: 9px 20px;
   border-radius: 5px;

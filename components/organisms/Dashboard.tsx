@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { AccountBeheer } from "@/components/organisms/AccountBeheer";
@@ -160,6 +161,8 @@ export function Dashboard() {
   const [hydrated, setHydrated] = useState(false);
   const [foutmelding, setFoutmelding] = useState("");
   const [importBezig, setImportBezig] = useState(false);
+  const [startBezig, setStartBezig] = useState(false);
+  const router = useRouter();
 
   const laad = useCallback(async () => {
     const [dash, meds, accountEmails] = await Promise.all([
@@ -215,6 +218,27 @@ export function Dashboard() {
   async function koppel(rol: BeoordelaarRol, email: string) {
     await koppelBeoordelaar(email, rol);
     await laad();
+  }
+
+  /**
+   * Een gesprek voor jezelf. Stond nergens: je kwam er alleen in via een
+   * bestaand gesprek, een import, of doordat een beoordelaar er een aanmaakte.
+   */
+  async function startEigenGesprek() {
+    if (!sessionEmail) return;
+    setStartBezig(true);
+    setFoutmelding("");
+    try {
+      const gesprek = await createGesprek(undefined, {
+        medewerkerEmail: sessionEmail,
+      });
+      router.push(`/gesprekken/${gesprek.id}/bewerken`);
+    } catch (error) {
+      setFoutmelding(
+        error instanceof Error ? error.message : "Aanmaken mislukt",
+      );
+      setStartBezig(false);
+    }
   }
 
   if (!hydrated) {
@@ -324,6 +348,14 @@ export function Dashboard() {
           className="form-rij"
           style={{ alignItems: "center", marginTop: -8 }}
         >
+          <button
+            type="button"
+            className="btn btn-v"
+            disabled={startBezig}
+            onClick={startEigenGesprek}
+          >
+            {startBezig ? "Bezig..." : "+ Nieuw gesprek voor mezelf"}
+          </button>
           {huidigeEigen && (
             <Link
               href={`/gesprekken/${huidigeEigen.id}/bewerken?scherm=8`}
