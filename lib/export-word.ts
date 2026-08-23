@@ -196,7 +196,7 @@ export function exportWord(state: OntwikkelpadenState): void {
       <div class="sign-box">Hoofdbeoordelaar: ${escapeHtml(state.hoofdbeoordelaar) || "___________"}</div>
       <div class="sign-box">Medebeoordelaar: ${escapeHtml(state.medebeoordelaar) || "___________"}</div>
     </div>
-    <p style="margin-top:12px">Na ondertekening per mail doorsturen naar evankouwen@precongroup.com</p>
+    <p style="margin-top:12px">Na ondertekening per mail doorsturen naar hr@precongroup.com</p>
   </div>
   </body></html>`;
 

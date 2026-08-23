@@ -268,7 +268,7 @@ export function ScreenAfronding({
             fontStyle: "italic",
           }}
         >
-          Na ondertekening per mail doorsturen naar evankouwen@precongroup.com
+          Na ondertekening per mail doorsturen naar hr@precongroup.com
         </p>
       </div>
     </>
