@@ -53,6 +53,13 @@ geval staat de koppeling meteen open — er is dan niemand om toestemming aan te
 vragen. Bestaat het account wel, dan blijft de koppeling op `in_afwachting`
 staan tot de medewerker akkoord geeft.
 
+## Modules
+
+Verbeterplanning draait als losse app op verbeterplanning.vercel.app met een
+eigen inlog en eigen database; binnen Ontwikkelpaden staat alleen nog een
+doorverwijzing. De Vlootschouw zit wél in deze app en is afgeschermd voor het
+MT via `APP_MT` (zie `lib/is-mt.ts`); beheerders mogen er altijd bij.
+
 ## Dataopslag
 
 Formuliergegevens worden opgeslagen in **Neon Postgres** (tabel `gesprekken`), niet meer in localStorage. Autosave elke 5 minuten + bij navigatie en handmatig opslaan.

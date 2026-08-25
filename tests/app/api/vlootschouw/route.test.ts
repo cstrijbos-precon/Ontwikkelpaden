@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/vlootschouw/route";
 import { mockAuth, mockAuthUser } from "@/tests/helpers/auth-mock";
 
@@ -16,6 +16,15 @@ vi.mock("@/lib/vlootschouw/overzicht", () => ({
 
 import { hasDatabase } from "@/lib/db";
 import { getVlootschouwOverzicht } from "@/lib/vlootschouw/overzicht";
+
+// De Vlootschouw is afgeschermd voor het MT; de testgebruikers horen erbij.
+const origineelMt = process.env.APP_MT;
+beforeEach(() => {
+  process.env.APP_MT = "u@precon.nl,mt@precon.nl";
+});
+afterEach(() => {
+  process.env.APP_MT = origineelMt;
+});
 
 describe("GET /api/vlootschouw", () => {
   it("returns 401 without session", async () => {
@@ -53,5 +62,15 @@ describe("GET /api/vlootschouw", () => {
 
     const res = await GET();
     expect(res.status).toBe(500);
+  });
+  it("weigert wie niet in het MT zit", async () => {
+    process.env.APP_MT = "iemand.anders@precon.nl";
+    mockAuthUser();
+    // Eerdere tests in dit bestand hebben de mock al aangeroepen.
+    vi.mocked(getVlootschouwOverzicht).mockClear();
+
+    const res = await GET();
+    expect(res.status).toBe(403);
+    expect(vi.mocked(getVlootschouwOverzicht)).not.toHaveBeenCalled();
   });
 });

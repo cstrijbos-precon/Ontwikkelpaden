@@ -163,6 +163,18 @@ dan `APP_REGISTRATIECODE`. Laat je die leeg, dan is het adres de enige drempel.
 APP_REGISTRATIECODE=een-code-die-intern-rondgaat
 ```
 
+#### `APP_MT` — wie de Vlootschouw ziet
+
+De Vlootschouw is alleen voor het MT. Zet de adressen in `APP_MT`:
+
+```env
+APP_MT=een@precongroup.com,twee@precongroup.com
+```
+
+Wie er niet in staat, ziet de knop niet en wordt op `/vlootschouw` teruggestuurd
+naar het dashboard; de API geeft 403. Beheerders uit `APP_ADMINS` mogen er
+altijd bij. Een lege lijst betekent **niemand** — niet "iedereen".
+
 #### Tijdelijk zonder verificatie testen
 
 Zolang er nog geen mailkanaal is, kun je losse adressen uitzonderen:

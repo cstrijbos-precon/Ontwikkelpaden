@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { hasDatabase } from "@/lib/db";
+import { isMtLid } from "@/lib/is-mt";
 import { upsertPlanningCel } from "@/lib/vlootschouw/planning";
 import { updatePlanningBodySchema } from "@/lib/vlootschouw/schema";
 
@@ -7,6 +8,11 @@ export async function PUT(request: Request) {
   const session = await auth();
   if (!session?.user?.email) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // De Vlootschouw is alleen voor het MT.
+  if (!isMtLid(session.user.email)) {
+    return Response.json({ error: "Alleen voor het MT" }, { status: 403 });
   }
 
   if (!hasDatabase()) {

@@ -5,6 +5,7 @@ import { noteerLogin } from "@/lib/app-users-store";
 import { findUserByEmail } from "@/lib/auth-users";
 import { hasDatabase } from "@/lib/db";
 import { isAdmin } from "@/lib/is-admin";
+import { isMtLid } from "@/lib/is-mt";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -43,6 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user?.email) {
         token.email = user.email;
         token.isAdmin = isAdmin(user.email);
+        token.isMt = isMtLid(user.email);
       }
       return token;
     },
@@ -50,6 +52,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.email = token.email as string;
         session.user.isAdmin = Boolean(token.isAdmin);
+        session.user.isMt = Boolean(token.isMt);
       }
       return session;
     },

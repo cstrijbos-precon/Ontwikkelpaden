@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PUT } from "@/app/api/vlootschouw/planning/route";
 import { mockAuth, mockAuthUser } from "@/tests/helpers/auth-mock";
 
@@ -31,6 +31,15 @@ const geldigVerzoek = {
   nodigNu: 2,
   nodigStraks: 0,
 };
+
+// De Vlootschouw is afgeschermd voor het MT; de testgebruikers horen erbij.
+const origineelMt = process.env.APP_MT;
+beforeEach(() => {
+  process.env.APP_MT = "u@precon.nl,mt@precon.nl";
+});
+afterEach(() => {
+  process.env.APP_MT = origineelMt;
+});
 
 describe("PUT /api/vlootschouw/planning", () => {
   it("returns 401 without session", async () => {
