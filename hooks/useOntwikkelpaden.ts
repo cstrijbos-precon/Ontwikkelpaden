@@ -6,6 +6,7 @@ import { useCycle } from "@/hooks/useCycle";
 import { useReflecties } from "@/hooks/useReflecties";
 import { exportWord } from "@/lib/export-word";
 import { clampPadNiveau, clampScore } from "@/lib/field-format";
+import { wachtendeKoppelingen } from "@/lib/gesprekken-access";
 import { createInitialState, mergeWithInitialState } from "@/lib/initial-state";
 import { loadActiveGesprek } from "@/lib/load-active-gesprek";
 import {
@@ -33,6 +34,8 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
   const [medewerkerEmail, setMedewerkerEmailState] = useState<string | null>(
     null,
   );
+  // Welke koppelingen nog op akkoord van de medewerker wachten.
+  const [wachtendeRollen, setWachtendeRollen] = useState<string[]>([]);
   const [knownEmails, setKnownEmails] = useState<string[]>([]);
   const [saveStatus, setSaveStatus] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -58,6 +61,7 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
           setStatus(gesprek.status ?? "draft");
           setPreviousGesprekId(gesprek.previousGesprekId ?? null);
           setMedewerkerEmailState(gesprek.medewerkerEmail ?? null);
+          setWachtendeRollen(wachtendeKoppelingen(gesprek));
           const schermIndex = schermParam ? Number(schermParam) : null;
           if (schermIndex !== null && !Number.isNaN(schermIndex)) {
             setHuidig(schermIndex);
@@ -70,6 +74,7 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
           setStatus(active.status ?? "draft");
           setPreviousGesprekId(active.previousGesprekId ?? null);
           setMedewerkerEmailState(active.medewerkerEmail ?? null);
+          setWachtendeRollen(wachtendeKoppelingen(active));
         }
         setLoadError("");
       } catch (error) {
@@ -344,6 +349,7 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     status,
     previousGesprekId,
     medewerkerEmail,
+    wachtendeRollen,
     knownEmails,
     setMedewerkerEmail,
     saveStatus,

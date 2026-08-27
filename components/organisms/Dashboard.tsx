@@ -69,11 +69,9 @@ function Rubriek({
 
         return (
           <div key={item.id} className="dashboard-rij">
-            {wachtend ? (
-              <span style={{ color: "var(--grijs-licht)" }}>{label}</span>
-            ) : (
-              <Link href={href}>{label}</Link>
-            )}
+            {/* Ook bij een openstaande koppeling kun je er al in; het badge
+                laat zien dat de medewerker nog moet bevestigen. */}
+            <Link href={href}>{label}</Link>
             <span style={{ display: "flex", gap: 6 }}>
               <span className="badge">{STATUS_LABEL[item.status]}</span>
               {wachtend && (

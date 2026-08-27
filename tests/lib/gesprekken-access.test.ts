@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { canAccessGesprek } from "@/lib/gesprekken-access";
+import {
+  canAccessGesprek,
+  wachtendeKoppelingen,
+} from "@/lib/gesprekken-access";
 
 const gesprek = {
   createdBy: "creator@precon.nl",
@@ -56,16 +59,21 @@ describe("canAccessGesprek", () => {
     ).toBe(false);
   });
 
-  it("denies a hoofd-/medebeoordelaar whose koppeling nog in_afwachting is", () => {
-    const pending = {
-      ...gesprek,
-      hoofdbeoordelaar: "hoofd@precon.nl",
-      hoofdbeoordelaarStatus: "in_afwachting" as const,
-      medebeoordelaar: "mede@precon.nl",
-      medebeoordelaarStatus: "in_afwachting" as const,
-    };
-    expect(canAccessGesprek(pending, "hoofd@precon.nl", false)).toBe(false);
-    expect(canAccessGesprek(pending, "mede@precon.nl", false)).toBe(false);
+  it("laat een beoordelaar er al in terwijl de koppeling nog wacht", () => {
+    // Bewuste keuze: een notulist die net een gesprek aanmaakte, moet er
+    // meteen in kunnen. De goedkeuring blijft als bevestiging bestaan.
+    expect(
+      canAccessGesprek(
+        {
+          createdBy: "iemand@precon.nl",
+          medewerkerEmail: "jan@precon.nl",
+          hoofdbeoordelaar: "hoofd@precon.nl",
+          hoofdbeoordelaarStatus: "in_afwachting",
+        },
+        "hoofd@precon.nl",
+        false,
+      ),
+    ).toBe(true);
   });
 
   it("allows a hoofd-/medebeoordelaar once status toegestaan is", () => {
@@ -84,5 +92,42 @@ describe("canAccessGesprek", () => {
       hoofdbeoordelaarStatus: "in_afwachting" as const,
     };
     expect(canAccessGesprek(pending, "admin@precon.nl", true)).toBe(true);
+  });
+});
+
+describe("wachtendeKoppelingen", () => {
+  it("noemt de rollen die nog op akkoord wachten", () => {
+    expect(
+      wachtendeKoppelingen({
+        createdBy: "a@precon.nl",
+        medewerkerEmail: "jan@precon.nl",
+        hoofdbeoordelaar: "hoofd@precon.nl",
+        hoofdbeoordelaarStatus: "in_afwachting",
+        medebeoordelaar: "mede@precon.nl",
+        medebeoordelaarStatus: "toegestaan",
+      }),
+    ).toEqual(["hoofdbeoordelaar"]);
+  });
+
+  it("is leeg als alles is goedgekeurd", () => {
+    expect(
+      wachtendeKoppelingen({
+        createdBy: "a@precon.nl",
+        medewerkerEmail: "jan@precon.nl",
+        hoofdbeoordelaar: "hoofd@precon.nl",
+        hoofdbeoordelaarStatus: "toegestaan",
+      }),
+    ).toEqual([]);
+  });
+
+  it("telt een leeg rolveld niet mee", () => {
+    expect(
+      wachtendeKoppelingen({
+        createdBy: "a@precon.nl",
+        medewerkerEmail: "jan@precon.nl",
+        hoofdbeoordelaar: "",
+        hoofdbeoordelaarStatus: "in_afwachting",
+      }),
+    ).toEqual([]);
   });
 });

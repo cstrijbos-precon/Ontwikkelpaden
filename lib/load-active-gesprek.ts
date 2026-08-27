@@ -1,3 +1,4 @@
+import type { BeoordelaarStatus } from "@/lib/gesprekken-access";
 import {
   getStoredGesprekId,
   setStoredGesprekId,
@@ -17,6 +18,10 @@ export interface ActiveGesprek {
   status: GesprekStatus;
   previousGesprekId: string | null;
   medewerkerEmail: string | null;
+  hoofdbeoordelaar: string;
+  hoofdbeoordelaarStatus: BeoordelaarStatus;
+  medebeoordelaar: string;
+  medebeoordelaarStatus: BeoordelaarStatus;
 }
 
 export async function loadActiveGesprek(): Promise<ActiveGesprek> {
@@ -31,6 +36,10 @@ export async function loadActiveGesprek(): Promise<ActiveGesprek> {
         status: gesprek.status ?? "draft",
         previousGesprekId: gesprek.previousGesprekId ?? null,
         medewerkerEmail: gesprek.medewerkerEmail ?? null,
+        hoofdbeoordelaar: gesprek.hoofdbeoordelaar,
+        hoofdbeoordelaarStatus: gesprek.hoofdbeoordelaarStatus,
+        medebeoordelaar: gesprek.medebeoordelaar,
+        medebeoordelaarStatus: gesprek.medebeoordelaarStatus,
       };
     } catch {
       // Stored id invalid — fall through to list/create.
@@ -48,6 +57,10 @@ export async function loadActiveGesprek(): Promise<ActiveGesprek> {
       status: gesprek.status ?? "draft",
       previousGesprekId: gesprek.previousGesprekId ?? null,
       medewerkerEmail: gesprek.medewerkerEmail ?? null,
+      hoofdbeoordelaar: gesprek.hoofdbeoordelaar,
+      hoofdbeoordelaarStatus: gesprek.hoofdbeoordelaarStatus,
+      medebeoordelaar: gesprek.medebeoordelaar,
+      medebeoordelaarStatus: gesprek.medebeoordelaarStatus,
     };
   }
 
@@ -59,5 +72,9 @@ export async function loadActiveGesprek(): Promise<ActiveGesprek> {
     status: created.status ?? "draft",
     previousGesprekId: created.previousGesprekId ?? null,
     medewerkerEmail: created.medewerkerEmail ?? null,
+    hoofdbeoordelaar: created.hoofdbeoordelaar,
+    hoofdbeoordelaarStatus: created.hoofdbeoordelaarStatus,
+    medebeoordelaar: created.medebeoordelaar,
+    medebeoordelaarStatus: created.medebeoordelaarStatus,
   };
 }

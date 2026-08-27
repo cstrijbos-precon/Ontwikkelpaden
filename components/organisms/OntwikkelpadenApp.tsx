@@ -60,6 +60,22 @@ export function OntwikkelpadenApp({ gesprekId }: OntwikkelpadenAppProps = {}) {
         onSelect={app.naarScherm}
       />
       <div className="scherm">
+        {app.wachtendeRollen.length > 0 && (
+          <div className="tip-box" style={{ marginBottom: 16 }}>
+            <strong>Wacht op goedkeuring van de medewerker.</strong> Je bent
+            toegevoegd als{" "}
+            {app.wachtendeRollen
+              .map((rol) =>
+                rol === "hoofdbeoordelaar"
+                  ? "hoofdbeoordelaar"
+                  : "medebeoordelaar",
+              )
+              .join(" en ")}
+            , maar de medewerker heeft dat nog niet bevestigd. Je kunt het
+            gesprek alvast invullen; de bevestiging ziet die persoon bij het
+            eerstvolgende inloggen.
+          </div>
+        )}
         <fieldset
           disabled={gesprekVergrendeld}
           style={{ border: "none", padding: 0, margin: 0 }}
