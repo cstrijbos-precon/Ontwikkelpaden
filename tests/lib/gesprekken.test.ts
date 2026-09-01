@@ -334,6 +334,33 @@ describe("requestBeoordelaarKoppeling", () => {
     expect(updateCall).toContain("in_afwachting");
   });
 
+  it("schrijft de beoordelaar ook in state, niet alleen in de kolom", async () => {
+    // Het formulier op scherm Gegevens leest uit state. Blijft die leeg, dan
+    // schrijft de eerstvolgende autosave de koppeling weer weg.
+    process.env.APP_USERS = `jan@precon.nl:${hash}`;
+    const row = gesprekRow({ medebeoordelaar: "" });
+    sqlMock.mockResolvedValueOnce([row]).mockResolvedValueOnce([
+      {
+        ...row,
+        medebeoordelaar: "beoordelaar@precon.nl",
+        medebeoordelaar_status: "in_afwachting",
+      },
+    ]);
+
+    await requestBeoordelaarKoppeling(
+      "jan@precon.nl",
+      "medebeoordelaar",
+      "beoordelaar@precon.nl",
+    );
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken"),
+    );
+    const sqlTekst = (updateCall?.[0] as TemplateStringsArray).join("");
+    expect(sqlTekst).toContain("jsonb_set");
+    expect(sqlTekst).toContain("{medebeoordelaar}");
+  });
+
   it("geeft direct toegang als de medewerker nog geen account heeft", async () => {
     // Niemand om toestemming aan te vragen: wachten zou het gesprek blokkeren.
     const row = gesprekRow({ hoofdbeoordelaar: "" });

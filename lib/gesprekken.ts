@@ -485,19 +485,27 @@ export async function requestBeoordelaarKoppeling(
       : existing.medebeoordelaar;
   if (huidigeWaarde.trim() !== "") throw new BeoordelaarAlGekoppeldError();
 
+  /**
+   * De kolom én het state-veld moeten mee. Het formulier op scherm Gegevens
+   * leest de beoordelaars uit `state`; bleef die leeg, dan schreef de
+   * eerstvolgende autosave die leegte terug over de kolom en was de koppeling
+   * stilzwijgend weg.
+   */
   const updated = (
     rol === "hoofdbeoordelaar"
       ? await sql`
         UPDATE gesprekken SET
           hoofdbeoordelaar = ${beoordelaarEmail},
-          hoofdbeoordelaar_status = ${nieuweStatus}
+          hoofdbeoordelaar_status = ${nieuweStatus},
+          state = jsonb_set(state, '{hoofdbeoordelaar}', to_jsonb(${beoordelaarEmail}::text))
         WHERE id = ${existing.id}
         RETURNING *
       `
       : await sql`
         UPDATE gesprekken SET
           medebeoordelaar = ${beoordelaarEmail},
-          medebeoordelaar_status = ${nieuweStatus}
+          medebeoordelaar_status = ${nieuweStatus},
+          state = jsonb_set(state, '{medebeoordelaar}', to_jsonb(${beoordelaarEmail}::text))
         WHERE id = ${existing.id}
         RETURNING *
       `
@@ -538,11 +546,17 @@ export async function respondBeoordelaarKoppeling(
         `
       : rol === "hoofdbeoordelaar"
         ? await sql`
-          UPDATE gesprekken SET hoofdbeoordelaar = '', hoofdbeoordelaar_status = 'toegestaan'
+          UPDATE gesprekken SET
+            hoofdbeoordelaar = '',
+            hoofdbeoordelaar_status = 'toegestaan',
+            state = jsonb_set(state, '{hoofdbeoordelaar}', '""'::jsonb)
           WHERE id = ${gesprekId} RETURNING *
         `
         : await sql`
-          UPDATE gesprekken SET medebeoordelaar = '', medebeoordelaar_status = 'toegestaan'
+          UPDATE gesprekken SET
+            medebeoordelaar = '',
+            medebeoordelaar_status = 'toegestaan',
+            state = jsonb_set(state, '{medebeoordelaar}', '""'::jsonb)
           WHERE id = ${gesprekId} RETURNING *
         `
   ) as GesprekRow[];
