@@ -126,10 +126,10 @@ export function ScreenGegevens({
       )}
       <div className="form-rij" style={{ alignItems: "center" }}>
         <label className="btn btn-t" style={{ display: "inline-block" }}>
-          📄 Importeer oud gesprek (.docx)
+          📄 Importeer oud gesprek (.docx of .pdf)
           <input
             type="file"
-            accept=".docx"
+            accept=".docx,.pdf"
             style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
