@@ -328,16 +328,29 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     exportWord(state);
   }, [state, save]);
 
-  const handleImportDocx = useCallback(async (file: File) => {
-    try {
-      const result = await importGesprekDocx(file);
-      setState((prev) => ({ ...prev, ...result.state }));
-      setImportWarnings(result.warnings);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Import mislukt";
-      setImportWarnings([message]);
-    }
-  }, []);
+  /**
+   * Een import wordt meteen bewaard. Zonder die opslag bestond het resultaat
+   * alleen in de browser: de velden stonden wel op het scherm, maar wie ze
+   * bekeek en het tabblad sloot was alles kwijt — zonder melding. Opslaan
+   * gebeurde pas bij een schermwissel, de knop Opslaan, of de autosave na vijf
+   * minuten.
+   */
+  const handleImportDocx = useCallback(
+    async (file: File) => {
+      try {
+        const result = await importGesprekDocx(file);
+        const samengevoegd = { ...state, ...result.state };
+        setState(samengevoegd);
+        setImportWarnings(result.warnings);
+        await save(samengevoegd);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Import mislukt";
+        setImportWarnings([message]);
+      }
+    },
+    [state, save],
+  );
 
   const dismissImportWarnings = useCallback(() => {
     setImportWarnings([]);

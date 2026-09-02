@@ -14,6 +14,42 @@ export interface ParseOpties {
    * anders krijgt elke afgebroken zin een witregel.
    */
   regelScheiding: string;
+  /**
+   * Alleen voor PDF. Een PDF breekt een alinea af op de breedte van de pagina,
+   * niet op een zinseinde. Zonder dit staat er "van de\naanbesteding" midden
+   * in een zin. Met dit aan worden zulke vervolgregels weer aan elkaar
+   * geplakt; een regel die op een punt eindigt begint wel een nieuwe regel.
+   */
+  plakAfbrekingen?: boolean;
+}
+
+/** Eindigt deze regel een zin, of loopt hij door op de volgende regel? */
+function isAfgerond(regel: string): boolean {
+  return /[.!?:;]["')\]]?$/.test(regel.trim());
+}
+
+/** Begint deze regel een eigen punt (opsomming of nummering)? */
+function isEigenRegel(regel: string): boolean {
+  return /^([-•*–—]|\d+[.)]\s)/.test(regel.trim());
+}
+
+/**
+ * Voegt losse regels samen tot veldtekst. Bij een PDF worden regels die
+ * duidelijk één zin vormen weer aan elkaar geplakt met een spatie.
+ */
+function voegRegelsSamen(regels: string[], opties: ParseOpties): string {
+  if (!opties.plakAfbrekingen) return regels.join(opties.regelScheiding).trim();
+
+  let uit = "";
+  for (const regel of regels) {
+    if (!uit) {
+      uit = regel;
+      continue;
+    }
+    const vorigeLooptDoor = !isAfgerond(uit) && !isEigenRegel(regel);
+    uit += vorigeLooptDoor ? ` ${regel}` : opties.regelScheiding + regel;
+  }
+  return uit.trim();
 }
 
 /** "8-6-2026" of "8/6/2026" (dag-maand-jaar, zoals in de oude formulieren) -> YYYY-MM-DD. */
@@ -26,12 +62,17 @@ function parseDutchDate(text: string): string {
   );
 }
 
+/**
+ * De score staat als sterren achter de competentie. Oude formulieren gebruiken
+ * asterisken (`***`), de export van deze app zet er ★ neer met ☆ voor de lege
+ * plekken. Alleen de gevulde sterren tellen, dus ☆ hoort niet in de klasse.
+ */
 const COMP_LABELS: { id: CompId; pattern: RegExp }[] = [
-  { id: "b", pattern: /Be[iï]nvloedingskracht\s*:?\s*_*(\*+)/i },
-  { id: "k", pattern: /Klantgerichtheid\s*:?\s*_*(\*+)/i },
-  { id: "o", pattern: /Ondernemerschap\s*:?\s*_*(\*+)/i },
-  { id: "org", pattern: /Organisatievermogen\s*:?\s*_*(\*+)/i },
-  { id: "t", pattern: /Training en coaching\s*:?\s*_*(\*+)/i },
+  { id: "b", pattern: /Be[iï]nvloedingskracht\s*:?\s*_*([★*]+)/i },
+  { id: "k", pattern: /Klantgerichtheid\s*:?\s*_*([★*]+)/i },
+  { id: "o", pattern: /Ondernemerschap\s*:?\s*_*([★*]+)/i },
+  { id: "org", pattern: /Organisatievermogen\s*:?\s*_*([★*]+)/i },
+  { id: "t", pattern: /Training en coaching\s*:?\s*_*([★*]+)/i },
 ];
 
 type SectionTarget =
@@ -267,7 +308,7 @@ export function parseGesprekParagrafen(
 
   const state: Partial<OntwikkelpadenState> = {};
   for (const [key, lines] of Object.entries(textFields)) {
-    const value = (lines ?? []).join(opties.regelScheiding).trim();
+    const value = voegRegelsSamen(lines ?? [], opties);
     if (!value) continue;
 
     // De formulieren schrijven datums als 9-6-2026; de app bewaart ze als
@@ -281,9 +322,7 @@ export function parseGesprekParagrafen(
     (state as Record<string, unknown>)[key] = value;
   }
   if (situaties.some((s) => s.length > 0)) {
-    state.situaties = situaties.map((lines) =>
-      lines.join(opties.regelScheiding).trim(),
-    );
+    state.situaties = situaties.map((lines) => voegRegelsSamen(lines, opties));
   }
   if (Object.keys(scores).length > 0) {
     state.scores = scores as Record<CompId, number>;

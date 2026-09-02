@@ -45,6 +45,33 @@ export function splitsTabelregels(regels: string[]): string[] {
   return uit;
 }
 
+/** "Pagina 3 van 8", "3 / 8", "Blad 2" — wat de printer eronder zet. */
+const PAGINA_AANDUIDING =
+  /^\s*(pagina|blad|page)?\s*\d+\s*(van|\/|of)\s*\d+\s*$|pagina\s*\d+\s*(van|\/)\s*\d+/i;
+
+/**
+ * Kop- en voetregels staan op elke pagina en horen bij geen enkel veld. Zonder
+ * dit belandt "F-04 Functioneringsgesprek Pagina 1 van 3" onderaan de tekst
+ * van het veld dat toevallig over die paginagrens liep.
+ *
+ * Twee zeefjes: een regel met een paginanummering erin gaat er altijd uit, en
+ * een korte regel die op drie of meer pagina's letterlijk terugkomt is een
+ * vaste kop- of voetregel. Lange regels blijven staan: die kunnen echte tekst
+ * zijn die iemand herhaalt.
+ */
+export function verwijderKopEnVoetregels(regels: string[]): string[] {
+  const telling = new Map<string, number>();
+  for (const regel of regels) {
+    telling.set(regel, (telling.get(regel) ?? 0) + 1);
+  }
+
+  return regels.filter((regel) => {
+    if (PAGINA_AANDUIDING.test(regel)) return false;
+    const vaak = (telling.get(regel) ?? 0) >= 3;
+    return !(vaak && regel.length <= 80);
+  });
+}
+
 /**
  * Leest een PDF van een oud gesprek uit. De herkenning is dezelfde als bij
  * Word; alleen het uitpakken verschilt.
@@ -85,11 +112,14 @@ export async function parseGesprekPdf(
     );
   }
 
-  const resultaat = parseGesprekParagrafen(splitsTabelregels(regels), {
+  const schoon = verwijderKopEnVoetregels(regels);
+
+  const resultaat = parseGesprekParagrafen(splitsTabelregels(schoon), {
     regelScheiding: "\n",
+    plakAfbrekingen: true,
   });
   resultaat.warnings.unshift(
-    "Uit een PDF gelezen: de tekst is per regel overgenomen, dus loop de velden even na op afbrekingen.",
+    "Uit een PDF gelezen: afgebroken zinnen zijn weer aan elkaar geplakt en kop- en voetregels weggelaten. Loop de velden even na.",
   );
   return resultaat;
 }

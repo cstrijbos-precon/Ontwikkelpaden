@@ -264,6 +264,37 @@ describe("useOntwikkelpaden", () => {
     expect(result.current.importWarnings).toEqual([]);
   });
 
+  it("bewaart het geïmporteerde resultaat meteen, zonder te wachten op een schermwissel", async () => {
+    // Zonder deze opslag stond het resultaat alleen in de browser: wie het
+    // tabblad sloot voordat de autosave (elke vijf minuten) of een
+    // schermwissel liep, raakte de import kwijt zonder enige melding.
+    const state = createInitialState();
+    vi.mocked(loadActiveGesprek).mockResolvedValue({
+      id: "g-1",
+      state,
+      status: "draft",
+      previousGesprekId: null,
+      medewerkerEmail: null,
+    });
+    vi.mocked(importGesprekDocx).mockResolvedValue({
+      state: { naam: "Uit document" },
+      warnings: [],
+    });
+
+    const { result } = renderHook(() => useOntwikkelpaden());
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    const file = new File(["inhoud"], "gesprek.pdf");
+    await act(async () => {
+      await result.current.handleImportDocx(file);
+    });
+
+    expect(saveGesprek).toHaveBeenCalledWith(
+      "g-1",
+      expect.objectContaining({ naam: "Uit document" }),
+    );
+  });
+
   it("loads known emails and links the current user as medewerker", async () => {
     const state = createInitialState();
     vi.mocked(loadActiveGesprek).mockResolvedValue({

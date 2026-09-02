@@ -1,12 +1,17 @@
 import { jsPDF } from "jspdf";
 import { describe, expect, it } from "vitest";
 import { herkenBestandstype } from "@/lib/bestandstype";
-import { parseGesprekPdf } from "@/lib/parse-gesprek-pdf";
+import {
+  parseGesprekPdf,
+  verwijderKopEnVoetregels,
+} from "@/lib/parse-gesprek-pdf";
 
 /** Bouwt een PDF met dezelfde koppen als de oude formulieren. */
 function maakPdf(regels: string[]): ArrayBuffer {
   const doc = new jsPDF();
-  regels.forEach((regel, i) => doc.text(regel, 15, 15 + i * 7));
+  regels.forEach((regel, i) => {
+    doc.text(regel, 15, 15 + i * 7);
+  });
   return doc.output("arraybuffer");
 }
 
@@ -56,9 +61,9 @@ describe("parseGesprekPdf", () => {
     expect(state.scores).toMatchObject({ b: 2, k: 3, o: 2, org: 1 });
   });
 
-  it("waarschuwt dat de tekst per regel is overgenomen", async () => {
+  it("waarschuwt dat de tekst is opgeschoond", async () => {
     const { warnings } = await parseGesprekPdf(maakPdf(FORMULIER));
-    expect(warnings[0]).toContain("per regel");
+    expect(warnings[0]).toContain("Uit een PDF gelezen");
   });
 
   it("meldt duidelijk dat een PDF zonder tekstlaag niet gaat", async () => {
@@ -139,5 +144,84 @@ describe("herkenBestandstype", () => {
   it("geeft null bij iets anders", () => {
     const tekst = new TextEncoder().encode("gewoon tekst").buffer;
     expect(herkenBestandstype(tekst as ArrayBuffer)).toBeNull();
+  });
+});
+
+describe("kop- en voetregels", () => {
+  it("haalt paginanummering weg", () => {
+    const uit = verwijderKopEnVoetregels([
+      "Doorgroeien richting adviseur.",
+      "Pagina 1 van 3",
+      "F-04 Functioneringsgesprek Pagina 2 van 3",
+      "3 / 8",
+    ]);
+    expect(uit).toEqual(["Doorgroeien richting adviseur."]);
+  });
+
+  it("haalt een vaste voetregel weg die op elke pagina terugkomt", () => {
+    const uit = verwijderKopEnVoetregels([
+      "F-04 Functioneringsgesprek",
+      "Tekst pagina een.",
+      "F-04 Functioneringsgesprek",
+      "Tekst pagina twee.",
+      "F-04 Functioneringsgesprek",
+    ]);
+    expect(uit).toEqual(["Tekst pagina een.", "Tekst pagina twee."]);
+  });
+
+  it("laat een lange regel staan, ook als die vaker voorkomt", () => {
+    // Alleen korte regels zijn kop- of voetregels; lange herhalingen kunnen
+    // echte antwoorden zijn die iemand in meerdere velden heeft geplakt.
+    const lang = "x".repeat(90);
+    const uit = verwijderKopEnVoetregels([lang, lang, lang]);
+    expect(uit).toHaveLength(3);
+  });
+});
+
+describe("afgebroken zinnen", () => {
+  it("plakt regels van één zin weer aan elkaar", async () => {
+    const { state } = await parseGesprekPdf(
+      maakPdf([
+        "3. Jouw profiel",
+        "Inhoudelijk sterk, groeit in advies en begint meer regie",
+        "te nemen in projecten.",
+        "4. Inschalen",
+      ]),
+    );
+
+    expect(state.profiel).toBe(
+      "Inhoudelijk sterk, groeit in advies en begint meer regie te nemen in projecten.",
+    );
+  });
+
+  it("houdt een nieuwe zin op een eigen regel", async () => {
+    const { state } = await parseGesprekPdf(
+      maakPdf([
+        "3. Jouw profiel",
+        "Eerste zin is af.",
+        "Tweede zin hoort niet aan de eerste geplakt.",
+        "4. Inschalen",
+      ]),
+    );
+
+    expect(state.profiel).toBe(
+      "Eerste zin is af.\nTweede zin hoort niet aan de eerste geplakt.",
+    );
+  });
+
+  it("houdt een opsomming op eigen regels", async () => {
+    const { state } = await parseGesprekPdf(
+      maakPdf([
+        "3. Jouw profiel",
+        "Wat ik wil oppakken",
+        "- meer regie in projecten",
+        "- eerder om hulp vragen",
+        "4. Inschalen",
+      ]),
+    );
+
+    expect(state.profiel).toBe(
+      "Wat ik wil oppakken\n- meer regie in projecten\n- eerder om hulp vragen",
+    );
   });
 });
