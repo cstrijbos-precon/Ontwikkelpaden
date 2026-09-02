@@ -49,6 +49,9 @@ export function splitsTabelregels(regels: string[]): string[] {
 const PAGINA_AANDUIDING =
   /^\s*(pagina|blad|page)?\s*\d+\s*(van|\/|of)\s*\d+\s*$|pagina\s*\d+\s*(van|\/)\s*\d+/i;
 
+/** Een kaal paginanummer, eventueel met een punt erachter: "7", "12.". */
+const KAAL_PAGINANUMMER = /^\d{1,3}\.?$/;
+
 /**
  * Kop- en voetregels staan op elke pagina en horen bij geen enkel veld. Zonder
  * dit belandt "F-04 Functioneringsgesprek Pagina 1 van 3" onderaan de tekst
@@ -58,6 +61,11 @@ const PAGINA_AANDUIDING =
  * een korte regel die op drie of meer pagina's letterlijk terugkomt is een
  * vaste kop- of voetregel. Lange regels blijven staan: die kunnen echte tekst
  * zijn die iemand herhaalt.
+ *
+ * Een kaal paginanummer glipt door beide zeven heen: elke pagina heeft er een
+ * ander, dus het komt nooit drie keer hetzelfde terug. Het staat in dit
+ * formulier wel altijd direct ná de vaste voet (die intussen al is
+ * weggehaald) — die positie verraadt hem alsnog.
  */
 export function verwijderKopEnVoetregels(regels: string[]): string[] {
   const telling = new Map<string, number>();
@@ -65,11 +73,23 @@ export function verwijderKopEnVoetregels(regels: string[]): string[] {
     telling.set(regel, (telling.get(regel) ?? 0) + 1);
   }
 
-  return regels.filter((regel) => {
-    if (PAGINA_AANDUIDING.test(regel)) return false;
+  const verwijderd = regels.map((regel) => {
+    if (PAGINA_AANDUIDING.test(regel)) return true;
     const vaak = (telling.get(regel) ?? 0) >= 3;
-    return !(vaak && regel.length <= 80);
+    return vaak && regel.length <= 80;
   });
+
+  for (let i = 1; i < regels.length; i++) {
+    if (
+      !verwijderd[i] &&
+      verwijderd[i - 1] &&
+      KAAL_PAGINANUMMER.test(regels[i])
+    ) {
+      verwijderd[i] = true;
+    }
+  }
+
+  return regels.filter((_regel, i) => !verwijderd[i]);
 }
 
 /**

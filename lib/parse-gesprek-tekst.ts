@@ -52,28 +52,86 @@ function voegRegelsSamen(regels: string[], opties: ParseOpties): string {
   return uit.trim();
 }
 
-/** "8-6-2026" of "8/6/2026" (dag-maand-jaar, zoals in de oude formulieren) -> YYYY-MM-DD. */
+const MAANDEN: Record<string, string> = {
+  jan: "01",
+  feb: "02",
+  mrt: "03",
+  apr: "04",
+  mei: "05",
+  jun: "06",
+  jul: "07",
+  aug: "08",
+  sep: "09",
+  okt: "10",
+  nov: "11",
+  dec: "12",
+};
+
+/**
+ * "8-6-2026" of "8/6/2026" (dag-maand-jaar) -> YYYY-MM-DD. Het formulier
+ * gebruikt daarnaast ook "4-aug-2026" (dag-maandnaam-jaar) — Word maakt daar
+ * automatisch een datum met maandnaam van zodra iemand een cijferdatum intypt.
+ */
 function parseDutchDate(text: string): string {
-  const m = text.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-  if (!m) return "";
-  const [, d, mo, y] = m;
-  return enforceDate(
-    `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
-  );
+  const numeriek = text.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (numeriek) {
+    const [, d, mo, y] = numeriek;
+    return enforceDate(
+      `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+    );
+  }
+
+  const metMaandnaam = text.match(/(\d{1,2})-([a-zé]{3,})-(\d{4})/i);
+  if (metMaandnaam) {
+    const [, d, maandTekst, y] = metMaandnaam;
+    const maand = MAANDEN[maandTekst.slice(0, 3).toLowerCase()];
+    if (maand) {
+      return enforceDate(`${y}-${maand}-${String(d).padStart(2, "0")}`);
+    }
+  }
+
+  return "";
 }
 
 /**
- * De score staat als sterren achter de competentie. Oude formulieren gebruiken
- * asterisken (`***`), de export van deze app zet er ★ neer met ☆ voor de lege
- * plekken. Alleen de gevulde sterren tellen, dus ☆ hoort niet in de klasse.
+ * De score staat als sterren achter de competentie, op haar eigen regel
+ * (label, dubbele punt, dan sterren tussen liggende streepjes). De toelichting
+ * boven het formulier geeft ditzelfde label als voorbeeld, met drie sterren
+ * erachter; daarom wordt hier per regel gematcht en niet op de hele tekst —
+ * anders wint dat voorbeeld het van het echte antwoord eronder, gewoon omdat
+ * het eerder komt.
  */
 const COMP_LABELS: { id: CompId; pattern: RegExp }[] = [
-  { id: "b", pattern: /Be[iï]nvloedingskracht\s*:?\s*_*([★*]+)/i },
-  { id: "k", pattern: /Klantgerichtheid\s*:?\s*_*([★*]+)/i },
-  { id: "o", pattern: /Ondernemerschap\s*:?\s*_*([★*]+)/i },
-  { id: "org", pattern: /Organisatievermogen\s*:?\s*_*([★*]+)/i },
-  { id: "t", pattern: /Training en coaching\s*:?\s*_*([★*]+)/i },
+  { id: "b", pattern: /^Be[iï]nvloedingskracht\s*:?\s*(.*)$/i },
+  { id: "k", pattern: /^Klantgerichtheid\s*:?\s*(.*)$/i },
+  { id: "o", pattern: /^Ondernemerschap\s*:?\s*(.*)$/i },
+  { id: "org", pattern: /^Organisatievermogen\s*:?\s*(.*)$/i },
+  { id: "t", pattern: /^Training en coaching\s*:?\s*(.*)$/i },
 ];
+
+interface SterrenUitslag {
+  score: number | null;
+  /** Twee losse groepen sterren op één regel: iemand twijfelde, niet geraden. */
+  onduidelijk: boolean;
+}
+
+/**
+ * Haalt het aantal sterren uit de rest van de regel. Oude formulieren
+ * gebruiken asterisken, soms omringd door liggende streepjes als lege plek;
+ * de export van deze app zet er ★ neer met ☆ voor leeg. Alleen de gevulde
+ * sterren tellen.
+ *
+ * Geen sterren op de regel betekent simpelweg: niet ingevuld — geen score,
+ * geen waarschuwing. Twee losse groepen sterren op één regel is wél een
+ * probleem: iemand twijfelde tussen twee waarden, en dan wordt er niets
+ * geraden.
+ */
+function leesSterren(waarde: string): SterrenUitslag {
+  const groepen = waarde.match(/[★*]+/g);
+  if (!groepen) return { score: null, onduidelijk: false };
+  if (groepen.length > 1) return { score: null, onduidelijk: true };
+  return { score: clampScore(groepen[0].length), onduidelijk: false };
+}
 
 type SectionTarget =
   | { kind: "field"; key: keyof OntwikkelpadenState }
@@ -152,6 +210,12 @@ const MARKERS: Marker[] = [
   },
   { pattern: /^overige checks$/i, target: { kind: "field", key: "checks" } },
   {
+    // Vaste tussentekst boven "3. Jouw profiel" op het formulier. Zonder deze
+    // skip blijft hij aan het veld ervoor plakken (Overige checks).
+    pattern: /^als je al een pop met de ontwikkelpaden hebt/i,
+    target: { kind: "skip" },
+  },
+  {
     pattern: /^3\.\s*jouw profiel$/i,
     target: { kind: "field", key: "profiel" },
   },
@@ -180,6 +244,10 @@ const MARKERS: Marker[] = [
   {
     pattern: /^welke zaken uit de toolbox/i,
     target: { kind: "field", key: "toolboxKeuze" },
+  },
+  {
+    pattern: /^kan je al checkpoints bedenken/i,
+    target: { kind: "field", key: "checkpoints" },
   },
   {
     pattern: /^8\.\s*eventuele overige afspraken$/i,
@@ -297,10 +365,20 @@ export function parseGesprekParagrafen(
   }
 
   const scores: Partial<Record<CompId, number>> = {};
-  const inschalenText = inschalenLines.join("\n");
   for (const { id, pattern } of COMP_LABELS) {
-    const m = inschalenText.match(pattern);
-    if (m?.[1]) scores[id] = clampScore(m[1].length);
+    for (const regel of inschalenLines) {
+      const m = regel.match(pattern);
+      if (!m) continue;
+      const { score, onduidelijk } = leesSterren(m[1] ?? "");
+      if (onduidelijk) {
+        warnings.push(
+          `Score voor "${regel.split(":")[0]?.trim()}" is niet eenduidig ("${regel}") — vul deze handmatig in.`,
+        );
+      } else if (score !== null) {
+        scores[id] = score;
+      }
+      break;
+    }
   }
 
   const signOffDate = paragraphs.find((t) => /^datum\s*:/i.test(t));

@@ -176,6 +176,39 @@ describe("kop- en voetregels", () => {
     const uit = verwijderKopEnVoetregels([lang, lang, lang]);
     expect(uit).toHaveLength(3);
   });
+
+  it("haalt een kaal paginanummer weg dat direct na de voet staat", () => {
+    // Elke pagina heeft een ander nummer, dus zo'n regel komt nooit drie keer
+    // hetzelfde terug — de eerdere zeef mist hem daardoor. Op het echte
+    // formulier staat dit kale cijfer wél altijd direct achter de vaste voet
+    // (die zelf wel vaak genoeg terugkomt om als kop-/voetregel te tellen).
+    const uit = verwijderKopEnVoetregels([
+      "F-04 Functioneringsgesprek",
+      ".",
+      "4",
+      "2. Reflecteren op praktijksituaties",
+      "F-04 Functioneringsgesprek",
+      ".",
+      "5",
+      "3. Jouw profiel",
+      "F-04 Functioneringsgesprek",
+      ".",
+      "6",
+      "Inhoudelijk sterk.",
+    ]);
+    expect(uit).toEqual([
+      "2. Reflecteren op praktijksituaties",
+      "3. Jouw profiel",
+      "Inhoudelijk sterk.",
+    ]);
+  });
+
+  it("laat een los cijfer staan dat niet na een voetregel komt", () => {
+    // Alleen de positie direct na een verwijderde voetregel is verdacht; een
+    // los cijfer ergens anders kan een echt antwoord zijn.
+    const uit = verwijderKopEnVoetregels(["78%, doel was 75%", "5"]);
+    expect(uit).toEqual(["78%, doel was 75%", "5"]);
+  });
 });
 
 describe("afgebroken zinnen", () => {
