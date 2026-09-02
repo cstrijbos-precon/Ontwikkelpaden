@@ -160,6 +160,27 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     return () => clearInterval(interval);
   }, [hydrated, gesprekId, loadError, state, save]);
 
+  /**
+   * Bewaart een paar seconden na de laatste wijziging, zonder op een
+   * schermwissel of de vijf-minuten-autosave te wachten. Zonder dit was een
+   * ingevuld antwoord pas veilig als je toevallig van scherm wisselde of vijf
+   * minuten bleef zitten — sluit iemand het tabblad eerder, dan is het weg.
+   * De eerste keer dat `state` verschijnt is het gesprek net geladen, niet
+   * gewijzigd; die aanroep slaat over.
+   */
+  const heeftEersteStateRef = useRef(true);
+  useEffect(() => {
+    if (!hydrated || !gesprekId || loadError) return;
+    if (heeftEersteStateRef.current) {
+      heeftEersteStateRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      void save(state);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [hydrated, gesprekId, loadError, state, save]);
+
   const setMedewerkerEmail = useCallback(
     async (email: string | null) => {
       if (!gesprekId) return;

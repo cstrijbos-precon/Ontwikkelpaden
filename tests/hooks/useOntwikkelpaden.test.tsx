@@ -113,6 +113,44 @@ describe("useOntwikkelpaden", () => {
     expect(saveGesprek).toHaveBeenCalled();
   });
 
+  it("bewaart een paar seconden na een wijziging, zonder schermwissel of knop", async () => {
+    // Dit is de bescherming tegen dataverlies: eerder werd pas opgeslagen bij
+    // een schermwissel, de knop Opslaan, of de autosave na vijf minuten. Wie
+    // typte en meteen het tabblad sloot, raakte alles kwijt.
+    vi.useFakeTimers();
+    try {
+      const state = createInitialState();
+      vi.mocked(loadActiveGesprek).mockResolvedValue({
+        id: "g-1",
+        state,
+        status: "draft",
+        previousGesprekId: null,
+        medewerkerEmail: null,
+      });
+      vi.mocked(saveGesprek).mockResolvedValue(
+        {} as Awaited<ReturnType<typeof saveGesprek>>,
+      );
+
+      const { result } = renderHook(() => useOntwikkelpaden());
+      await vi.waitFor(() => expect(result.current.hydrated).toBe(true));
+
+      act(() => {
+        result.current.updateField("naam", "Piet");
+      });
+      expect(saveGesprek).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4000);
+      });
+      expect(saveGesprek).toHaveBeenCalledWith(
+        "g-1",
+        expect.objectContaining({ naam: "Piet" }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("navigates between screens and toggles UI state", async () => {
     const state = createInitialState();
     vi.mocked(loadActiveGesprek).mockResolvedValue({

@@ -76,10 +76,12 @@ describe("buildNextCycleState", () => {
     expect(next.datumVolgend).toBe("");
   });
 
-  it("reset hoofd- en medebeoordelaar", () => {
+  it("neemt hoofd- en medebeoordelaar over naar de nieuwe cyclus", () => {
+    // Voorheen begon elke cyclus zonder beoordelaars, waardoor iemand die
+    // vorig jaar al was goedgekeurd zich elk jaar opnieuw moest koppelen.
     const next = buildNextCycleState(afgerondGesprek());
-    expect(next.hoofdbeoordelaar).toBe("");
-    expect(next.medebeoordelaar).toBe("");
+    expect(next.hoofdbeoordelaar).toBe("Chantal");
+    expect(next.medebeoordelaar).toBe("Evan");
   });
 
   it("reset ambitie en trainingsgroep", () => {
