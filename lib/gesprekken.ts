@@ -10,6 +10,15 @@ import {
 } from "@/lib/field-format";
 import type { BeoordelaarStatus } from "@/lib/gesprekken-access";
 import { canAccessGesprek } from "@/lib/gesprekken-access";
+import {
+  beantwoordHoofdbeoordelaarKoppeling,
+  haalHoofdbeoordelaarKoppeling,
+  haalMedewerkersVoorHoofdbeoordelaar,
+  haalWachtendeHoofdbeoordelaar,
+  isStandingHoofdbeoordelaar,
+  stelHoofdbeoordelaarVoor,
+  stelHoofdbeoordelaarVoorDirect,
+} from "@/lib/hoofdbeoordelaar-koppeling";
 import { createInitialState, mergeWithInitialState } from "@/lib/initial-state";
 import { domeinIsToegestaan } from "@/lib/registratie";
 import type {
@@ -174,6 +183,11 @@ export async function listGesprekken(
            OR LOWER(medewerker_email) = LOWER(${userEmail})
            OR LOWER(hoofdbeoordelaar) = LOWER(${userEmail})
            OR LOWER(medebeoordelaar) = LOWER(${userEmail})
+           OR LOWER(medewerker_email) IN (
+             SELECT LOWER(medewerker_email) FROM hoofdbeoordelaar_koppelingen
+             WHERE LOWER(hoofdbeoordelaar_email) = LOWER(${userEmail})
+               AND status = 'toegestaan'
+           )
         ORDER BY updated_at DESC
       `
   ) as GesprekListRow[];
@@ -193,8 +207,8 @@ export async function getGesprekById(
   if (!row) return null;
 
   const gesprek = mapRow(row);
-  if (
-    !canAccessGesprek(
+  const toegang =
+    canAccessGesprek(
       {
         createdBy: gesprek.createdBy,
         medewerkerEmail: gesprek.medewerkerEmail,
@@ -205,10 +219,13 @@ export async function getGesprekById(
       },
       userEmail,
       isAdmin,
-    )
-  ) {
-    return null;
-  }
+    ) ||
+    // Een doorlopende hoofdbeoordelaar-koppeling geeft toegang tot al het
+    // werk van die medewerker, ook gesprekken die zelf geen hoofdbeoordelaar
+    // hebben ingevuld — bijvoorbeeld oude, al afgesloten jaren.
+    (await isStandingHoofdbeoordelaar(gesprek.medewerkerEmail, userEmail));
+
+  if (!toegang) return null;
 
   return gesprek;
 }
@@ -322,6 +339,21 @@ export async function updateGesprek(
 
   const gesprek = mapRow(row);
   await syncExtractTables(gesprek.id, cleanState);
+
+  // Vult de medewerker zelf een hoofdbeoordelaar in, dan is dat een bewuste
+  // eigen keuze (zie boven) — en geldt meteen voor al zijn of haar werk, niet
+  // alleen dit ene gesprek.
+  if (
+    hoofdbeoordelaarGewijzigd &&
+    meta.hoofdbeoordelaar.trim() &&
+    gesprek.medewerkerEmail
+  ) {
+    await stelHoofdbeoordelaarVoorDirect(
+      gesprek.medewerkerEmail,
+      meta.hoofdbeoordelaar.trim(),
+    );
+  }
+
   return gesprek;
 }
 
@@ -420,21 +452,33 @@ export async function getDashboardOverzicht(
 ): Promise<DashboardOverzicht> {
   const alle = await listGesprekken(userEmail, isAdmin);
   const email = userEmail.toLowerCase();
+  const eigenMedewerkers = new Set(
+    (await haalMedewerkersVoorHoofdbeoordelaar(userEmail)).map((e) =>
+      e.toLowerCase(),
+    ),
+  );
 
   const eigen = alle.filter((g) => g.medewerkerEmail?.toLowerCase() === email);
   const alsHoofdbeoordelaar = alle.filter(
-    (g) => g.hoofdbeoordelaar.trim().toLowerCase() === email,
+    (g) =>
+      g.hoofdbeoordelaar.trim().toLowerCase() === email ||
+      (g.medewerkerEmail &&
+        eigenMedewerkers.has(g.medewerkerEmail.toLowerCase())),
   );
   const alsMedebeoordelaar = alle.filter(
     (g) => g.medebeoordelaar.trim().toLowerCase() === email,
   );
   const pendingGoedkeuringen = await getPendingGoedkeuringen(userEmail);
+  const wachtendeHoofdbeoordelaar =
+    await haalWachtendeHoofdbeoordelaar(userEmail);
 
   return {
     eigen,
     alsHoofdbeoordelaar,
     alsMedebeoordelaar,
     pendingGoedkeuringen,
+    pendingHoofdbeoordelaar:
+      wachtendeHoofdbeoordelaar?.hoofdbeoordelaarEmail ?? null,
   };
 }
 
@@ -513,6 +557,18 @@ export async function requestBeoordelaarKoppeling(
 
   const updatedRow = updated[0];
   if (!updatedRow) throw new Error("Koppelen mislukt");
+
+  // Een hoofdbeoordelaar krijgt hiermee ook een doorlopende koppeling: niet
+  // alleen dit ene gesprek, maar al het werk van deze medewerker, nu en
+  // volgend jaar. Medebeoordelaar blijft beperkt tot dit ene gesprek.
+  if (rol === "hoofdbeoordelaar") {
+    await stelHoofdbeoordelaarVoor(
+      medewerkerEmail,
+      beoordelaarEmail,
+      beoordelaarEmail,
+    );
+  }
+
   return mapRow(updatedRow);
 }
 
@@ -563,5 +619,69 @@ export async function respondBeoordelaarKoppeling(
 
   const row = rows[0];
   if (!row) return null;
+
+  // De doorlopende koppeling volgt hetzelfde besluit: goedkeuren geldt voor
+  // al het werk van deze medewerker, afwijzen trekt die toegang weer in.
+  if (rol === "hoofdbeoordelaar" && existing.medewerkerEmail) {
+    await beantwoordHoofdbeoordelaarKoppeling(existing.medewerkerEmail, actie);
+    await syncGesprekkenMetHoofdbeoordelaarBesluit(
+      existing.medewerkerEmail,
+      row.hoofdbeoordelaar || existing.hoofdbeoordelaar,
+      actie,
+    );
+  }
+
   return mapRow(row);
+}
+
+/**
+ * Houdt de badge/status op elk los gesprek gelijk met het besluit over de
+ * doorlopende hoofdbeoordelaar-koppeling. Zonder dit kon een medewerker via
+ * de ene weg goedkeuren (het losse gesprek, of de doorlopende vraag) en bleef
+ * de andere kant 'in afwachting' tonen — of erger: bij afwijzen bleef een
+ * los gesprek de afgewezen naam gewoon nog in de kolom hebben staan, met
+ * onvoorwaardelijke toegang tot gevolg (canAccessGesprek kijkt niet naar de
+ * status, alleen naar de naam in de kolom).
+ */
+async function syncGesprekkenMetHoofdbeoordelaarBesluit(
+  medewerkerEmail: string,
+  hoofdbeoordelaarEmail: string,
+  actie: "goedkeuren" | "afwijzen",
+): Promise<void> {
+  if (actie === "goedkeuren") {
+    await sql`
+      UPDATE gesprekken SET hoofdbeoordelaar_status = 'toegestaan'
+      WHERE LOWER(medewerker_email) = LOWER(${medewerkerEmail})
+    `;
+    return;
+  }
+
+  await sql`
+    UPDATE gesprekken SET
+      hoofdbeoordelaar = '',
+      hoofdbeoordelaar_status = 'toegestaan',
+      state = jsonb_set(state, '{hoofdbeoordelaar}', '""'::jsonb)
+    WHERE LOWER(medewerker_email) = LOWER(${medewerkerEmail})
+      AND LOWER(hoofdbeoordelaar) = LOWER(${hoofdbeoordelaarEmail})
+  `;
+}
+
+/**
+ * De medewerker beantwoordt de vraag "mag deze persoon al je verslagen
+ * inzien?" — de doorlopende koppeling, los van welk gesprek de aanvraag deed
+ * ontstaan.
+ */
+export async function respondStandingHoofdbeoordelaar(
+  userEmail: string,
+  actie: "goedkeuren" | "afwijzen",
+): Promise<void> {
+  const koppeling = await haalHoofdbeoordelaarKoppeling(userEmail);
+  if (!koppeling) return;
+
+  await beantwoordHoofdbeoordelaarKoppeling(userEmail, actie);
+  await syncGesprekkenMetHoofdbeoordelaarBesluit(
+    userEmail,
+    koppeling.hoofdbeoordelaarEmail,
+    actie,
+  );
 }

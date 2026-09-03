@@ -283,9 +283,11 @@ export function Dashboard() {
 
   return (
     <>
-      {overzicht.pendingGoedkeuringen.length > 0 && (
+      {(overzicht.pendingGoedkeuringen.length > 0 ||
+        overzicht.pendingHoofdbeoordelaar) && (
         <GoedkeuringPopup
           items={overzicht.pendingGoedkeuringen}
+          pendingHoofdbeoordelaar={overzicht.pendingHoofdbeoordelaar}
           onResolved={laad}
         />
       )}

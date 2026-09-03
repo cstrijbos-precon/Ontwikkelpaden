@@ -12,6 +12,7 @@ import {
   MedewerkerNietGevondenError,
   requestBeoordelaarKoppeling,
   respondBeoordelaarKoppeling,
+  respondStandingHoofdbeoordelaar,
   startNewCycle,
   updateGesprek,
 } from "@/lib/gesprekken";
@@ -25,6 +26,48 @@ vi.mock("@/lib/db", () => ({
   // dus valt de lookup terug op APP_USERS.
   hasDatabase: () => false,
 }));
+
+/**
+ * Losstaand getest in hoofdbeoordelaar-koppeling.test.ts; hier alleen
+ * gemockt, zodat deze tests de eigen sql-mock-sequenties van gesprekken.ts
+ * niet hoeven te vervuilen met calls die daar niet bijhoren.
+ */
+const stelHoofdbeoordelaarVoorMock = vi.fn();
+const stelHoofdbeoordelaarVoorDirectMock = vi.fn();
+const beantwoordHoofdbeoordelaarKoppelingMock = vi.fn();
+const isStandingHoofdbeoordelaarMock = vi.fn();
+const haalMedewerkersVoorHoofdbeoordelaarMock = vi.fn();
+const haalWachtendeHoofdbeoordelaarMock = vi.fn();
+const haalHoofdbeoordelaarKoppelingMock = vi.fn();
+
+vi.mock("@/lib/hoofdbeoordelaar-koppeling", () => ({
+  stelHoofdbeoordelaarVoor: (...args: unknown[]) =>
+    stelHoofdbeoordelaarVoorMock(...args),
+  stelHoofdbeoordelaarVoorDirect: (...args: unknown[]) =>
+    stelHoofdbeoordelaarVoorDirectMock(...args),
+  beantwoordHoofdbeoordelaarKoppeling: (...args: unknown[]) =>
+    beantwoordHoofdbeoordelaarKoppelingMock(...args),
+  isStandingHoofdbeoordelaar: (...args: unknown[]) =>
+    isStandingHoofdbeoordelaarMock(...args),
+  haalMedewerkersVoorHoofdbeoordelaar: (...args: unknown[]) =>
+    haalMedewerkersVoorHoofdbeoordelaarMock(...args),
+  haalWachtendeHoofdbeoordelaar: (...args: unknown[]) =>
+    haalWachtendeHoofdbeoordelaarMock(...args),
+  haalHoofdbeoordelaarKoppeling: (...args: unknown[]) =>
+    haalHoofdbeoordelaarKoppelingMock(...args),
+}));
+
+beforeEach(() => {
+  stelHoofdbeoordelaarVoorMock.mockReset().mockResolvedValue(undefined);
+  stelHoofdbeoordelaarVoorDirectMock.mockReset().mockResolvedValue(undefined);
+  beantwoordHoofdbeoordelaarKoppelingMock
+    .mockReset()
+    .mockResolvedValue(undefined);
+  isStandingHoofdbeoordelaarMock.mockReset().mockResolvedValue(false);
+  haalMedewerkersVoorHoofdbeoordelaarMock.mockReset().mockResolvedValue([]);
+  haalWachtendeHoofdbeoordelaarMock.mockReset().mockResolvedValue(null);
+  haalHoofdbeoordelaarKoppelingMock.mockReset().mockResolvedValue(null);
+});
 
 function gesprekRow(overrides: Record<string, unknown> = {}) {
   const state = createInitialState();
@@ -125,6 +168,22 @@ describe("getGesprekById", () => {
     ]);
     const gesprek = await getGesprekById("gesprek-1", "mede@precon.nl", false);
     expect(gesprek?.id).toBe("gesprek-1");
+  });
+
+  it("geeft toegang via een doorlopende hoofdbeoordelaar-koppeling, ook zonder eigen kolom op dit gesprek", async () => {
+    // Bijvoorbeeld een oud, al afgesloten jaar van vóór de koppeling bestond.
+    sqlMock.mockResolvedValueOnce([
+      gesprekRow({ hoofdbeoordelaar: "", medewerker_email: "jan@precon.nl" }),
+    ]);
+    isStandingHoofdbeoordelaarMock.mockResolvedValueOnce(true);
+
+    const gesprek = await getGesprekById("gesprek-1", "kim@precon.nl", false);
+
+    expect(gesprek?.id).toBe("gesprek-1");
+    expect(isStandingHoofdbeoordelaarMock).toHaveBeenCalledWith(
+      "jan@precon.nl",
+      "kim@precon.nl",
+    );
   });
 });
 
@@ -245,6 +304,29 @@ describe("updateGesprek", () => {
         .includes("UPDATE gesprekken SET"),
     );
     expect(updateCall).toContain("toegestaan");
+    expect(stelHoofdbeoordelaarVoorDirectMock).toHaveBeenCalledWith(
+      "jan@precon.nl",
+      "nieuw@precon.nl",
+    );
+  });
+
+  it("zet géén doorlopende koppeling als het adres niet wijzigt", async () => {
+    const existingRow = gesprekRow({
+      hoofdbeoordelaar: "hoofd@precon.nl",
+      hoofdbeoordelaar_status: "toegestaan",
+    });
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    nextState.hoofdbeoordelaar = "hoofd@precon.nl";
+
+    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+
+    expect(stelHoofdbeoordelaarVoorDirectMock).not.toHaveBeenCalled();
   });
 
   it("laat een openstaande hoofdbeoordelaar_status met rust als het adres niet wijzigt", async () => {
@@ -332,6 +414,47 @@ describe("requestBeoordelaarKoppeling", () => {
       (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken"),
     );
     expect(updateCall).toContain("in_afwachting");
+  });
+
+  it("zet ook een doorlopende koppeling voor een hoofdbeoordelaar", async () => {
+    // Zodat deze persoon niet alleen dit gesprek ziet, maar al het werk van
+    // deze medewerker — nu en volgend jaar.
+    process.env.APP_USERS = `jan@precon.nl:${hash}`;
+    const row = gesprekRow({ hoofdbeoordelaar: "" });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([
+        { ...row, hoofdbeoordelaar: "beoordelaar@precon.nl" },
+      ]);
+
+    await requestBeoordelaarKoppeling(
+      "jan@precon.nl",
+      "hoofdbeoordelaar",
+      "beoordelaar@precon.nl",
+    );
+
+    expect(stelHoofdbeoordelaarVoorMock).toHaveBeenCalledWith(
+      "jan@precon.nl",
+      "beoordelaar@precon.nl",
+      "beoordelaar@precon.nl",
+    );
+  });
+
+  it("zet géén doorlopende koppeling voor een medebeoordelaar", async () => {
+    const row = gesprekRow({ medebeoordelaar: "" });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([
+        { ...row, medebeoordelaar: "beoordelaar@precon.nl" },
+      ]);
+
+    await requestBeoordelaarKoppeling(
+      "jan@precon.nl",
+      "medebeoordelaar",
+      "beoordelaar@precon.nl",
+    );
+
+    expect(stelHoofdbeoordelaarVoorMock).not.toHaveBeenCalled();
   });
 
   it("schrijft de beoordelaar ook in state, niet alleen in de kolom", async () => {
@@ -451,6 +574,56 @@ describe("respondBeoordelaarKoppeling", () => {
     sqlMock.mockReset();
   });
 
+  it("keurt de doorlopende koppeling ook goed als het om de hoofdbeoordelaar gaat", async () => {
+    const row = gesprekRow({
+      hoofdbeoordelaar: "hoofd@precon.nl",
+      hoofdbeoordelaar_status: "in_afwachting",
+      medewerker_email: "jan@precon.nl",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([
+        { ...row, hoofdbeoordelaar_status: "toegestaan" },
+      ])
+      .mockResolvedValueOnce([]);
+
+    await respondBeoordelaarKoppeling(
+      "gesprek-1",
+      "jan@precon.nl",
+      false,
+      "hoofdbeoordelaar",
+      "goedkeuren",
+    );
+
+    expect(beantwoordHoofdbeoordelaarKoppelingMock).toHaveBeenCalledWith(
+      "jan@precon.nl",
+      "goedkeuren",
+    );
+  });
+
+  it("laat de doorlopende koppeling met rust bij een medebeoordelaar", async () => {
+    const row = gesprekRow({
+      medebeoordelaar: "mede@precon.nl",
+      medebeoordelaar_status: "in_afwachting",
+      medewerker_email: "jan@precon.nl",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([
+        { ...row, medebeoordelaar_status: "toegestaan" },
+      ]);
+
+    await respondBeoordelaarKoppeling(
+      "gesprek-1",
+      "jan@precon.nl",
+      false,
+      "medebeoordelaar",
+      "goedkeuren",
+    );
+
+    expect(beantwoordHoofdbeoordelaarKoppelingMock).not.toHaveBeenCalled();
+  });
+
   it("keurt een verzoek goed als de medewerker zelf dit doet", async () => {
     const row = gesprekRow({
       hoofdbeoordelaar: "hoofd@precon.nl",
@@ -460,7 +633,8 @@ describe("respondBeoordelaarKoppeling", () => {
       .mockResolvedValueOnce([row])
       .mockResolvedValueOnce([
         { ...row, hoofdbeoordelaar_status: "toegestaan" },
-      ]);
+      ])
+      .mockResolvedValueOnce([]);
 
     const gesprek = await respondBeoordelaarKoppeling(
       "gesprek-1",
@@ -482,7 +656,8 @@ describe("respondBeoordelaarKoppeling", () => {
       .mockResolvedValueOnce([row])
       .mockResolvedValueOnce([
         { ...row, hoofdbeoordelaar: "", hoofdbeoordelaar_status: "toegestaan" },
-      ]);
+      ])
+      .mockResolvedValueOnce([]);
 
     const gesprek = await respondBeoordelaarKoppeling(
       "gesprek-1",
@@ -493,6 +668,10 @@ describe("respondBeoordelaarKoppeling", () => {
     );
 
     expect(gesprek?.hoofdbeoordelaar).toBe("");
+    expect(beantwoordHoofdbeoordelaarKoppelingMock).toHaveBeenCalledWith(
+      "jan@precon.nl",
+      "afwijzen",
+    );
   });
 
   it("gooit GeenToegangError als iemand anders dan de medewerker het probeert", async () => {
@@ -518,7 +697,8 @@ describe("respondBeoordelaarKoppeling", () => {
       .mockResolvedValueOnce([row])
       .mockResolvedValueOnce([
         { ...row, hoofdbeoordelaar_status: "toegestaan" },
-      ]);
+      ])
+      .mockResolvedValueOnce([]);
 
     const gesprek = await respondBeoordelaarKoppeling(
       "gesprek-1",
@@ -540,6 +720,59 @@ describe("respondBeoordelaarKoppeling", () => {
       "goedkeuren",
     );
     expect(gesprek).toBeNull();
+  });
+});
+
+describe("respondStandingHoofdbeoordelaar", () => {
+  beforeEach(() => {
+    sqlMock.mockReset();
+  });
+
+  it("keurt goed en zet de badge op elk gesprek van deze medewerker gelijk", async () => {
+    haalHoofdbeoordelaarKoppelingMock.mockResolvedValue({
+      medewerkerEmail: "jan@precon.nl",
+      hoofdbeoordelaarEmail: "kim@precon.nl",
+      status: "in_afwachting",
+      aangemaaktDoor: "kim@precon.nl",
+    });
+    sqlMock.mockResolvedValueOnce([]);
+
+    await respondStandingHoofdbeoordelaar("jan@precon.nl", "goedkeuren");
+
+    expect(beantwoordHoofdbeoordelaarKoppelingMock).toHaveBeenCalledWith(
+      "jan@precon.nl",
+      "goedkeuren",
+    );
+    const [strings] = sqlMock.mock.calls[0] as [TemplateStringsArray];
+    expect(strings.join("")).toContain("UPDATE gesprekken");
+  });
+
+  it("doet niets als er geen koppeling openstaat", async () => {
+    haalHoofdbeoordelaarKoppelingMock.mockResolvedValue(null);
+
+    await respondStandingHoofdbeoordelaar("jan@precon.nl", "goedkeuren");
+
+    expect(beantwoordHoofdbeoordelaarKoppelingMock).not.toHaveBeenCalled();
+    expect(sqlMock).not.toHaveBeenCalled();
+  });
+
+  it("wist bij afwijzen ook de naam uit gesprekken waar deze persoon als hoofdbeoordelaar in staat", async () => {
+    haalHoofdbeoordelaarKoppelingMock.mockResolvedValue({
+      medewerkerEmail: "jan@precon.nl",
+      hoofdbeoordelaarEmail: "kim@precon.nl",
+      status: "in_afwachting",
+      aangemaaktDoor: "kim@precon.nl",
+    });
+    sqlMock.mockResolvedValueOnce([]);
+
+    await respondStandingHoofdbeoordelaar("jan@precon.nl", "afwijzen");
+
+    expect(beantwoordHoofdbeoordelaarKoppelingMock).toHaveBeenCalledWith(
+      "jan@precon.nl",
+      "afwijzen",
+    );
+    const [strings] = sqlMock.mock.calls[0] as [TemplateStringsArray];
+    expect(strings.join("")).toContain("hoofdbeoordelaar = ''");
   });
 });
 
@@ -632,6 +865,51 @@ describe("getDashboardOverzicht", () => {
     expect(overzicht.alsHoofdbeoordelaar[0]?.id).toBe("2");
     expect(overzicht.alsMedebeoordelaar).toHaveLength(0);
     expect(overzicht.pendingGoedkeuringen).toEqual([]);
+  });
+
+  it("neemt gesprekken mee via een doorlopende koppeling, ook zonder eigen kolom op dat gesprek", async () => {
+    // Een oud, afgesloten jaar van vóór de koppeling bestond — de kolom op
+    // dát gesprek is nog leeg, maar de doorlopende koppeling geeft toch
+    // toegang, en dus hoort het gesprek ook op het dashboard te staan.
+    haalMedewerkersVoorHoofdbeoordelaarMock.mockResolvedValue([
+      "piet@precon.nl",
+    ]);
+    sqlMock
+      .mockResolvedValueOnce([
+        {
+          id: "oud-jaar",
+          medewerker_naam: "Piet",
+          medewerker_email: "piet@precon.nl",
+          gesprek_datum: "2021-01-01",
+          status: "archived",
+          hoofdbeoordelaar: "",
+          hoofdbeoordelaar_status: "toegestaan",
+          medebeoordelaar: "",
+          medebeoordelaar_status: "toegestaan",
+          updated_at: "2021-01-01",
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const overzicht = await getDashboardOverzicht("kim@precon.nl", false);
+
+    expect(overzicht.alsHoofdbeoordelaar.map((g) => g.id)).toContain(
+      "oud-jaar",
+    );
+  });
+
+  it("geeft pendingHoofdbeoordelaar door van de doorlopende koppeling", async () => {
+    haalWachtendeHoofdbeoordelaarMock.mockResolvedValue({
+      medewerkerEmail: "jan@precon.nl",
+      hoofdbeoordelaarEmail: "kim@precon.nl",
+      status: "in_afwachting",
+      aangemaaktDoor: "kim@precon.nl",
+    });
+    sqlMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    const overzicht = await getDashboardOverzicht("jan@precon.nl", false);
+
+    expect(overzicht.pendingHoofdbeoordelaar).toBe("kim@precon.nl");
   });
 });
 

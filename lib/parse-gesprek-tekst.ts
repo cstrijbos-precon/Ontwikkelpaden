@@ -84,7 +84,7 @@ function parseDutchDate(text: string): string {
   const metMaandnaam = text.match(/(\d{1,2})-([a-zé]{3,})-(\d{4})/i);
   if (metMaandnaam) {
     const [, d, maandTekst, y] = metMaandnaam;
-    const maand = MAANDEN[maandTekst.slice(0, 3).toLowerCase()];
+    const maand = maandTekst && MAANDEN[maandTekst.slice(0, 3).toLowerCase()];
     if (maand) {
       return enforceDate(`${y}-${maand}-${String(d).padStart(2, "0")}`);
     }

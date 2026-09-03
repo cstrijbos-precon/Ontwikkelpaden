@@ -7,9 +7,12 @@ import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
  * afgerond gesprek. Sterren, T-profiel-framework en stamgegevens gaan mee;
  * alle overige tekstvelden en het akkoord starten leeg voor de nieuwe cyclus.
  *
- * De beoordelaars gaan ook mee. Zonder dit begon elke nieuwe cyclus zonder
- * hoofd- en medebeoordelaar, en moest degene die vorig jaar al was
- * goedgekeurd zichzelf elk jaar opnieuw koppelen en opnieuw laten bevestigen.
+ * De hoofdbeoordelaar gaat mee als naam op het formulier. De echte toegang
+ * loopt sinds kort via een doorlopende koppeling (zie
+ * lib/hoofdbeoordelaar-koppeling.ts) die los van dit gesprek blijft bestaan;
+ * deze regel is dus alleen nog voor het gemak op het scherm, niet voor
+ * toegang. Medebeoordelaar is bewust een relatie per gesprek — "alleen het
+ * huidige verslag" — en begint dus leeg in elke nieuwe cyclus.
  */
 export function buildNextCycleState(
   vorige: OntwikkelpadenState,
@@ -25,6 +28,5 @@ export function buildNextCycleState(
     tCellen: [...vorige.tCellen],
     vorigJaar: effectieveNiveaus(vorige),
     hoofdbeoordelaar: vorige.hoofdbeoordelaar,
-    medebeoordelaar: vorige.medebeoordelaar,
   };
 }

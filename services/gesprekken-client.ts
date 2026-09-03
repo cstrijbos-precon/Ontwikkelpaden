@@ -134,3 +134,15 @@ export async function respondBeoordelaarKoppeling(
   });
   return parseJson<Gesprek>(res);
 }
+
+/** Antwoord op de vraag "mag deze persoon al je verslagen inzien?" */
+export async function respondHoofdbeoordelaarKoppeling(
+  actie: "goedkeuren" | "afwijzen",
+): Promise<void> {
+  const res = await fetch("/api/hoofdbeoordelaar-koppeling", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ actie }),
+  });
+  await parseJson<{ ok: true }>(res);
+}

@@ -76,12 +76,16 @@ describe("buildNextCycleState", () => {
     expect(next.datumVolgend).toBe("");
   });
 
-  it("neemt hoofd- en medebeoordelaar over naar de nieuwe cyclus", () => {
-    // Voorheen begon elke cyclus zonder beoordelaars, waardoor iemand die
-    // vorig jaar al was goedgekeurd zich elk jaar opnieuw moest koppelen.
+  it("neemt de hoofdbeoordelaar over als naam op het formulier", () => {
+    // De echte toegang loopt via een doorlopende koppeling, los van dit
+    // gesprek; dit is alleen het gemak op het scherm.
     const next = buildNextCycleState(afgerondGesprek());
     expect(next.hoofdbeoordelaar).toBe("Chantal");
-    expect(next.medebeoordelaar).toBe("Evan");
+  });
+
+  it("reset medebeoordelaar — die geldt bewust alleen voor het huidige verslag", () => {
+    const next = buildNextCycleState(afgerondGesprek());
+    expect(next.medebeoordelaar).toBe("");
   });
 
   it("reset ambitie en trainingsgroep", () => {

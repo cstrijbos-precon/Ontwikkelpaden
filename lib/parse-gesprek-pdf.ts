@@ -80,10 +80,12 @@ export function verwijderKopEnVoetregels(regels: string[]): string[] {
   });
 
   for (let i = 1; i < regels.length; i++) {
+    const regel = regels[i];
     if (
+      regel !== undefined &&
       !verwijderd[i] &&
       verwijderd[i - 1] &&
-      KAAL_PAGINANUMMER.test(regels[i])
+      KAAL_PAGINANUMMER.test(regel)
     ) {
       verwijderd[i] = true;
     }

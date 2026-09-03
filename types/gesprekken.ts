@@ -51,4 +51,9 @@ export interface DashboardOverzicht {
   alsHoofdbeoordelaar: GesprekListItem[];
   alsMedebeoordelaar: GesprekListItem[];
   pendingGoedkeuringen: GesprekListItem[];
+  /**
+   * E-mailadres van wie vraagt om al je verslagen te mogen inzien, los van
+   * één specifiek gesprek. Null als er niemand op goedkeuring wacht.
+   */
+  pendingHoofdbeoordelaar: string | null;
 }
