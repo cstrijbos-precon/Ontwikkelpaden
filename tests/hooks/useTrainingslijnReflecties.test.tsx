@@ -67,6 +67,7 @@ describe("useTrainingslijnReflecties", () => {
       {
         lijn: "Vakexpert 1-2",
         dagdeel: "Dagdeel 2",
+        opvolging: "",
         inzichten: "",
         leerpunten: "Beter vragen stellen",
       },
@@ -91,6 +92,7 @@ describe("useTrainingslijnReflecties", () => {
       {
         lijn: "Leider 1-2",
         dagdeel: "Dagdeel 1",
+        opvolging: "",
         inzichten: "Inzicht A",
         leerpunten: "Leerpunt B",
       },
@@ -110,5 +112,19 @@ describe("useTrainingslijnReflecties", () => {
     });
 
     expect(result.current.state.trainingslijnReflecties).toHaveLength(2);
+  });
+
+  it("bewaart wat iemand deed met de leerpunten van de vorige keer", () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.updateTrainingslijnReflectie("Leider 1-2", "Dagdeel 2", {
+        opvolging: "Ik heb vaker doorgevraagd bij lastige gesprekken",
+      });
+    });
+
+    expect(result.current.state.trainingslijnReflecties[0]?.opvolging).toBe(
+      "Ik heb vaker doorgevraagd bij lastige gesprekken",
+    );
   });
 });

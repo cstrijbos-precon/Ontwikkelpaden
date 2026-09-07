@@ -31,7 +31,9 @@ export function useTrainingslijnReflecties(
     (
       lijn: string,
       dagdeel: string,
-      patch: Partial<Pick<TrainingslijnReflectie, "inzichten" | "leerpunten">>,
+      patch: Partial<
+        Pick<TrainingslijnReflectie, "opvolging" | "inzichten" | "leerpunten">
+      >,
     ) => {
       setState((prev) => {
         const bestaat = prev.trainingslijnReflecties.some(
@@ -46,6 +48,7 @@ export function useTrainingslijnReflecties(
               {
                 lijn,
                 dagdeel,
+                opvolging: "",
                 inzichten: "",
                 leerpunten: "",
                 ...patch,

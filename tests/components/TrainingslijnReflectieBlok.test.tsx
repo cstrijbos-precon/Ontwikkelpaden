@@ -162,4 +162,105 @@ describe("TrainingslijnReflectieBlok", () => {
       expect(screen.getByText("Kon niet laden")).toBeInTheDocument(),
     );
   });
+
+  it("vraagt bij het eerste dagdeel niet naar de vorige leerpunten", async () => {
+    render(
+      <TrainingslijnReflectieBlok
+        gevolgdeTrainingslijnen={["Vakexpert 1-2"]}
+        trainingslijnReflecties={[]}
+        onToggleLijn={vi.fn()}
+        onUpdateReflectie={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Welke inzichten heb je opgedaan/),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByText(
+        /Wat heb je gedaan met de leerpunten van de vorige keer/,
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("vraagt vanaf het tweede dagdeel als eerste vraag naar de vorige leerpunten", async () => {
+    render(
+      <TrainingslijnReflectieBlok
+        gevolgdeTrainingslijnen={["Adviseur 1-2"]}
+        trainingslijnReflecties={[]}
+        onToggleLijn={vi.fn()}
+        onUpdateReflectie={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /Wat heb je gedaan met de leerpunten van de vorige keer/,
+        ),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("laat de eerder ingevulde leerpunten van het vorige dagdeel zien als geheugensteun", async () => {
+    render(
+      <TrainingslijnReflectieBlok
+        gevolgdeTrainingslijnen={["Adviseur 1-2"]}
+        trainingslijnReflecties={[
+          {
+            lijn: "Adviseur 1-2",
+            dagdeel: "Dagdeel 1",
+            opvolging: "",
+            inzichten: "",
+            leerpunten: "Beter samenvatten",
+          },
+        ]}
+        onToggleLijn={vi.fn()}
+        onUpdateReflectie={vi.fn()}
+      />,
+    );
+
+    // "Beter samenvatten" staat zowel in de geheugensteun als in de eigen
+    // leerpuntentextarea van Dagdeel 1 — daarom hier specifiek de geheugensteun.
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Leerpunten van Dagdeel 1: Beter samenvatten/),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("typen in de opvolgvraag roept onUpdateReflectie aan met opvolging", async () => {
+    const onUpdateReflectie = vi.fn();
+    render(
+      <TrainingslijnReflectieBlok
+        gevolgdeTrainingslijnen={["Adviseur 1-2"]}
+        trainingslijnReflecties={[]}
+        onToggleLijn={vi.fn()}
+        onUpdateReflectie={onUpdateReflectie}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /Wat heb je gedaan met de leerpunten van de vorige keer/,
+        ),
+      ).toBeInTheDocument(),
+    );
+    // Volgorde in de DOM: Dagdeel 1 (inzichten, leerpunten), dan Dagdeel 2
+    // (opvolging als eerste vraag, dan inzichten, leerpunten) — dus index 2.
+    fireEvent.change(screen.getAllByRole("textbox")[2] as HTMLElement, {
+      target: { value: "Ik heb het toegepast in een klantgesprek" },
+    });
+
+    expect(onUpdateReflectie).toHaveBeenCalledWith(
+      "Adviseur 1-2",
+      "Dagdeel 2",
+      {
+        opvolging: "Ik heb het toegepast in een klantgesprek",
+      },
+    );
+  });
 });

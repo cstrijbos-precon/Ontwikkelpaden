@@ -42,6 +42,7 @@ const reflectieSchema = z.object({
 const trainingslijnReflectieSchema = z.object({
   lijn: z.string(),
   dagdeel: z.string(),
+  opvolging: z.string(),
   inzichten: z.string(),
   leerpunten: z.string(),
 });

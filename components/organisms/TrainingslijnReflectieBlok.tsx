@@ -13,7 +13,9 @@ interface TrainingslijnReflectieBlokProps {
   onUpdateReflectie: (
     lijn: string,
     dagdeel: string,
-    patch: Partial<Pick<TrainingslijnReflectie, "inzichten" | "leerpunten">>,
+    patch: Partial<
+      Pick<TrainingslijnReflectie, "opvolging" | "inzichten" | "leerpunten">
+    >,
   ) => void;
 }
 
@@ -123,10 +125,19 @@ export function TrainingslijnReflectieBlok({
                   blijven bewaard.
                 </p>
               )}
-              {lijn?.dagdelen.map((dagdeel) => {
+              {lijn?.dagdelen.map((dagdeel, index) => {
                 const reflectie = trainingslijnReflecties.find(
                   (r) => r.lijn === naam && r.dagdeel === dagdeel.label,
                 );
+                const vorigeDagdeel =
+                  index > 0 ? lijn.dagdelen[index - 1] : null;
+                const vorigeReflectie = vorigeDagdeel
+                  ? trainingslijnReflecties.find(
+                      (r) =>
+                        r.lijn === naam && r.dagdeel === vorigeDagdeel.label,
+                    )
+                  : null;
+
                 return (
                   <div
                     key={dagdeel.label}
@@ -148,6 +159,34 @@ export function TrainingslijnReflectieBlok({
                       {dagdeel.label}
                       {dagdeel.datum ? ` — ${dagdeel.datum}` : ""}
                     </p>
+                    {vorigeDagdeel && (
+                      <>
+                        {vorigeReflectie?.leerpunten && (
+                          <p
+                            style={{
+                              fontSize: 12,
+                              color: "var(--grijs-licht)",
+                              fontStyle: "italic",
+                              marginBottom: 6,
+                            }}
+                          >
+                            Leerpunten van {vorigeDagdeel.label}:{" "}
+                            {vorigeReflectie.leerpunten}
+                          </p>
+                        )}
+                        <FormField label="Wat heb je gedaan met de leerpunten van de vorige keer?">
+                          <textarea
+                            rows={2}
+                            value={reflectie?.opvolging ?? ""}
+                            onChange={(e) =>
+                              onUpdateReflectie(naam, dagdeel.label, {
+                                opvolging: e.target.value,
+                              })
+                            }
+                          />
+                        </FormField>
+                      </>
+                    )}
                     <FormField label="Welke inzichten heb je opgedaan?">
                       <textarea
                         rows={2}

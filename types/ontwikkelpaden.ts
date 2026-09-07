@@ -63,6 +63,8 @@ export interface Reflectie {
 export interface TrainingslijnReflectie {
   lijn: string;
   dagdeel: string;
+  /** Wat je deed met de leerpunten van het vorige dagdeel — leeg bij het eerste dagdeel. */
+  opvolging: string;
   inzichten: string;
   leerpunten: string;
 }
