@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCycle } from "@/hooks/useCycle";
 import { useReflecties } from "@/hooks/useReflecties";
+import { useTrainingslijnReflecties } from "@/hooks/useTrainingslijnReflecties";
 import { exportWord } from "@/lib/export-word";
 import { clampPadNiveau, clampScore } from "@/lib/field-format";
 import { wachtendeKoppelingen } from "@/lib/gesprekken-access";
@@ -109,6 +110,8 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
 
   const { addReflectie, updateReflectie, removeReflectie } =
     useReflecties(setState);
+  const { toggleGevolgdeTrainingslijn, updateTrainingslijnReflectie } =
+    useTrainingslijnReflecties(setState);
   const { handleAfronden, handleStartNewCycle } = useCycle({
     gesprekId,
     state,
@@ -410,6 +413,8 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     addReflectie,
     updateReflectie,
     removeReflectie,
+    toggleGevolgdeTrainingslijn,
+    updateTrainingslijnReflectie,
     handleAfronden,
     handleStartNewCycle,
     naarScherm,

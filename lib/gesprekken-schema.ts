@@ -39,6 +39,13 @@ const reflectieSchema = z.object({
   tekst: z.string(),
 });
 
+const trainingslijnReflectieSchema = z.object({
+  lijn: z.string(),
+  dagdeel: z.string(),
+  inzichten: z.string(),
+  leerpunten: z.string(),
+});
+
 export const ontwikkelpadenStateSchema = z.object({
   naam: z.string(),
   wereld: z.string(),
@@ -71,7 +78,8 @@ export const ontwikkelpadenStateSchema = z.object({
   toolboxKeuze: z.string(),
   checkpoints: z.string(),
   tProfielOntwikkeling: z.string(),
-  trainingslijnLeren: z.string(),
+  gevolgdeTrainingslijnen: z.array(z.string()),
+  trainingslijnReflecties: z.array(trainingslijnReflectieSchema),
   overigeAfspraken: z.string(),
   datumVolgend: dateFieldSchema,
   reflecties: z.array(reflectieSchema),

@@ -59,6 +59,14 @@ export interface Reflectie {
   tekst: string;
 }
 
+/** Reflectie op één dagdeel van een gevolgde trainingslijn. */
+export interface TrainingslijnReflectie {
+  lijn: string;
+  dagdeel: string;
+  inzichten: string;
+  leerpunten: string;
+}
+
 export interface OntwikkelpadenState {
   naam: string;
   wereld: string;
@@ -93,7 +101,8 @@ export interface OntwikkelpadenState {
   toolboxKeuze: string;
   checkpoints: string;
   tProfielOntwikkeling: string;
-  trainingslijnLeren: string;
+  gevolgdeTrainingslijnen: string[];
+  trainingslijnReflecties: TrainingslijnReflectie[];
   overigeAfspraken: string;
   datumVolgend: string;
   reflecties: Reflectie[];

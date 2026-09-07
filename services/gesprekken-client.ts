@@ -1,3 +1,4 @@
+import type { Trainingslijn } from "@/app/api/trainingslijnen/route";
 import type {
   BekendeMedewerker,
   BeoordelaarRol,
@@ -145,4 +146,10 @@ export async function respondHoofdbeoordelaarKoppeling(
     body: JSON.stringify({ actie }),
   });
   await parseJson<{ ok: true }>(res);
+}
+
+export async function fetchTrainingslijnen(): Promise<Trainingslijn[]> {
+  const res = await fetch("/api/trainingslijnen");
+  const data = await parseJson<{ lijnen: Trainingslijn[] }>(res);
+  return data.lijnen;
 }

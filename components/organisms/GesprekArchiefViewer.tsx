@@ -117,6 +117,8 @@ export function GesprekArchiefViewer({ gesprek }: GesprekArchiefViewerProps) {
               onAddReflectie={NOOP}
               onUpdateReflectie={NOOP}
               onRemoveReflectie={NOOP}
+              onToggleGevolgdeTrainingslijn={NOOP}
+              onUpdateTrainingslijnReflectie={NOOP}
               onStartNewCycle={NOOP}
             />
           </fieldset>

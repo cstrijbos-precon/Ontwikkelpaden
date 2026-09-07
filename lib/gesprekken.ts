@@ -20,6 +20,10 @@ import {
   stelHoofdbeoordelaarVoorDirect,
 } from "@/lib/hoofdbeoordelaar-koppeling";
 import { createInitialState, mergeWithInitialState } from "@/lib/initial-state";
+import {
+  bepaalNieuweOndertekeningen,
+  mailOndertekenaars,
+} from "@/lib/ondertekeningmail";
 import { domeinIsToegestaan } from "@/lib/registratie";
 import type {
   BekendeMedewerker,
@@ -352,6 +356,12 @@ export async function updateGesprek(
       gesprek.medewerkerEmail,
       meta.hoofdbeoordelaar.trim(),
     );
+  }
+
+  // Elke handtekening die er hier bij komt, mailt de nog openstaande rollen —
+  // niet alleen de eerstvolgende, iedereen die nog moet tekenen.
+  for (const rol of bepaalNieuweOndertekeningen(existing.state, cleanState)) {
+    await mailOndertekenaars(gesprek, rol);
   }
 
   return gesprek;

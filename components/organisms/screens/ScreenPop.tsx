@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FormField } from "@/components/molecules/FormField";
 import { ReflectieItem } from "@/components/molecules/ReflectieItem";
+import { TrainingslijnReflectieBlok } from "@/components/organisms/TrainingslijnReflectieBlok";
 import { COMPS } from "@/lib/data/competenties";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { effectiefNiveau } from "@/lib/effectief-niveau";
@@ -9,6 +10,7 @@ import type {
   OntwikkelpadenState,
   Reflectie,
   Toolbox,
+  TrainingslijnReflectie,
 } from "@/types/ontwikkelpaden";
 
 interface ToolboxPanelProps {
@@ -80,6 +82,12 @@ interface ScreenPopProps {
     patch: Partial<Pick<Reflectie, "datum" | "tekst">>,
   ) => void;
   onRemoveReflectie: (id: string) => void;
+  onToggleGevolgdeTrainingslijn: (naam: string) => void;
+  onUpdateTrainingslijnReflectie: (
+    lijn: string,
+    dagdeel: string,
+    patch: Partial<Pick<TrainingslijnReflectie, "inzichten" | "leerpunten">>,
+  ) => void;
   onStartNewCycle: () => void;
 }
 
@@ -95,6 +103,8 @@ export function ScreenPop({
   onAddReflectie,
   onUpdateReflectie,
   onRemoveReflectie,
+  onToggleGevolgdeTrainingslijn,
+  onUpdateTrainingslijnReflectie,
   onStartNewCycle,
 }: ScreenPopProps) {
   const actief = PAD_IDS.filter(
@@ -221,14 +231,12 @@ export function ScreenPop({
           onChange={(e) => onUpdate("tProfielOntwikkeling", e.target.value)}
         />
       </FormField>
-      <FormField label="Wat heb je geleerd uit je trainingslijn(en)?">
-        <textarea
-          rows={3}
-          placeholder="Wat heb je opgestoken van de trainingen die je hebt gevolgd..."
-          value={state.trainingslijnLeren}
-          onChange={(e) => onUpdate("trainingslijnLeren", e.target.value)}
-        />
-      </FormField>
+      <TrainingslijnReflectieBlok
+        gevolgdeTrainingslijnen={state.gevolgdeTrainingslijnen}
+        trainingslijnReflecties={state.trainingslijnReflecties}
+        onToggleLijn={onToggleGevolgdeTrainingslijn}
+        onUpdateReflectie={onUpdateTrainingslijnReflectie}
+      />
 
       <div className="sk">Reflecties</div>
       <div className="tip-box">

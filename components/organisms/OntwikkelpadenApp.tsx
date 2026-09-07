@@ -156,6 +156,8 @@ export function OntwikkelpadenApp({ gesprekId }: OntwikkelpadenAppProps = {}) {
             onAddReflectie={app.addReflectie}
             onUpdateReflectie={app.updateReflectie}
             onRemoveReflectie={app.removeReflectie}
+            onToggleGevolgdeTrainingslijn={app.toggleGevolgdeTrainingslijn}
+            onUpdateTrainingslijnReflectie={app.updateTrainingslijnReflectie}
             onStartNewCycle={app.handleStartNewCycle}
           />
         )}

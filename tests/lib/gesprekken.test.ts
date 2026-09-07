@@ -57,6 +57,19 @@ vi.mock("@/lib/hoofdbeoordelaar-koppeling", () => ({
     haalHoofdbeoordelaarKoppelingMock(...args),
 }));
 
+/** Losstaand getest in ondertekeningmail.test.ts; hier alleen gemockt. */
+const mailOndertekenaarsMock = vi.fn();
+
+vi.mock("@/lib/ondertekeningmail", async () => {
+  const echt = await vi.importActual<typeof import("@/lib/ondertekeningmail")>(
+    "@/lib/ondertekeningmail",
+  );
+  return {
+    bepaalNieuweOndertekeningen: echt.bepaalNieuweOndertekeningen,
+    mailOndertekenaars: (...args: unknown[]) => mailOndertekenaarsMock(...args),
+  };
+});
+
 beforeEach(() => {
   stelHoofdbeoordelaarVoorMock.mockReset().mockResolvedValue(undefined);
   stelHoofdbeoordelaarVoorDirectMock.mockReset().mockResolvedValue(undefined);
@@ -67,6 +80,7 @@ beforeEach(() => {
   haalMedewerkersVoorHoofdbeoordelaarMock.mockReset().mockResolvedValue([]);
   haalWachtendeHoofdbeoordelaarMock.mockReset().mockResolvedValue(null);
   haalHoofdbeoordelaarKoppelingMock.mockReset().mockResolvedValue(null);
+  mailOndertekenaarsMock.mockReset().mockResolvedValue(undefined);
 });
 
 function gesprekRow(overrides: Record<string, unknown> = {}) {
@@ -327,6 +341,43 @@ describe("updateGesprek", () => {
     await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
 
     expect(stelHoofdbeoordelaarVoorDirectMock).not.toHaveBeenCalled();
+  });
+
+  it("mailt de openstaande ondertekenaars zodra een handtekening voor het eerst wordt gezet", async () => {
+    const existingRow = gesprekRow();
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([
+        {
+          ...existingRow,
+          state: { ...existingRow.state, akkoordProfessional: true },
+        },
+      ])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    nextState.akkoordProfessional = true;
+
+    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+
+    expect(mailOndertekenaarsMock).toHaveBeenCalledTimes(1);
+    expect(mailOndertekenaarsMock.mock.calls[0]?.[1]).toBe("professional");
+  });
+
+  it("mailt niets als er geen handtekening bij is gekomen", async () => {
+    const existingRow = gesprekRow();
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+
+    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+
+    expect(mailOndertekenaarsMock).not.toHaveBeenCalled();
   });
 
   it("laat een openstaande hoofdbeoordelaar_status met rust als het adres niet wijzigt", async () => {
