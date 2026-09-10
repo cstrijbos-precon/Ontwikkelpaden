@@ -63,6 +63,17 @@ describe("datums met maandnaam", () => {
     });
     expect(state.datum).toBe("2026-08-04");
   });
+
+  it("leest '4 augustus 2026', voluit met spaties zoals iemand het met de hand typt", () => {
+    // Kwam voor in een echt ingeleverd verslag: zowel Datum als Datum vorig
+    // gesprek stonden zo geschreven, en kwamen daardoor allebei leeg binnen.
+    const { state } = parseGesprekParagrafen(
+      ["Datum", "4 augustus 2026", "Datum vorig gesprek", "9 augustus 2025"],
+      { regelScheiding: "\n" },
+    );
+    expect(state.datum).toBe("2026-08-04");
+    expect(state.datumVorig).toBe("2025-08-09");
+  });
 });
 
 describe("checkpoints", () => {

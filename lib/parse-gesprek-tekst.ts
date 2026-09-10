@@ -69,8 +69,11 @@ const MAANDEN: Record<string, string> = {
 
 /**
  * "8-6-2026" of "8/6/2026" (dag-maand-jaar) -> YYYY-MM-DD. Het formulier
- * gebruikt daarnaast ook "4-aug-2026" (dag-maandnaam-jaar) — Word maakt daar
- * automatisch een datum met maandnaam van zodra iemand een cijferdatum intypt.
+ * gebruikt daarnaast een datum met maandnaam, met streepje of spatie ertussen
+ * — "4-aug-2026" (Word maakt dit automatisch van een ingetypte cijferdatum)
+ * en "4 augustus 2026" (voluit, met spaties — zo typt iemand het ook met de
+ * hand). Alleen de eerste drie letters van de maandnaam tellen mee, dus de
+ * volledige naam wordt hetzelfde herkend als de afkorting.
  */
 function parseDutchDate(text: string): string {
   const numeriek = text.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
@@ -81,7 +84,7 @@ function parseDutchDate(text: string): string {
     );
   }
 
-  const metMaandnaam = text.match(/(\d{1,2})-([a-zé]{3,})-(\d{4})/i);
+  const metMaandnaam = text.match(/(\d{1,2})[-\s]+([a-zé]{3,})[-\s]+(\d{4})/i);
   if (metMaandnaam) {
     const [, d, maandTekst, y] = metMaandnaam;
     const maand = maandTekst && MAANDEN[maandTekst.slice(0, 3).toLowerCase()];

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { DateInput } from "@/components/atoms/DateInput";
 import { FormField } from "@/components/molecules/FormField";
 import { WERELDEN } from "@/lib/data/werelden";
+import { isGeldigEmail } from "@/lib/registratie";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface ScreenGegevensProps {
@@ -31,6 +32,7 @@ function BeoordelaarEmailField({
   onChange: (value: string) => void;
 }) {
   const normalized = value.trim().toLowerCase();
+  const geldigEmail = normalized === "" || isGeldigEmail(normalized);
   const bekend = normalized !== "" && knownEmails.includes(normalized);
   return (
     <FormField label={label}>
@@ -41,7 +43,14 @@ function BeoordelaarEmailField({
         placeholder="naam@precongroup.com"
         onChange={(e) => onChange(e.target.value)}
       />
-      {normalized !== "" && !bekend && (
+      {!geldigEmail && (
+        <p style={{ fontSize: 11, color: "var(--rood)", marginTop: 4 }}>
+          ⚠ Dit lijkt geen e-mailadres (bijvoorbeeld uit een geïmporteerd
+          document) — pas dit handmatig aan naar het echte adres, anders krijgt
+          deze persoon geen toegang.
+        </p>
+      )}
+      {geldigEmail && normalized !== "" && !bekend && (
         <p style={{ fontSize: 11, color: "var(--oranje)", marginTop: 4 }}>
           ⚠ Geen account gevonden met dit e-mailadres — deze persoon krijgt pas
           toegang tot dit dossier zodra er een account voor bestaat.
