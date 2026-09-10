@@ -375,7 +375,7 @@ export function Dashboard() {
         titel="Hoofdbeoordelaar van"
         items={overzicht.alsHoofdbeoordelaar}
         statusVeld="hoofdbeoordelaarStatus"
-        scherm={7}
+        scherm={0}
         bekendeMedewerkers={medewerkersVoorDropdown}
         onToevoegen={(email) => koppel("hoofdbeoordelaar", email)}
       />
@@ -383,7 +383,7 @@ export function Dashboard() {
         titel="Medebeoordelaar van"
         items={overzicht.alsMedebeoordelaar}
         statusVeld="medebeoordelaarStatus"
-        scherm={7}
+        scherm={0}
         bekendeMedewerkers={medewerkersVoorDropdown}
         onToevoegen={(email) => koppel("medebeoordelaar", email)}
       />

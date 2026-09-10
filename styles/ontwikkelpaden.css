@@ -665,7 +665,7 @@ body {
 
 .t-grid {
   display: grid;
-  grid-template-columns: repeat(10, 34px);
+  grid-template-columns: repeat(9, 34px);
   gap: 3px;
   margin: 10px 0;
 }

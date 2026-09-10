@@ -9,7 +9,7 @@ export function TProfielGrid({ state, onToggle }: TProfielGridProps) {
   return (
     <div className="t-grid">
       {Array.from({ length: 6 }, (_, r) =>
-        Array.from({ length: 10 }, (_, k) => {
+        Array.from({ length: 9 }, (_, k) => {
           const key = `${r}-${k}`;
           const aan = state.tCellen.includes(key);
           return (

@@ -260,6 +260,14 @@ export function ScreenAfronding({
             kan nu op het POP-scherm.
           </p>
         )}
+        {status !== "completed" && !alleAkkoord && (
+          <p
+            style={{ fontSize: 11, color: "var(--grijs-licht)", marginTop: 8 }}
+          >
+            Afronden kan pas als alle drie de handtekeningen hierboven zijn
+            gezet.
+          </p>
+        )}
         <p
           style={{
             fontSize: 11,
