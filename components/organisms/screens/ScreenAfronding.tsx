@@ -5,6 +5,7 @@ import { FormField } from "@/components/molecules/FormField";
 import { ScoreBox } from "@/components/molecules/ScoreBox";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { effectiefNiveau } from "@/lib/effectief-niveau";
+import { exportWord } from "@/lib/export-word";
 import { getPadColor } from "@/lib/pad-colors";
 import type { GesprekStatus } from "@/types/gesprekken";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
@@ -18,6 +19,15 @@ interface ScreenAfrondingProps {
     value: OntwikkelpadenState[K],
   ) => void;
   onAfronden: () => void;
+}
+
+const HR_ADRES = "hr@precongroup.com";
+
+function hrMailto(naam: string): string {
+  const professional = naam.trim() || "medewerker";
+  const onderwerp = `Ondertekend functioneringsgesprek en POP - ${professional}`;
+  const tekst = `Hierbij het ondertekende functioneringsgesprek en POP van ${professional}. Het verslag zit als bijlage bij deze mail.`;
+  return `mailto:${HR_ADRES}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(tekst)}`;
 }
 
 function formatTijdstip(iso: string): string {
@@ -268,16 +278,35 @@ export function ScreenAfronding({
             gezet.
           </p>
         )}
-        <p
-          style={{
-            fontSize: 11,
-            color: "var(--grijs-licht)",
-            marginTop: 14,
-            fontStyle: "italic",
-          }}
-        >
-          Na ondertekening per mail doorsturen naar hr@precongroup.com
-        </p>
+        <div style={{ marginTop: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: "bold", marginBottom: 8 }}>
+            Doorsturen naar HR
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-v"
+              onClick={() => exportWord(state)}
+            >
+              📄 Download ondertekend verslag
+            </button>
+            <a className="btn btn-t" href={hrMailto(state.naam)}>
+              ✉ Mail naar HR
+            </a>
+          </div>
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--grijs-licht)",
+              marginTop: 8,
+              fontStyle: "italic",
+            }}
+          >
+            Download eerst het verslag; de mailknop opent je mailprogramma naar
+            hr@precongroup.com. Voeg het gedownloade bestand daar zelf als
+            bijlage toe.
+          </p>
+        </div>
       </div>
     </>
   );
