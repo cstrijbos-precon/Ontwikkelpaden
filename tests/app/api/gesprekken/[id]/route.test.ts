@@ -11,13 +11,21 @@ vi.mock("@/lib/db", () => ({
   hasDatabase: vi.fn(),
 }));
 
-vi.mock("@/lib/gesprekken", () => ({
-  getGesprekById: vi.fn(),
-  updateGesprek: vi.fn(),
-}));
+vi.mock("@/lib/gesprekken", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/gesprekken")>();
+  return {
+    ...actual,
+    getGesprekById: vi.fn(),
+    updateGesprek: vi.fn(),
+  };
+});
 
 import { hasDatabase } from "@/lib/db";
-import { getGesprekById, updateGesprek } from "@/lib/gesprekken";
+import {
+  getGesprekById,
+  ToegangGeweigerdError,
+  updateGesprek,
+} from "@/lib/gesprekken";
 
 const context = { params: Promise.resolve({ id: "gesprek-1" }) };
 
@@ -63,6 +71,18 @@ describe("GET /api/gesprekken/[id]", () => {
 
     const res = await GET(new Request("http://x"), context);
     expect(res.status).toBe(500);
+  });
+
+  it("returns 403 met een duidelijke melding als toegang is geweigerd", async () => {
+    mockAuthUser();
+    vi.mocked(hasDatabase).mockReturnValue(true);
+    vi.mocked(getGesprekById).mockRejectedValue(new ToegangGeweigerdError());
+
+    const res = await GET(new Request("http://x"), context);
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({
+      error: "Toegang tot dit gesprek is geweigerd door de medewerker",
+    });
   });
 });
 

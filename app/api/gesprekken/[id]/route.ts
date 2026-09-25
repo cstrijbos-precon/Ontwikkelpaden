@@ -1,6 +1,10 @@
 import { auth } from "@/auth";
 import { hasDatabase } from "@/lib/db";
-import { getGesprekById, updateGesprek } from "@/lib/gesprekken";
+import {
+  getGesprekById,
+  ToegangGeweigerdError,
+  updateGesprek,
+} from "@/lib/gesprekken";
 import { updateGesprekBodySchema } from "@/lib/gesprekken-schema";
 
 interface RouteContext {
@@ -29,7 +33,10 @@ export async function GET(_request: Request, context: RouteContext) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
     return Response.json(gesprek);
-  } catch {
+  } catch (error) {
+    if (error instanceof ToegangGeweigerdError) {
+      return Response.json({ error: error.message }, { status: 403 });
+    }
     return Response.json({ error: "Failed to load gesprek" }, { status: 500 });
   }
 }
@@ -78,6 +85,9 @@ export async function PUT(request: Request, context: RouteContext) {
     }
     return Response.json(gesprek);
   } catch (error) {
+    if (error instanceof ToegangGeweigerdError) {
+      return Response.json({ error: error.message }, { status: 403 });
+    }
     if (process.env.NODE_ENV === "development") {
       console.error("gesprekken PUT failed:", error);
     }

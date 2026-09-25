@@ -7,15 +7,20 @@ export interface GesprekAccessFields {
   hoofdbeoordelaarStatus?: BeoordelaarStatus;
   medebeoordelaar?: string | null;
   medebeoordelaarStatus?: BeoordelaarStatus;
+  /** E-mailadressen die de medewerker expliciet heeft afgewezen als beoordelaar. */
+  toegangGeweigerdVoor?: string[];
 }
 
 /**
- * Een beoordelaar mag het gesprek zien zodra hij is toegevoegd, ook als de
- * medewerker de koppeling nog moet goedkeuren. Anders staat een notulist die
- * net een gesprek heeft aangemaakt voor een dichte deur.
+ * De aanmaker van een gesprek (created_by) houdt er altijd toegang toe — dat
+ * dekt de notulist die het net heeft aangemaakt en anders voor een dichte
+ * deur zou staan, zolang de medewerker die persoon niet expliciet heeft
+ * afgewezen.
  *
- * De goedkeuring blijft bestaan als bevestiging door de medewerker; in het
- * scherm staat tot die tijd dat er nog op gewacht wordt.
+ * Hoofd- en medebeoordelaar geven pas toegang zodra de medewerker de
+ * koppeling heeft goedgekeurd (status 'toegestaan'). Vóór die tijd staat er
+ * alleen een aanvraag klaar — wie zichzelf aan wie dan ook koppelt, kan
+ * anders bij goedkeuring nog niet gegeven meteen alles lezen en bewerken.
  */
 export function canAccessGesprek(
   gesprek: GesprekAccessFields,
@@ -24,10 +29,21 @@ export function canAccessGesprek(
 ): boolean {
   if (isAdmin) return true;
   const email = userEmail.toLowerCase();
-  if (gesprek.createdBy.toLowerCase() === email) return true;
+  const geweigerd = gesprek.toegangGeweigerdVoor?.includes(email) ?? false;
+  if (gesprek.createdBy.toLowerCase() === email && !geweigerd) return true;
   if (gesprek.medewerkerEmail?.toLowerCase() === email) return true;
-  if (gesprek.hoofdbeoordelaar?.toLowerCase() === email) return true;
-  if (gesprek.medebeoordelaar?.toLowerCase() === email) return true;
+  if (
+    gesprek.hoofdbeoordelaar?.toLowerCase() === email &&
+    gesprek.hoofdbeoordelaarStatus === "toegestaan"
+  ) {
+    return true;
+  }
+  if (
+    gesprek.medebeoordelaar?.toLowerCase() === email &&
+    gesprek.medebeoordelaarStatus === "toegestaan"
+  ) {
+    return true;
+  }
   return false;
 }
 

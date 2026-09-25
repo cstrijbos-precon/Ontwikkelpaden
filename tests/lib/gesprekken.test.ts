@@ -138,6 +138,37 @@ describe("listGesprekken", () => {
     await listGesprekken("user@precon.nl", false);
     expect(sqlMock).toHaveBeenCalled();
   });
+
+  it("vergelijkt created_by hoofdletterongevoelig, net als de andere e-mailkolommen", async () => {
+    sqlMock.mockResolvedValueOnce([]);
+    await listGesprekken("Gemengd@Precon.nl", false);
+
+    const sqlTekst = (sqlMock.mock.calls[0]?.[0] as TemplateStringsArray).join(
+      "",
+    );
+    expect(sqlTekst).toContain("LOWER(created_by)");
+  });
+
+  it("laat hoofd-/medebeoordelaar pas meetellen zodra de status toegestaan is", async () => {
+    sqlMock.mockResolvedValueOnce([]);
+    await listGesprekken("user@precon.nl", false);
+
+    const sqlTekst = (sqlMock.mock.calls[0]?.[0] as TemplateStringsArray).join(
+      "",
+    );
+    expect(sqlTekst).toContain("hoofdbeoordelaar_status = 'toegestaan'");
+    expect(sqlTekst).toContain("medebeoordelaar_status = 'toegestaan'");
+  });
+
+  it("sluit gesprekken uit waarvoor de aanmaker is afgewezen", async () => {
+    sqlMock.mockResolvedValueOnce([]);
+    await listGesprekken("user@precon.nl", false);
+
+    const sqlTekst = (sqlMock.mock.calls[0]?.[0] as TemplateStringsArray).join(
+      "",
+    );
+    expect(sqlTekst).toContain("toegang_geweigerd");
+  });
 });
 
 describe("getGesprekById", () => {
@@ -310,7 +341,9 @@ describe("updateGesprek", () => {
     nextState.naam = "Jan";
     nextState.hoofdbeoordelaar = "nieuw@precon.nl";
 
-    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+    // De medewerker op deze rij is jan@precon.nl (zie gesprekRow) — alleen
+    // die persoon (of een admin) mag dit veld op deze manier veranderen.
+    await updateGesprek("gesprek-1", "jan@precon.nl", false, nextState);
 
     const updateCall = sqlMock.mock.calls.find((call) =>
       (call[0] as TemplateStringsArray)
@@ -318,6 +351,63 @@ describe("updateGesprek", () => {
         .includes("UPDATE gesprekken SET"),
     );
     expect(updateCall).toContain("toegestaan");
+    expect(stelHoofdbeoordelaarVoorDirectMock).toHaveBeenCalledWith(
+      "jan@precon.nl",
+      "nieuw@precon.nl",
+    );
+  });
+
+  it("negeert een hoofdbeoordelaar-wijziging van iemand die niet de medewerker is", async () => {
+    // Zonder deze check kon elke beoordelaar met toegang tot het gesprek
+    // zichzelf of wie dan ook als hoofdbeoordelaar instellen en dat laten
+    // doorgaan voor de bewuste keuze van de medewerker.
+    const existingRow = gesprekRow({
+      hoofdbeoordelaar: "oud@precon.nl",
+      hoofdbeoordelaar_status: "toegestaan",
+      medebeoordelaar: "mede@precon.nl",
+      medebeoordelaar_status: "toegestaan",
+    });
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    nextState.hoofdbeoordelaar = "indringer@precon.nl";
+
+    // mede@precon.nl heeft hier zelf wél echte toegang (goedgekeurd
+    // medebeoordelaar) — de vraag is alleen of die het hoofdbeoordelaarveld
+    // mag veranderen, en dat mag niet.
+    await updateGesprek("gesprek-1", "mede@precon.nl", false, nextState);
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
+    );
+    const sqlArgs = updateCall as unknown[];
+    expect(sqlArgs).toContain("oud@precon.nl");
+    expect(sqlArgs).not.toContain("indringer@precon.nl");
+    expect(stelHoofdbeoordelaarVoorDirectMock).not.toHaveBeenCalled();
+  });
+
+  it("laat een admin het hoofdbeoordelaarveld ook namens iemand anders wijzigen", async () => {
+    const existingRow = gesprekRow({
+      hoofdbeoordelaar: "oud@precon.nl",
+      hoofdbeoordelaar_status: "toegestaan",
+    });
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    nextState.hoofdbeoordelaar = "nieuw@precon.nl";
+
+    await updateGesprek("gesprek-1", "admin@precon.nl", true, nextState);
+
     expect(stelHoofdbeoordelaarVoorDirectMock).toHaveBeenCalledWith(
       "jan@precon.nl",
       "nieuw@precon.nl",
@@ -535,14 +625,16 @@ describe("requestBeoordelaarKoppeling", () => {
     expect(sqlTekst).toContain("{medebeoordelaar}");
   });
 
-  it("geeft direct toegang als de medewerker nog geen account heeft", async () => {
-    // Niemand om toestemming aan te vragen: wachten zou het gesprek blokkeren.
+  it("blijft in_afwachting ook als de medewerker nog geen account heeft", async () => {
+    // Anders kon wie dan ook een nog niet geregistreerde collega blijvend
+    // claimen, zonder dat er ooit iemand toestemming voor gaf. De koppeling
+    // wacht nu gewoon tot die medewerker voor het eerst inlogt.
     const row = gesprekRow({ hoofdbeoordelaar: "" });
     sqlMock.mockResolvedValueOnce([row]).mockResolvedValueOnce([
       {
         ...row,
         hoofdbeoordelaar: "beoordelaar@precon.nl",
-        hoofdbeoordelaar_status: "toegestaan",
+        hoofdbeoordelaar_status: "in_afwachting",
       },
     ]);
 
@@ -552,11 +644,11 @@ describe("requestBeoordelaarKoppeling", () => {
       "beoordelaar@precon.nl",
     );
 
-    expect(gesprek.hoofdbeoordelaarStatus).toBe("toegestaan");
+    expect(gesprek.hoofdbeoordelaarStatus).toBe("in_afwachting");
     const updateCall = sqlMock.mock.calls.find((call) =>
       (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken"),
     );
-    expect(updateCall).toContain("toegestaan");
+    expect(updateCall).toContain("in_afwachting");
   });
 
   it("weigert een adres buiten de toegestane domeinen", async () => {
@@ -723,6 +815,62 @@ describe("respondBeoordelaarKoppeling", () => {
       "jan@precon.nl",
       "afwijzen",
     );
+  });
+
+  it("registreert de afgewezen hoofdbeoordelaar in toegang_geweigerd", async () => {
+    // Dit is wat de aanmaker van een gesprek zijn created_by-toegang laat
+    // verliezen zodra hij als beoordelaar wordt afgewezen (zie
+    // gesprekken-access.test.ts).
+    const row = gesprekRow({
+      hoofdbeoordelaar: "hoofd@precon.nl",
+      hoofdbeoordelaar_status: "in_afwachting",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([
+        { ...row, hoofdbeoordelaar: "", hoofdbeoordelaar_status: "toegestaan" },
+      ])
+      .mockResolvedValueOnce([]);
+
+    await respondBeoordelaarKoppeling(
+      "gesprek-1",
+      "jan@precon.nl",
+      false,
+      "hoofdbeoordelaar",
+      "afwijzen",
+    );
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken"),
+    );
+    const sqlTekst = (updateCall?.[0] as TemplateStringsArray).join("");
+    expect(sqlTekst).toContain("toegang_geweigerd");
+  });
+
+  it("registreert een afgewezen medebeoordelaar net zo goed", async () => {
+    const row = gesprekRow({
+      medebeoordelaar: "mede@precon.nl",
+      medebeoordelaar_status: "in_afwachting",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([
+        { ...row, medebeoordelaar: "", medebeoordelaar_status: "toegestaan" },
+      ]);
+
+    await respondBeoordelaarKoppeling(
+      "gesprek-1",
+      "jan@precon.nl",
+      false,
+      "medebeoordelaar",
+      "afwijzen",
+    );
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray).join("").includes("UPDATE gesprekken"),
+    );
+    const sqlTekst = (updateCall?.[0] as TemplateStringsArray).join("");
+    expect(sqlTekst).toContain("toegang_geweigerd");
   });
 
   it("gooit GeenToegangError als iemand anders dan de medewerker het probeert", async () => {

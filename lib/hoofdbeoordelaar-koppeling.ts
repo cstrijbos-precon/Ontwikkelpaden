@@ -1,4 +1,3 @@
-import { findUserByEmail } from "@/lib/auth-users";
 import { sql } from "@/lib/db";
 import type { BeoordelaarStatus } from "@/lib/gesprekken-access";
 
@@ -30,19 +29,18 @@ function mapRow(row: KoppelingRow): HoofdbeoordelaarKoppeling {
  * Eén rij per medewerker: een nieuwe koppeling vervangt de vorige, en de
  * vorige hoofdbeoordelaar verliest daarmee de doorlopende toegang.
  *
- * Heeft de medewerker nog geen account, dan is er niemand om goedkeuring aan
- * te vragen — net als bij de koppeling per gesprek is de koppeling dan meteen
- * toegestaan, anders lopen we vast voordat iemand voor het eerst inlogt.
+ * Staat altijd op 'in_afwachting', ook als de medewerker nog geen account
+ * heeft: de koppeling wacht dan gewoon tot die medewerker voor het eerst
+ * inlogt, en krijgt dan dezelfde goedkeuringsvraag als ieder ander. Zonder
+ * dit kon wie dan ook een nog niet geregistreerde collega blijvend als
+ * hoofdbeoordelaar claimen, zonder dat er ooit iemand toestemming voor gaf.
  */
 export async function stelHoofdbeoordelaarVoor(
   medewerkerEmail: string,
   hoofdbeoordelaarEmail: string,
   aangemaaktDoor: string,
 ): Promise<HoofdbeoordelaarKoppeling> {
-  const heeftAccount = Boolean(await findUserByEmail(medewerkerEmail));
-  const status: BeoordelaarStatus = heeftAccount
-    ? "in_afwachting"
-    : "toegestaan";
+  const status: BeoordelaarStatus = "in_afwachting";
 
   const rows = (await sql`
     INSERT INTO hoofdbeoordelaar_koppelingen (

@@ -24,6 +24,8 @@ export interface Gesprek {
   updatedBy: string;
   createdAt: string;
   updatedAt: string;
+  /** E-mailadressen die de medewerker expliciet als beoordelaar heeft afgewezen. */
+  toegangGeweigerdVoor: string[];
 }
 
 export interface GesprekListItem {

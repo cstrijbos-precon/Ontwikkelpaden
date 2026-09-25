@@ -1,4 +1,3 @@
-import { findUserByEmail } from "@/lib/auth-users";
 import { buildNextCycleState } from "@/lib/cycle-carry-over";
 import { sql } from "@/lib/db";
 import { effectieveNiveaus } from "@/lib/effectief-niveau";
@@ -75,6 +74,7 @@ interface GesprekRow {
   updated_by: string;
   created_at: string;
   updated_at: string;
+  toegang_geweigerd: { email: string; op: string }[];
 }
 
 function mapListRow(row: GesprekListRow): GesprekListItem {
@@ -126,6 +126,9 @@ function mapRow(row: GesprekRow): Gesprek {
     updatedBy: row.updated_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    toegangGeweigerdVoor: (row.toegang_geweigerd ?? []).map((t) =>
+      t.email.toLowerCase(),
+    ),
   };
 }
 
@@ -183,10 +186,22 @@ export async function listGesprekken(
                hoofdbeoordelaar, hoofdbeoordelaar_status,
                medebeoordelaar, medebeoordelaar_status, updated_at
         FROM gesprekken
-        WHERE created_by = ${userEmail}
+        WHERE (
+             LOWER(created_by) = LOWER(${userEmail})
+             AND NOT EXISTS (
+               SELECT 1 FROM jsonb_array_elements(toegang_geweigerd) AS tg
+               WHERE LOWER(tg->>'email') = LOWER(${userEmail})
+             )
+           )
            OR LOWER(medewerker_email) = LOWER(${userEmail})
-           OR LOWER(hoofdbeoordelaar) = LOWER(${userEmail})
-           OR LOWER(medebeoordelaar) = LOWER(${userEmail})
+           OR (
+             LOWER(hoofdbeoordelaar) = LOWER(${userEmail})
+             AND hoofdbeoordelaar_status = 'toegestaan'
+           )
+           OR (
+             LOWER(medebeoordelaar) = LOWER(${userEmail})
+             AND medebeoordelaar_status = 'toegestaan'
+           )
            OR LOWER(medewerker_email) IN (
              SELECT LOWER(medewerker_email) FROM hoofdbeoordelaar_koppelingen
              WHERE LOWER(hoofdbeoordelaar_email) = LOWER(${userEmail})
@@ -220,6 +235,7 @@ export async function getGesprekById(
         hoofdbeoordelaarStatus: gesprek.hoofdbeoordelaarStatus,
         medebeoordelaar: gesprek.medebeoordelaar,
         medebeoordelaarStatus: gesprek.medebeoordelaarStatus,
+        toegangGeweigerdVoor: gesprek.toegangGeweigerdVoor,
       },
       userEmail,
       isAdmin,
@@ -229,7 +245,19 @@ export async function getGesprekById(
     // hebben ingevuld — bijvoorbeeld oude, al afgesloten jaren.
     (await isStandingHoofdbeoordelaar(gesprek.medewerkerEmail, userEmail));
 
-  if (!toegang) return null;
+  if (!toegang) {
+    // Onderscheid alleen dit ene geval met een duidelijke melding: iemand die
+    // het gesprek aanmaakte, maar expliciet is afgewezen als beoordelaar. Voor
+    // ieder ander zonder toegang blijft het antwoord een gewone lege uitslag —
+    // anders zou deze melding zelf al verraden dat het gesprek bestaat.
+    const email = userEmail.toLowerCase();
+    const afgewezenAlsAanmaker =
+      !isAdmin &&
+      gesprek.createdBy.toLowerCase() === email &&
+      gesprek.toegangGeweigerdVoor.includes(email);
+    if (afgewezenAlsAanmaker) throw new ToegangGeweigerdError();
+    return null;
+  }
 
   return gesprek;
 }
@@ -303,19 +331,44 @@ export async function updateGesprek(
    * eigen keuze en dus meteen toegestaan. Blijft het adres ongewijzigd (bv.
    * de periodieke autosave), dan laten we een eventuele 'in_afwachting'-status
    * met rust — anders zou de goedkeuringseis stilzwijgend omzeild worden.
+   *
+   * Alleen de medewerker zelf (of een beheerder) mag dit veld op deze manier
+   * veranderen. Iedereen die verder toegang heeft tot het gesprek — ook een
+   * medebeoordelaar, ook iemand die zelf nog op goedkeuring wacht — kan hier
+   * anders zichzelf of wie dan ook als hoofdbeoordelaar instellen en dat laten
+   * doorgaan voor de eigen keuze van de medewerker. Verandert zo iemand het
+   * veld toch, dan wordt die wijziging simpelweg niet opgeslagen.
    */
+  const magBeoordelaarsZelfKiezen =
+    isAdmin ||
+    userEmail.toLowerCase() === (existing.medewerkerEmail || "").toLowerCase();
+
   const hoofdbeoordelaarGewijzigd =
+    magBeoordelaarsZelfKiezen &&
     meta.hoofdbeoordelaar.trim().toLowerCase() !==
-    (existing.hoofdbeoordelaar || "").trim().toLowerCase();
+      (existing.hoofdbeoordelaar || "").trim().toLowerCase();
+  const nextHoofdbeoordelaar = magBeoordelaarsZelfKiezen
+    ? meta.hoofdbeoordelaar
+    : existing.hoofdbeoordelaar;
   const nextHoofdbeoordelaarStatus = hoofdbeoordelaarGewijzigd
     ? "toegestaan"
     : existing.hoofdbeoordelaarStatus;
   const medebeoordelaarGewijzigd =
+    magBeoordelaarsZelfKiezen &&
     meta.medebeoordelaar.trim().toLowerCase() !==
-    (existing.medebeoordelaar || "").trim().toLowerCase();
+      (existing.medebeoordelaar || "").trim().toLowerCase();
+  const nextMedebeoordelaar = magBeoordelaarsZelfKiezen
+    ? meta.medebeoordelaar
+    : existing.medebeoordelaar;
   const nextMedebeoordelaarStatus = medebeoordelaarGewijzigd
     ? "toegestaan"
     : existing.medebeoordelaarStatus;
+
+  // Het formulier leest de beoordelaars uit state, niet uit de kolom — een
+  // geweigerde wijziging moet dus ook uit de opgeslagen state verdwijnen,
+  // anders blijft die na een refresh alsnog zichtbaar staan.
+  cleanState.hoofdbeoordelaar = nextHoofdbeoordelaar;
+  cleanState.medebeoordelaar = nextMedebeoordelaar;
 
   const rows = (await sql`
     UPDATE gesprekken SET
@@ -326,9 +379,9 @@ export async function updateGesprek(
       gesprek_datum = ${meta.gesprekDatum},
       datum_vorig = ${meta.datumVorig},
       datum_volgend = ${meta.datumVolgend},
-      hoofdbeoordelaar = ${meta.hoofdbeoordelaar},
+      hoofdbeoordelaar = ${nextHoofdbeoordelaar},
       hoofdbeoordelaar_status = ${nextHoofdbeoordelaarStatus},
-      medebeoordelaar = ${meta.medebeoordelaar},
+      medebeoordelaar = ${nextMedebeoordelaar},
       medebeoordelaar_status = ${nextMedebeoordelaarStatus},
       status = ${nextStatus},
       state = ${cleanState},
@@ -424,6 +477,13 @@ export class GeenToegangError extends Error {
   }
 }
 
+export class ToegangGeweigerdError extends Error {
+  constructor() {
+    super("Toegang tot dit gesprek is geweigerd door de medewerker");
+    this.name = "ToegangGeweigerdError";
+  }
+}
+
 /** Naam+e-mail van iedereen die ooit een eigen gesprek heeft geopend — voor de beoordelaar-dropdown. */
 export async function getBekendeMedewerkers(): Promise<BekendeMedewerker[]> {
   const rows = (await sql`
@@ -494,17 +554,17 @@ export async function getDashboardOverzicht(
 
 /**
  * Een beoordelaar koppelt zichzelf aan een medewerker (via de naam-dropdown op
- * het dashboard). Bewust zonder toegangscheck — de koppeling wacht normaal op
- * akkoord van de medewerker zelf.
+ * het dashboard). Bewust zonder toegangscheck om de aanvraag te starten —
+ * maar de koppeling zelf geeft pas toegang zodra de medewerker akkoord geeft
+ * (zie canAccessGesprek); tot die tijd staat er alleen een aanvraag klaar.
  *
  * Heeft de medewerker nog geen enkel gesprek, dan start deze actie er meteen
- * een als concept.
+ * een als concept; wie 'm aanmaakt blijft daar via created_by toegang tot
+ * houden, dus wachten op goedkeuring blokkeert niemand.
  *
- * Heeft de medewerker nog geen account, dan staat de koppeling direct open.
- * Er is dan namelijk niemand om toestemming aan te vragen, en wachten zou
- * betekenen dat het gesprek onbruikbaar blijft tot die collega een keer
- * inlogt. Zodra iemand zich met dat adres registreert, ziet die het gesprek
- * gewoon staan: toegang hangt aan het e-mailadres, niet aan het account.
+ * Heeft de medewerker nog geen account, dan blijft de koppeling gewoon
+ * 'in_afwachting' tot die collega voor het eerst inlogt — dan ziet diegene
+ * dezelfde goedkeuringsvraag als ieder ander.
  */
 export async function requestBeoordelaarKoppeling(
   medewerkerEmail: string,
@@ -525,10 +585,7 @@ export async function requestBeoordelaarKoppeling(
     throw new MedewerkerNietGevondenError();
   }
 
-  const heeftAccount = Boolean(await findUserByEmail(medewerkerEmail));
-  const nieuweStatus: BeoordelaarStatus = heeftAccount
-    ? "in_afwachting"
-    : "toegestaan";
+  const nieuweStatus: BeoordelaarStatus = "in_afwachting";
 
   const existing = row
     ? mapRow(row)
@@ -615,14 +672,24 @@ export async function respondBeoordelaarKoppeling(
           UPDATE gesprekken SET
             hoofdbeoordelaar = '',
             hoofdbeoordelaar_status = 'toegestaan',
-            state = jsonb_set(state, '{hoofdbeoordelaar}', '""'::jsonb)
+            state = jsonb_set(state, '{hoofdbeoordelaar}', '""'::jsonb),
+            toegang_geweigerd = CASE WHEN hoofdbeoordelaar <> '' THEN
+              toegang_geweigerd || jsonb_build_array(
+                jsonb_build_object('email', LOWER(hoofdbeoordelaar), 'op', now())
+              )
+              ELSE toegang_geweigerd END
           WHERE id = ${gesprekId} RETURNING *
         `
         : await sql`
           UPDATE gesprekken SET
             medebeoordelaar = '',
             medebeoordelaar_status = 'toegestaan',
-            state = jsonb_set(state, '{medebeoordelaar}', '""'::jsonb)
+            state = jsonb_set(state, '{medebeoordelaar}', '""'::jsonb),
+            toegang_geweigerd = CASE WHEN medebeoordelaar <> '' THEN
+              toegang_geweigerd || jsonb_build_array(
+                jsonb_build_object('email', LOWER(medebeoordelaar), 'op', now())
+              )
+              ELSE toegang_geweigerd END
           WHERE id = ${gesprekId} RETURNING *
         `
   ) as GesprekRow[];
@@ -670,7 +737,10 @@ async function syncGesprekkenMetHoofdbeoordelaarBesluit(
     UPDATE gesprekken SET
       hoofdbeoordelaar = '',
       hoofdbeoordelaar_status = 'toegestaan',
-      state = jsonb_set(state, '{hoofdbeoordelaar}', '""'::jsonb)
+      state = jsonb_set(state, '{hoofdbeoordelaar}', '""'::jsonb),
+      toegang_geweigerd = toegang_geweigerd || jsonb_build_array(
+        jsonb_build_object('email', LOWER(hoofdbeoordelaar), 'op', now())
+      )
     WHERE LOWER(medewerker_email) = LOWER(${medewerkerEmail})
       AND LOWER(hoofdbeoordelaar) = LOWER(${hoofdbeoordelaarEmail})
   `;

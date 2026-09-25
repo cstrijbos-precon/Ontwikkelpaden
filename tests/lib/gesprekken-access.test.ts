@@ -33,11 +33,13 @@ describe("canAccessGesprek", () => {
     ).toBe(false);
   });
 
-  it("allows the hoofdbeoordelaar and medebeoordelaar (case-insensitive)", () => {
+  it("allows the hoofdbeoordelaar and medebeoordelaar (case-insensitive), eenmaal toegestaan", () => {
     const withReviewers = {
       ...gesprek,
       hoofdbeoordelaar: "hoofd@precon.nl",
+      hoofdbeoordelaarStatus: "toegestaan" as const,
       medebeoordelaar: "mede@precon.nl",
+      medebeoordelaarStatus: "toegestaan" as const,
     };
     expect(canAccessGesprek(withReviewers, "Hoofd@Precon.nl", false)).toBe(
       true,
@@ -59,16 +61,65 @@ describe("canAccessGesprek", () => {
     ).toBe(false);
   });
 
-  it("laat een beoordelaar er al in terwijl de koppeling nog wacht", () => {
-    // Bewuste keuze: een notulist die net een gesprek aanmaakte, moet er
-    // meteen in kunnen. De goedkeuring blijft als bevestiging bestaan.
+  it("weigert een hoofd-/medebeoordelaar zolang de koppeling nog wacht op goedkeuring", () => {
+    // Voorheen kreeg iedereen die zichzelf koppelde meteen volledige
+    // lees-/schrijftoegang, nog vóór de medewerker iets had goedgekeurd — dat
+    // was voor HR-gegevens een privacyprobleem, geen features. De aanmaker
+    // van het gesprek (created_by) blijft wel altijd toegang houden; dat is
+    // een apart pad, getest hierboven en hieronder.
     expect(
       canAccessGesprek(
         {
-          createdBy: "iemand@precon.nl",
+          createdBy: "iemand-anders@precon.nl",
           medewerkerEmail: "jan@precon.nl",
           hoofdbeoordelaar: "hoofd@precon.nl",
           hoofdbeoordelaarStatus: "in_afwachting",
+        },
+        "hoofd@precon.nl",
+        false,
+      ),
+    ).toBe(false);
+  });
+
+  it("laat de aanmaker van een gesprek er wél meteen in, ook als die zichzelf als beoordelaar nog moet laten goedkeuren", () => {
+    // Dit dekt de notulist die het gesprek net heeft aangemaakt: die staat
+    // niet voor een dichte deur, via created_by — niet via de nog hangende
+    // beoordelaarskoppeling.
+    expect(
+      canAccessGesprek(
+        {
+          createdBy: "hoofd@precon.nl",
+          medewerkerEmail: "jan@precon.nl",
+          hoofdbeoordelaar: "hoofd@precon.nl",
+          hoofdbeoordelaarStatus: "in_afwachting",
+        },
+        "hoofd@precon.nl",
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  it("trekt de toegang van de aanmaker in zodra de medewerker die persoon expliciet heeft afgewezen", () => {
+    expect(
+      canAccessGesprek(
+        {
+          createdBy: "hoofd@precon.nl",
+          medewerkerEmail: "jan@precon.nl",
+          toegangGeweigerdVoor: ["hoofd@precon.nl"],
+        },
+        "Hoofd@Precon.nl",
+        false,
+      ),
+    ).toBe(false);
+  });
+
+  it("laat andere toegang met rust als iemand anders is afgewezen", () => {
+    expect(
+      canAccessGesprek(
+        {
+          createdBy: "hoofd@precon.nl",
+          medewerkerEmail: "jan@precon.nl",
+          toegangGeweigerdVoor: ["iemand-anders@precon.nl"],
         },
         "hoofd@precon.nl",
         false,
