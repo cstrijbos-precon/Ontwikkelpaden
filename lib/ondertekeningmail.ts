@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/html-escape";
 import { mailIsIngesteld, verstuurMail } from "@/lib/mailer";
 import { isGeldigEmail } from "@/lib/registratie";
 import { appUrl } from "@/lib/verificatiemail";
@@ -112,8 +113,8 @@ export async function mailOndertekenaars(
         html: `<!doctype html>
 <html lang="nl"><body style="font-family:Arial,Helvetica,sans-serif;color:#33393f;line-height:1.6">
   <h2 style="color:#003366;font-size:18px">Handtekening gevraagd</h2>
-  <p><strong>${ondertekenaar}</strong> heeft zojuist getekend voor het functioneringsgesprek van
-     <strong>${gesprek.medewerkerNaam}</strong>. Het is nu aan jou om je handtekening te zetten.</p>
+  <p><strong>${escapeHtml(ondertekenaar)}</strong> heeft zojuist getekend voor het functioneringsgesprek van
+     <strong>${escapeHtml(gesprek.medewerkerNaam)}</strong>. Het is nu aan jou om je handtekening te zetten.</p>
   <p style="margin:24px 0">
     <a href="${link}" style="background:#E87722;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold">Naar het gesprek</a>
   </p>

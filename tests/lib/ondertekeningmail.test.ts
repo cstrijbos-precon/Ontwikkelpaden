@@ -110,6 +110,23 @@ describe("mailOndertekenaars", () => {
     expect(adressen).not.toContain("Sofie Nackaerts");
   });
 
+  it("escaped de naam in de HTML-mail, zodat een naam met HTML geen script/opmaak injecteert", async () => {
+    const state = createInitialState();
+    state.akkoordProfessional = true;
+    state.akkoordProfessionalNaam = "<img src=x onerror=alert(1)>";
+
+    await mailOndertekenaars(
+      gesprek({ state, medewerkerNaam: '<script>alert("x")</script>' }),
+      "professional",
+    );
+
+    const html = verstuurMailMock.mock.calls[0]?.[0].html as string;
+    expect(html).not.toContain("<img src=x onerror=alert(1)>");
+    expect(html).not.toContain('<script>alert("x")</script>');
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
   it("doet niets zonder ingesteld mailkanaal", async () => {
     mailIsIngesteldMock.mockReturnValue(false);
     await mailOndertekenaars(gesprek(), "professional");

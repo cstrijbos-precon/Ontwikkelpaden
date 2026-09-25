@@ -146,7 +146,7 @@ describe("listGesprekken", () => {
     const sqlTekst = (sqlMock.mock.calls[0]?.[0] as TemplateStringsArray).join(
       "",
     );
-    expect(sqlTekst).toContain("LOWER(created_by)");
+    expect(sqlTekst).toContain("LOWER(g.created_by)");
   });
 
   it("laat hoofd-/medebeoordelaar pas meetellen zodra de status toegestaan is", async () => {
@@ -168,6 +168,17 @@ describe("listGesprekken", () => {
       "",
     );
     expect(sqlTekst).toContain("toegang_geweigerd");
+  });
+
+  it("beperkt een doorlopende hoofdbeoordelaar-koppeling tot het huidige en voorgaande gesprek", async () => {
+    sqlMock.mockResolvedValueOnce([]);
+    await listGesprekken("user@precon.nl", false);
+
+    const sqlTekst = (sqlMock.mock.calls[0]?.[0] as TemplateStringsArray).join(
+      "",
+    );
+    expect(sqlTekst).toContain("ROW_NUMBER() OVER");
+    expect(sqlTekst).toContain("c.rn <= 2");
   });
 });
 
@@ -215,11 +226,15 @@ describe("getGesprekById", () => {
     expect(gesprek?.id).toBe("gesprek-1");
   });
 
-  it("geeft toegang via een doorlopende hoofdbeoordelaar-koppeling, ook zonder eigen kolom op dit gesprek", async () => {
-    // Bijvoorbeeld een oud, al afgesloten jaar van vóór de koppeling bestond.
-    sqlMock.mockResolvedValueOnce([
-      gesprekRow({ hoofdbeoordelaar: "", medewerker_email: "jan@precon.nl" }),
-    ]);
+  it("geeft toegang via een doorlopende hoofdbeoordelaar-koppeling aan het huidige gesprek", async () => {
+    // Het meest recente gesprek zelf heeft geen eigen hoofdbeoordelaar-kolom
+    // ingevuld — toegang komt via de koppeling.
+    sqlMock
+      .mockResolvedValueOnce([
+        gesprekRow({ hoofdbeoordelaar: "", medewerker_email: "jan@precon.nl" }),
+      ])
+      // isBinnenStandingBereik: de twee meest recente gesprekken van jan.
+      .mockResolvedValueOnce([{ id: "gesprek-1" }, { id: "gesprek-0" }]);
     isStandingHoofdbeoordelaarMock.mockResolvedValueOnce(true);
 
     const gesprek = await getGesprekById("gesprek-1", "kim@precon.nl", false);
@@ -229,6 +244,21 @@ describe("getGesprekById", () => {
       "jan@precon.nl",
       "kim@precon.nl",
     );
+  });
+
+  it("weigert een doorlopende hoofdbeoordelaar toegang tot een ouder jaar dan het voorgaande — dat vraag je op bij HR", async () => {
+    sqlMock
+      .mockResolvedValueOnce([
+        gesprekRow({ hoofdbeoordelaar: "", medewerker_email: "jan@precon.nl" }),
+      ])
+      // isBinnenStandingBereik: dit gesprek-1 staat niet bij de twee meest
+      // recente van jan (die zijn gesprek-3 en gesprek-2).
+      .mockResolvedValueOnce([{ id: "gesprek-3" }, { id: "gesprek-2" }]);
+    isStandingHoofdbeoordelaarMock.mockResolvedValueOnce(true);
+
+    expect(
+      await getGesprekById("gesprek-1", "kim@precon.nl", false),
+    ).toBeNull();
   });
 });
 

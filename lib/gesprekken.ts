@@ -182,36 +182,71 @@ export async function listGesprekken(
         ORDER BY updated_at DESC
       `
       : await sql`
-        SELECT id, medewerker_naam, medewerker_email, gesprek_datum, status,
-               hoofdbeoordelaar, hoofdbeoordelaar_status,
-               medebeoordelaar, medebeoordelaar_status, updated_at
-        FROM gesprekken
+        WITH cyclus AS (
+          SELECT id, ROW_NUMBER() OVER (
+            PARTITION BY LOWER(medewerker_email)
+            ORDER BY created_at DESC
+          ) AS rn
+          FROM gesprekken
+          WHERE medewerker_email IS NOT NULL
+        )
+        SELECT g.id, g.medewerker_naam, g.medewerker_email, g.gesprek_datum, g.status,
+               g.hoofdbeoordelaar, g.hoofdbeoordelaar_status,
+               g.medebeoordelaar, g.medebeoordelaar_status, g.updated_at
+        FROM gesprekken g
+        LEFT JOIN cyclus c ON c.id = g.id
         WHERE (
-             LOWER(created_by) = LOWER(${userEmail})
+             LOWER(g.created_by) = LOWER(${userEmail})
              AND NOT EXISTS (
-               SELECT 1 FROM jsonb_array_elements(toegang_geweigerd) AS tg
+               SELECT 1 FROM jsonb_array_elements(g.toegang_geweigerd) AS tg
                WHERE LOWER(tg->>'email') = LOWER(${userEmail})
              )
            )
-           OR LOWER(medewerker_email) = LOWER(${userEmail})
+           OR LOWER(g.medewerker_email) = LOWER(${userEmail})
            OR (
-             LOWER(hoofdbeoordelaar) = LOWER(${userEmail})
-             AND hoofdbeoordelaar_status = 'toegestaan'
+             LOWER(g.hoofdbeoordelaar) = LOWER(${userEmail})
+             AND g.hoofdbeoordelaar_status = 'toegestaan'
            )
            OR (
-             LOWER(medebeoordelaar) = LOWER(${userEmail})
-             AND medebeoordelaar_status = 'toegestaan'
+             LOWER(g.medebeoordelaar) = LOWER(${userEmail})
+             AND g.medebeoordelaar_status = 'toegestaan'
            )
-           OR LOWER(medewerker_email) IN (
-             SELECT LOWER(medewerker_email) FROM hoofdbeoordelaar_koppelingen
-             WHERE LOWER(hoofdbeoordelaar_email) = LOWER(${userEmail})
-               AND status = 'toegestaan'
+           OR (
+             -- Doorlopende hoofdbeoordelaar: alleen het huidige en het direct
+             -- voorgaande gesprek (rn 1 en 2), niet de hele historie. Oudere
+             -- verslagen vraag je op bij HR.
+             LOWER(g.medewerker_email) IN (
+               SELECT LOWER(medewerker_email) FROM hoofdbeoordelaar_koppelingen
+               WHERE LOWER(hoofdbeoordelaar_email) = LOWER(${userEmail})
+                 AND status = 'toegestaan'
+             )
+             AND c.rn <= 2
            )
-        ORDER BY updated_at DESC
+        ORDER BY g.updated_at DESC
       `
   ) as GesprekListRow[];
 
   return rows.map(mapListRow);
+}
+
+/**
+ * Of `gesprekId` het huidige of het direct voorgaande gesprek is van
+ * `medewerkerEmail` — de twee meest recente, op aanmaakdatum. Bepaalt hoever
+ * een doorlopende hoofdbeoordelaar-koppeling terugkijkt; zie
+ * isStandingHoofdbeoordelaar in lib/hoofdbeoordelaar-koppeling.ts.
+ */
+async function isBinnenStandingBereik(
+  gesprekId: string,
+  medewerkerEmail: string | null,
+): Promise<boolean> {
+  if (!medewerkerEmail) return false;
+  const rows = (await sql`
+    SELECT id FROM gesprekken
+    WHERE LOWER(medewerker_email) = LOWER(${medewerkerEmail})
+    ORDER BY created_at DESC
+    LIMIT 2
+  `) as { id: string }[];
+  return rows.some((r) => r.id === gesprekId);
 }
 
 export async function getGesprekById(
@@ -240,10 +275,12 @@ export async function getGesprekById(
       userEmail,
       isAdmin,
     ) ||
-    // Een doorlopende hoofdbeoordelaar-koppeling geeft toegang tot al het
-    // werk van die medewerker, ook gesprekken die zelf geen hoofdbeoordelaar
-    // hebben ingevuld — bijvoorbeeld oude, al afgesloten jaren.
-    (await isStandingHoofdbeoordelaar(gesprek.medewerkerEmail, userEmail));
+    // Een doorlopende hoofdbeoordelaar-koppeling geeft toegang tot het
+    // huidige en het direct voorgaande gesprek van die medewerker, ook als
+    // dat gesprek zelf geen hoofdbeoordelaar heeft ingevuld. Oudere jaren
+    // vallen hier bewust buiten — die vraag je op bij HR.
+    ((await isStandingHoofdbeoordelaar(gesprek.medewerkerEmail, userEmail)) &&
+      (await isBinnenStandingBereik(gesprek.id, gesprek.medewerkerEmail)));
 
   if (!toegang) {
     // Onderscheid alleen dit ene geval met een duidelijke melding: iemand die

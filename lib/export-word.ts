@@ -5,6 +5,7 @@ import {
   effectiefNiveau,
   effectieveNiveaus,
 } from "@/lib/effectief-niveau";
+import { escapeHtml } from "@/lib/html-escape";
 import {
   bepaalSenioriteit,
   leesTProfiel,
@@ -12,14 +13,6 @@ import {
 } from "@/lib/senioriteit";
 import { sterSym } from "@/lib/star-display";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function nl(text: string): string {
   return escapeHtml(text).replace(/\n/g, "<br>");
