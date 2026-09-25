@@ -50,11 +50,23 @@ export async function POST(request: Request) {
     return Response.json({ error: "Validation failed" }, { status: 400 });
   }
 
+  // Alleen je eigen adres (of een beheerder) mag hier meegegeven worden —
+  // anders kon iedereen een gesprek op naam van een ander aanmaken.
+  const magMedewerkerOpgeven =
+    session.user.isAdmin ||
+    parsed.data.medewerkerEmail?.toLowerCase() ===
+      session.user.email.toLowerCase();
+  const medewerkerEmail = magMedewerkerOpgeven
+    ? parsed.data.medewerkerEmail
+    : parsed.data.medewerkerEmail
+      ? session.user.email
+      : undefined;
+
   try {
     const gesprek = await createGesprek(
       session.user.email,
       parsed.data.state,
-      parsed.data.medewerkerEmail,
+      medewerkerEmail,
       undefined,
       parsed.data.status,
     );

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DELETE, PATCH } from "@/app/api/verbeterplanning/updates/[id]/route";
 import { mockAuth, mockAuthUser } from "@/tests/helpers/auth-mock";
 
@@ -23,10 +23,26 @@ function req(body: unknown) {
   });
 }
 
+// De Verbeterplanning is MT-only (zie isMtLid); u@precon.nl (de
+// standaard testgebruiker) hoort hier standaard bij.
+const origineelMt = process.env.APP_MT;
+beforeEach(() => {
+  process.env.APP_MT = "u@precon.nl";
+});
+afterEach(() => {
+  process.env.APP_MT = origineelMt;
+});
+
 describe("PATCH /api/verbeterplanning/updates/[id]", () => {
   it("returns 401 without session", async () => {
     mockAuth(null);
     expect((await PATCH(req({ text: "X" }), ctx())).status).toBe(401);
+  });
+
+  it("weigert wie niet in het MT zit", async () => {
+    process.env.APP_MT = "iemand.anders@precon.nl";
+    mockAuthUser();
+    expect((await PATCH(req({ text: "X" }), ctx())).status).toBe(403);
   });
 
   it("returns 503 without database", async () => {
@@ -75,6 +91,12 @@ describe("DELETE /api/verbeterplanning/updates/[id]", () => {
   it("returns 401 without session", async () => {
     mockAuth(null);
     expect((await DELETE(new Request("http://x"), ctx())).status).toBe(401);
+  });
+
+  it("weigert wie niet in het MT zit", async () => {
+    process.env.APP_MT = "iemand.anders@precon.nl";
+    mockAuthUser();
+    expect((await DELETE(new Request("http://x"), ctx())).status).toBe(403);
   });
 
   it("returns 503 without database", async () => {

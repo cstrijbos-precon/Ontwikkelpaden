@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { hasDatabase } from "@/lib/db";
+import { isMtLid } from "@/lib/is-mt";
 import { verbeterplanningErrorResponse } from "@/lib/verbeterplanning/errors";
 import { deleteKpi, updateKpi } from "@/lib/verbeterplanning/kpis";
 import { updateKpiBodySchema } from "@/lib/verbeterplanning/schema";
@@ -12,6 +13,11 @@ export async function PATCH(request: Request, context: RouteContext) {
   const session = await auth();
   if (!session?.user?.email) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // De Verbeterplanning is alleen voor het MT.
+  if (!isMtLid(session.user.email)) {
+    return Response.json({ error: "Alleen voor het MT" }, { status: 403 });
   }
 
   if (!hasDatabase()) {
@@ -44,6 +50,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
   const session = await auth();
   if (!session?.user?.email) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // De Verbeterplanning is alleen voor het MT.
+  if (!isMtLid(session.user.email)) {
+    return Response.json({ error: "Alleen voor het MT" }, { status: 403 });
   }
 
   if (!hasDatabase()) {

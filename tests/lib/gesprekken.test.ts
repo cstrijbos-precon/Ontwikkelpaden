@@ -346,6 +346,60 @@ describe("updateGesprek", () => {
     expect(updated?.state.naam).toBe("Jan");
   });
 
+  it("laat iemand een nog niet-geclaimd gesprek aan zichzelf koppelen", async () => {
+    const row = gesprekRow({
+      medewerker_email: null,
+      created_by: "kim@precon.nl",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([row])
+      .mockResolvedValue([]);
+
+    await updateGesprek(
+      "gesprek-1",
+      "kim@precon.nl",
+      false,
+      createInitialState(),
+      undefined,
+      "kim@precon.nl",
+    );
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCall).toContain("kim@precon.nl");
+  });
+
+  it("negeert een medewerkerEmail-claim namens iemand anders", async () => {
+    const row = gesprekRow({
+      medewerker_email: null,
+      created_by: "kim@precon.nl",
+    });
+    sqlMock
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([row])
+      .mockResolvedValue([]);
+
+    await updateGesprek(
+      "gesprek-1",
+      "kim@precon.nl",
+      false,
+      createInitialState(),
+      undefined,
+      "slachtoffer@precon.nl",
+    );
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCall).not.toContain("slachtoffer@precon.nl");
+  });
+
   it("returns null when gesprek not accessible", async () => {
     sqlMock.mockResolvedValueOnce([gesprekRow()]);
     const result = await updateGesprek(
@@ -479,10 +533,127 @@ describe("updateGesprek", () => {
     nextState.naam = "Jan";
     nextState.akkoordProfessional = true;
 
-    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+    // Alleen de medewerker zelf mag voor "professional" tekenen (zie
+    // gesprekRow: medewerker_email is jan@precon.nl).
+    await updateGesprek("gesprek-1", "jan@precon.nl", false, nextState);
 
     expect(mailOndertekenaarsMock).toHaveBeenCalledTimes(1);
     expect(mailOndertekenaarsMock.mock.calls[0]?.[1]).toBe("professional");
+  });
+
+  it("negeert een handtekening van iemand die niet de bijbehorende rol is", async () => {
+    // Zonder deze check kon iedereen met schrijftoegang tot het gesprek een
+    // akkoordvlag van een andere rol zetten.
+    const existingRow = gesprekRow();
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    nextState.akkoordProfessional = true;
+    nextState.akkoordProfessionalNaam = "Indringer";
+
+    // creator@precon.nl is niet jan@precon.nl (de medewerker), maar heeft
+    // hier wél toegang tot het gesprek via created_by.
+    await updateGesprek("gesprek-1", "creator@precon.nl", false, nextState);
+
+    const updateCallArgs = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
+    );
+    const savedState = updateCallArgs?.find(
+      (arg) =>
+        typeof arg === "object" &&
+        arg !== null &&
+        "akkoordProfessionalNaam" in arg,
+    ) as { akkoordProfessional: boolean; akkoordProfessionalNaam: string };
+    expect(savedState.akkoordProfessional).toBe(false);
+    expect(savedState.akkoordProfessionalNaam).toBe("");
+    expect(mailOndertekenaarsMock).not.toHaveBeenCalled();
+  });
+
+  it("bevriest een afgerond gesprek: verdere wijzigingen worden genegeerd", async () => {
+    const existingRow = gesprekRow({ status: "completed" });
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Andere naam";
+
+    await updateGesprek(
+      "gesprek-1",
+      "jan@precon.nl",
+      false,
+      nextState,
+      "completed",
+    );
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCall).not.toContain("Andere naam");
+    expect(updateCall).toContain("Jan");
+  });
+
+  it("laat een admin een afgerond gesprek nog wél corrigeren", async () => {
+    const existingRow = gesprekRow({ status: "completed" });
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Naam door admin gecorrigeerd";
+
+    await updateGesprek(
+      "gesprek-1",
+      "admin@precon.nl",
+      true,
+      nextState,
+      "completed",
+    );
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCall).toContain("Naam door admin gecorrigeerd");
+  });
+
+  it("weigert status 'completed' als niet daadwerkelijk alle drie getekend hebben", async () => {
+    const existingRow = gesprekRow();
+    sqlMock
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValueOnce([existingRow])
+      .mockResolvedValue([]);
+
+    const nextState = createInitialState();
+    nextState.naam = "Jan";
+    // Geen van de akkoordvlaggen is gezet.
+
+    await updateGesprek(
+      "gesprek-1",
+      "creator@precon.nl",
+      false,
+      nextState,
+      "completed",
+    );
+
+    const updateCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("UPDATE gesprekken SET"),
+    );
+    expect(updateCall).toContain("draft");
+    expect(updateCall).not.toContain("completed");
   });
 
   it("mailt niets als er geen handtekening bij is gekomen", async () => {

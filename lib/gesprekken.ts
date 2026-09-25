@@ -355,11 +355,31 @@ export async function updateGesprek(
   const existing = await getGesprekById(id, userEmail, isAdmin);
   if (!existing) return null;
 
-  const cleanState = mergeWithInitialState(state);
+  /**
+   * Een afgerond gesprek is bevroren: alle drie hebben getekend, en niemand
+   * — ook geen beoordelaar met verder schrijftoegang — mag de inhoud daarna
+   * nog wijzigen. Dit negeert de binnenkomende state volledig en werkt met
+   * wat er al lag; alleen een beheerder mag dit voor een correctie omzeilen.
+   * De statusovergang naar 'archived' (nieuwe cyclus starten, zie
+   * startNewCycle) blijft hieronder gewoon mogelijk.
+   */
+  const bevroren = existing.status === "completed" && !isAdmin;
+  const cleanState = bevroren
+    ? mergeWithInitialState(existing.state)
+    : mergeWithInitialState(state);
   const meta = metadataFromState(cleanState);
-  const nextStatus = status ?? existing.status;
-  const nextMedewerkerEmail =
-    medewerkerEmail !== undefined ? medewerkerEmail : existing.medewerkerEmail;
+  /**
+   * Alleen een claim op je eigen adres (of een beheerder) telt mee — anders
+   * kon iedereen met schrijftoegang tot dit gesprek het aan een willekeurig
+   * ander e-mailadres koppelen. De UI biedt dit alleen aan als jezelf op een
+   * nog niet-geclaimd gesprek (zie ScreenGegevens.tsx).
+   */
+  const magMedewerkerClaimen =
+    medewerkerEmail !== undefined &&
+    (isAdmin || medewerkerEmail?.toLowerCase() === userEmail.toLowerCase());
+  const nextMedewerkerEmail = magMedewerkerClaimen
+    ? medewerkerEmail
+    : existing.medewerkerEmail;
 
   /**
    * Een beoordelaar die zichzelf toevoegt via het dashboard loopt niet via deze
@@ -406,6 +426,57 @@ export async function updateGesprek(
   // anders blijft die na een refresh alsnog zichtbaar staan.
   cleanState.hoofdbeoordelaar = nextHoofdbeoordelaar;
   cleanState.medebeoordelaar = nextMedebeoordelaar;
+
+  /**
+   * Wie mag welke handtekening zetten (of terugdraaien) — dezelfde regel als
+   * magTekenenAls in ScreenAfronding.tsx, hier server-side afgedwongen.
+   * Zonder dit kon iedereen met schrijftoegang tot het gesprek een
+   * akkoordvlag van een andere rol zetten. Een niet-toegestane wijziging
+   * wordt simpelweg niet opgeslagen — de rest van de state gaat gewoon door.
+   */
+  const magTekenenAls = (roleEmail: string | null) =>
+    isAdmin ||
+    (roleEmail !== null &&
+      roleEmail.trim().toLowerCase() === userEmail.toLowerCase());
+
+  if (!magTekenenAls(nextMedewerkerEmail)) {
+    cleanState.akkoordProfessional = existing.state.akkoordProfessional;
+    cleanState.akkoordProfessionalNaam = existing.state.akkoordProfessionalNaam;
+    cleanState.akkoordProfessionalAt = existing.state.akkoordProfessionalAt;
+  }
+  if (!magTekenenAls(nextHoofdbeoordelaar)) {
+    cleanState.akkoordHoofdbeoordelaar = existing.state.akkoordHoofdbeoordelaar;
+    cleanState.akkoordHoofdbeoordelaarNaam =
+      existing.state.akkoordHoofdbeoordelaarNaam;
+    cleanState.akkoordHoofdbeoordelaarAt =
+      existing.state.akkoordHoofdbeoordelaarAt;
+  }
+  if (!magTekenenAls(nextMedebeoordelaar)) {
+    cleanState.akkoordMedebeoordelaar = existing.state.akkoordMedebeoordelaar;
+    cleanState.akkoordMedebeoordelaarNaam =
+      existing.state.akkoordMedebeoordelaarNaam;
+    cleanState.akkoordMedebeoordelaarAt =
+      existing.state.akkoordMedebeoordelaarAt;
+  }
+
+  const alleAkkoord =
+    cleanState.akkoordProfessional &&
+    cleanState.akkoordHoofdbeoordelaar &&
+    cleanState.akkoordMedebeoordelaar;
+
+  /**
+   * Naar 'completed' mag alleen als daadwerkelijk alle drie getekend hebben
+   * — anders zou een handmatige PUT de "Afronden"-knop in de UI kunnen
+   * omzeilen. Is het gesprek al afgerond, dan mag de status alleen nog naar
+   * 'archived' (nieuwe cyclus); terug naar 'draft' zou het bevriezen
+   * hierboven bij de volgende wijziging weer opheffen.
+   */
+  let nextStatus = status ?? existing.status;
+  if (existing.status === "completed" && !isAdmin) {
+    nextStatus = nextStatus === "archived" ? "archived" : "completed";
+  } else if (nextStatus === "completed" && !alleAkkoord) {
+    nextStatus = existing.status;
+  }
 
   const rows = (await sql`
     UPDATE gesprekken SET

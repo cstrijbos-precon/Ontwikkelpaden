@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PATCH } from "@/app/api/verbeterplanning/kpis/[id]/status/route";
 import { mockAuth, mockAuthUser } from "@/tests/helpers/auth-mock";
 
@@ -21,6 +21,16 @@ function req(body: unknown) {
     body: JSON.stringify(body),
   });
 }
+
+// De Verbeterplanning is MT-only (zie isMtLid); u@precon.nl (de
+// standaard testgebruiker) hoort hier standaard bij.
+const origineelMt = process.env.APP_MT;
+beforeEach(() => {
+  process.env.APP_MT = "u@precon.nl";
+});
+afterEach(() => {
+  process.env.APP_MT = origineelMt;
+});
 
 describe("PATCH /api/verbeterplanning/kpis/[id]/status", () => {
   it("returns 400 for status 'purple' (not a valid kpi status)", async () => {
@@ -54,6 +64,14 @@ describe("PATCH /api/verbeterplanning/kpis/[id]/status", () => {
     expect(
       (await PATCH(req({ quarterIndex: 0, status: "green" }), ctx())).status,
     ).toBe(401);
+  });
+
+  it("weigert wie niet in het MT zit", async () => {
+    process.env.APP_MT = "iemand.anders@precon.nl";
+    mockAuthUser();
+    expect(
+      (await PATCH(req({ quarterIndex: 0, status: "green" }), ctx())).status,
+    ).toBe(403);
   });
 
   it("returns 503 without database", async () => {

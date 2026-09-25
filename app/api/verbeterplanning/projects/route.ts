@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { hasDatabase } from "@/lib/db";
+import { isMtLid } from "@/lib/is-mt";
 import { verbeterplanningErrorResponse } from "@/lib/verbeterplanning/errors";
 import { createProject } from "@/lib/verbeterplanning/projects";
 import { createProjectBodySchema } from "@/lib/verbeterplanning/schema";
@@ -8,6 +9,11 @@ export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.email) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // De Verbeterplanning is alleen voor het MT.
+  if (!isMtLid(session.user.email)) {
+    return Response.json({ error: "Alleen voor het MT" }, { status: 403 });
   }
 
   if (!hasDatabase()) {

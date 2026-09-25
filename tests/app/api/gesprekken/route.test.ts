@@ -108,6 +108,52 @@ describe("POST /api/gesprekken", () => {
     expect(await res.json()).toEqual({ id: "new" });
   });
 
+  it("negeert een meegegeven medewerkerEmail van een ander en gebruikt het eigen adres", async () => {
+    mockAuthUser("u@precon.nl", false);
+    vi.mocked(hasDatabase).mockReturnValue(true);
+    vi.mocked(createGesprek).mockResolvedValue({ id: "new" } as Awaited<
+      ReturnType<typeof createGesprek>
+    >);
+
+    await POST(
+      new Request("http://x", {
+        method: "POST",
+        body: JSON.stringify({ medewerkerEmail: "ander@precon.nl" }),
+      }),
+    );
+
+    expect(createGesprek).toHaveBeenCalledWith(
+      "u@precon.nl",
+      undefined,
+      "u@precon.nl",
+      undefined,
+      undefined,
+    );
+  });
+
+  it("staat een admin toe medewerkerEmail wél namens iemand anders te zetten", async () => {
+    mockAuthUser("admin@precon.nl", true);
+    vi.mocked(hasDatabase).mockReturnValue(true);
+    vi.mocked(createGesprek).mockResolvedValue({ id: "new" } as Awaited<
+      ReturnType<typeof createGesprek>
+    >);
+
+    await POST(
+      new Request("http://x", {
+        method: "POST",
+        body: JSON.stringify({ medewerkerEmail: "ander@precon.nl" }),
+      }),
+    );
+
+    expect(createGesprek).toHaveBeenCalledWith(
+      "admin@precon.nl",
+      undefined,
+      "ander@precon.nl",
+      undefined,
+      undefined,
+    );
+  });
+
   it("returns 500 when create fails", async () => {
     mockAuthUser();
     vi.mocked(hasDatabase).mockReturnValue(true);
