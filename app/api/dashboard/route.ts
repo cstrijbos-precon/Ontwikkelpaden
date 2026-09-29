@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { hasDatabase } from "@/lib/db";
 import { getDashboardOverzicht } from "@/lib/gesprekken";
+import { isAdmin } from "@/lib/is-admin";
 
 export async function GET() {
   const session = await auth();
@@ -15,7 +16,8 @@ export async function GET() {
   try {
     const overzicht = await getDashboardOverzicht(
       session.user.email,
-      session.user.isAdmin ?? false,
+      // Live gecheckt, niet de (mogelijk verouderde) sessie-cookie.
+      isAdmin(session.user.email),
     );
     return Response.json(overzicht);
   } catch {

@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { hasDatabase } from "@/lib/db";
 import { GesprekNotCompletedError, startNewCycle } from "@/lib/gesprekken";
+import { isAdmin } from "@/lib/is-admin";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -22,7 +23,8 @@ export async function POST(_request: Request, context: RouteContext) {
     const gesprek = await startNewCycle(
       id,
       session.user.email,
-      session.user.isAdmin ?? false,
+      // Live gecheckt, niet de (mogelijk verouderde) sessie-cookie.
+      isAdmin(session.user.email),
     );
     if (!gesprek) {
       return Response.json({ error: "Not found" }, { status: 404 });

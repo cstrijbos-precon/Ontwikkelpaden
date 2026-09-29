@@ -25,15 +25,20 @@ function verzoek(body: unknown) {
 }
 
 const origineleUsers = process.env.APP_USERS;
+const origineleAdmins = process.env.APP_ADMINS;
 
 beforeEach(() => {
   listMock.mockReset().mockResolvedValue([]);
   verwijderMock.mockReset().mockResolvedValue(true);
   process.env.APP_USERS = "";
+  // isAdmin() wordt nu live tegen APP_ADMINS gecheckt, niet meer tegen de
+  // (mogelijk verouderde) sessie-cookie.
+  process.env.APP_ADMINS = "beheer@precon.nl";
 });
 
 afterEach(() => {
   process.env.APP_USERS = origineleUsers;
+  process.env.APP_ADMINS = origineleAdmins;
 });
 
 describe("account-beheer", () => {
@@ -66,6 +71,17 @@ describe("account-beheer", () => {
 
     const res = await DELETE(verzoek({ email: "niemand@precongroup.com" }));
     expect(res.status).toBe(404);
+  });
+
+  it("negeert een verouderde isAdmin-vlag in de sessie als APP_ADMINS die persoon niet (meer) bevat", async () => {
+    // Zonder live check zou een net verwijderde beheerder deze rechten
+    // houden tot de sessie van 8 uur verloopt.
+    process.env.APP_ADMINS = "iemand.anders@precon.nl";
+    mockAuthUser("beheer@precon.nl", true);
+
+    const res = await DELETE(verzoek({ email: "roos@precongroup.com" }));
+    expect(res.status).toBe(403);
+    expect(verwijderMock).not.toHaveBeenCalled();
   });
 
   it("raakt accounts uit de serverinstellingen niet aan", async () => {

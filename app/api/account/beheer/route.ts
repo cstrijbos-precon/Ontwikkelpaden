@@ -6,6 +6,7 @@ import {
 } from "@/lib/app-users-store";
 import { findEnvUserByEmail } from "@/lib/auth-users";
 import { hasDatabase } from "@/lib/db";
+import { isAdmin } from "@/lib/is-admin";
 
 const bodySchema = z.object({ email: z.string() }).strict();
 
@@ -14,7 +15,10 @@ async function eisBeheerder() {
   if (!session?.user?.email) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!session.user.isAdmin) {
+  // Live tegen APP_ADMINS gecheckt, niet tegen de (mogelijk verouderde)
+  // sessie-cookie — anders houdt een net verwijderde beheerder deze rechten
+  // tot de sessie van 8 uur verloopt.
+  if (!isAdmin(session.user.email)) {
     return Response.json({ error: "Alleen voor beheerders" }, { status: 403 });
   }
   if (!hasDatabase()) {

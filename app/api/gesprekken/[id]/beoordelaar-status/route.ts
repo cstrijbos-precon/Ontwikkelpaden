@@ -5,6 +5,7 @@ import {
   respondBeoordelaarKoppeling,
 } from "@/lib/gesprekken";
 import { beoordelaarStatusBodySchema } from "@/lib/gesprekken-schema";
+import { isAdmin } from "@/lib/is-admin";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -38,7 +39,8 @@ export async function POST(request: Request, context: RouteContext) {
     const gesprek = await respondBeoordelaarKoppeling(
       id,
       session.user.email,
-      session.user.isAdmin ?? false,
+      // Live gecheckt, niet de (mogelijk verouderde) sessie-cookie.
+      isAdmin(session.user.email),
       parsed.data.rol,
       parsed.data.actie,
     );

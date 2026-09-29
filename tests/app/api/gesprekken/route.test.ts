@@ -1,6 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "@/app/api/gesprekken/route";
 import { mockAuth, mockAuthUser } from "@/tests/helpers/auth-mock";
+
+// isAdmin() wordt live tegen APP_ADMINS gecheckt, niet meer tegen de
+// (mogelijk verouderde) sessie-cookie.
+const origineleAdmins = process.env.APP_ADMINS;
+beforeEach(() => {
+  process.env.APP_ADMINS = "admin@precon.nl";
+});
+afterEach(() => {
+  process.env.APP_ADMINS = origineleAdmins;
+});
 
 vi.mock("@/auth", () => ({
   auth: vi.fn(),

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { GesprekArchiefViewer } from "@/components/organisms/GesprekArchiefViewer";
 import { hasDatabase } from "@/lib/db";
 import { getGesprekById } from "@/lib/gesprekken";
+import { isAdmin } from "@/lib/is-admin";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -25,7 +26,8 @@ export default async function GesprekArchiefPage({ params }: PageProps) {
   const gesprek = await getGesprekById(
     id,
     session.user.email,
-    session.user.isAdmin ?? false,
+    // Live gecheckt, niet de (mogelijk verouderde) sessie-cookie.
+    isAdmin(session.user.email),
   );
 
   if (!gesprek) {

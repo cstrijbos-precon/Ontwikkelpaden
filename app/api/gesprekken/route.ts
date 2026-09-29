@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { hasDatabase } from "@/lib/db";
 import { createGesprek, listGesprekken } from "@/lib/gesprekken";
 import { createGesprekBodySchema } from "@/lib/gesprekken-schema";
+import { isAdmin } from "@/lib/is-admin";
 
 export async function GET() {
   const session = await auth();
@@ -16,7 +17,8 @@ export async function GET() {
   try {
     const items = await listGesprekken(
       session.user.email,
-      session.user.isAdmin ?? false,
+      // Live gecheckt, niet de (mogelijk verouderde) sessie-cookie.
+      isAdmin(session.user.email),
     );
     return Response.json({ items });
   } catch {
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
   // Alleen je eigen adres (of een beheerder) mag hier meegegeven worden —
   // anders kon iedereen een gesprek op naam van een ander aanmaken.
   const magMedewerkerOpgeven =
-    session.user.isAdmin ||
+    isAdmin(session.user.email) ||
     parsed.data.medewerkerEmail?.toLowerCase() ===
       session.user.email.toLowerCase();
   const medewerkerEmail = magMedewerkerOpgeven

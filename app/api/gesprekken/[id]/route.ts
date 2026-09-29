@@ -6,6 +6,7 @@ import {
   updateGesprek,
 } from "@/lib/gesprekken";
 import { updateGesprekBodySchema } from "@/lib/gesprekken-schema";
+import { isAdmin } from "@/lib/is-admin";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -27,7 +28,8 @@ export async function GET(_request: Request, context: RouteContext) {
     const gesprek = await getGesprekById(
       id,
       session.user.email,
-      session.user.isAdmin ?? false,
+      // Live gecheckt, niet de (mogelijk verouderde) sessie-cookie.
+      isAdmin(session.user.email),
     );
     if (!gesprek) {
       return Response.json({ error: "Not found" }, { status: 404 });
@@ -75,7 +77,8 @@ export async function PUT(request: Request, context: RouteContext) {
     const gesprek = await updateGesprek(
       id,
       session.user.email,
-      session.user.isAdmin ?? false,
+      // Live gecheckt, niet de (mogelijk verouderde) sessie-cookie.
+      isAdmin(session.user.email),
       parsed.data.state,
       parsed.data.status,
       parsed.data.medewerkerEmail,
