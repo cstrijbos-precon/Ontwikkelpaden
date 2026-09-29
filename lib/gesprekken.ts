@@ -552,8 +552,12 @@ export async function startNewCycle(
 
   await updateGesprek(id, userEmail, isAdmin, existing.state, "archived");
 
+  // created_by van de nieuwe cyclus is de medewerker zelf, niet wie op de
+  // knop klikte — anders zou bijvoorbeeld een doorlopende hoofdbeoordelaar
+  // die een nieuwe cyclus start zichzelf een blijvende created_by-toegang
+  // op dat gesprek geven, los van de koppeling.
   return createGesprek(
-    userEmail,
+    existing.medewerkerEmail ?? userEmail,
     buildNextCycleState(existing.state),
     existing.medewerkerEmail ?? undefined,
     existing.id,

@@ -1359,6 +1359,23 @@ describe("startNewCycle", () => {
     expect(updateCalls[0]).toContain("archived");
   });
 
+  it("zet created_by van de nieuwe cyclus op de medewerker, niet op wie de knop indrukte", async () => {
+    // gesprekRow: medewerker_email is jan@precon.nl, created_by hier is
+    // creator@precon.nl (bv. een hoofdbeoordelaar die de knop indrukte).
+    const existingRow = gesprekRow({ status: "completed" });
+    mockSqlByQuery(existingRow);
+
+    await startNewCycle("gesprek-1", "creator@precon.nl", false);
+
+    const insertCall = sqlMock.mock.calls.find((call) =>
+      (call[0] as TemplateStringsArray)
+        .join("")
+        .includes("INSERT INTO gesprekken"),
+    );
+    expect(insertCall).toContain("jan@precon.nl");
+    expect(insertCall).not.toContain("creator@precon.nl");
+  });
+
   it("throws GesprekNotCompletedError when gesprek is still draft", async () => {
     mockSqlByQuery(gesprekRow({ status: "draft" }));
 
