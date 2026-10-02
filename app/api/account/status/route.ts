@@ -2,6 +2,7 @@ import { z } from "zod";
 import { findUserByEmail } from "@/lib/auth-users";
 import { hasDatabase } from "@/lib/db";
 import { mailIsIngesteld } from "@/lib/mailer";
+import { beperk, clientIp, LIMIETEN, teVeelAanvragen } from "@/lib/rate-limit";
 import {
   domeinIsToegestaan,
   isGeldigEmail,
@@ -21,6 +22,14 @@ const bodySchema = z.object({ email: z.string() }).strict();
  * zonder verificatiemail.
  */
 export async function POST(request: Request) {
+  // Zonder grens kan iemand hier duizenden adressen langslopen en zo een
+  // lijst van bestaande accounts opbouwen.
+  const limiet = await beperk(
+    `status:ip:${clientIp(request.headers)}`,
+    LIMIETEN.accountStatusPerIp,
+  );
+  if (!limiet.toegestaan) return teVeelAanvragen(limiet);
+
   let body: unknown;
   try {
     body = await request.json();

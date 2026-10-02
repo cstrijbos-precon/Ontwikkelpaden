@@ -29,6 +29,16 @@ vi.mock("@/lib/verificatiemail", () => ({
 
 let mailIngesteld = true;
 
+const beperkMock = vi.fn();
+
+vi.mock("@/lib/rate-limit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/rate-limit")>()),
+  beperk: (...args: unknown[]) => beperkMock(...args),
+}));
+
+const TOEGESTAAN = { toegestaan: true, opnieuwOverSeconden: 0 };
+const GEBLOKKEERD = { toegestaan: false, opnieuwOverSeconden: 120 };
+
 function verzoek(body: unknown) {
   return new Request("http://localhost/api/account", {
     method: "POST",
@@ -46,6 +56,7 @@ beforeEach(() => {
   mailMock.mockReset().mockResolvedValue(undefined);
   bevestigMock.mockReset().mockResolvedValue(undefined);
   mailIngesteld = true;
+  beperkMock.mockReset().mockResolvedValue(TOEGESTAAN);
   process.env.APP_USERS = "";
   process.env.APP_REGISTRATIECODE = "";
   process.env.APP_VERIFICATIE_UITZONDERINGEN = "";
@@ -58,6 +69,32 @@ afterEach(() => {
 });
 
 describe("POST /api/account", () => {
+  it("weigert met 429 als dit IP-adres te vaak heeft geprobeerd, zonder iets aan te maken", async () => {
+    beperkMock.mockResolvedValueOnce(GEBLOKKEERD);
+
+    const res = await POST(
+      verzoek({ email: "roos@precongroup.com", wachtwoord: "Wachtwoord123" }),
+    );
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("120");
+    expect(maakMock).not.toHaveBeenCalled();
+    expect(mailMock).not.toHaveBeenCalled();
+  });
+
+  it("weigert met 429 als er al te vaak een mail naar dit adres is gevraagd", async () => {
+    beperkMock
+      .mockResolvedValueOnce(TOEGESTAAN) // per IP
+      .mockResolvedValueOnce(GEBLOKKEERD); // per adres
+
+    const res = await POST(
+      verzoek({ email: "roos@precongroup.com", wachtwoord: "Wachtwoord123" }),
+    );
+
+    expect(res.status).toBe(429);
+    expect(mailMock).not.toHaveBeenCalled();
+  });
+
   it("maakt een account aan en stuurt een verificatiemail", async () => {
     const res = await POST(
       verzoek({

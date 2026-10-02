@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { herkenBestandstype } from "@/lib/bestandstype";
 import { parseGesprekDocx } from "@/lib/parse-gesprek-docx";
 import { parseGesprekPdf } from "@/lib/parse-gesprek-pdf";
+import { beperk, LIMIETEN, teVeelAanvragen } from "@/lib/rate-limit";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -10,6 +11,14 @@ export async function POST(request: Request) {
   if (!session?.user?.email) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Het verwerken van een document is zwaar; zonder grens kan één gebruiker
+  // de server met uploads bezighouden.
+  const limiet = await beperk(
+    `import:${session.user.email.toLowerCase()}`,
+    LIMIETEN.importPerGebruiker,
+  );
+  if (!limiet.toegestaan) return teVeelAanvragen(limiet);
 
   let formData: FormData;
   try {

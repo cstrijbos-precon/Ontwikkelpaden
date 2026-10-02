@@ -4,6 +4,7 @@ import { bevestigDirect, maakOnbevestigdAccount } from "@/lib/app-users-store";
 import { findUserByEmail } from "@/lib/auth-users";
 import { hasDatabase } from "@/lib/db";
 import { mailIsIngesteld } from "@/lib/mailer";
+import { beperk, clientIp, LIMIETEN, teVeelAanvragen } from "@/lib/rate-limit";
 import {
   domeinIsToegestaan,
   isGeldigEmail,
@@ -46,6 +47,19 @@ export async function POST(request: Request) {
 
   const email = parsed.data.email.toLowerCase().trim();
   const uitgezonderd = verificatieUitzondering(email);
+
+  // Per IP-adres: remt het raden van de registratiecode. Per adres: voorkomt
+  // dat iemand een collega met verificatiemails kan volspammen.
+  const ipLimiet = await beperk(
+    `registratie:ip:${clientIp(request.headers)}`,
+    LIMIETEN.registratiePerIp,
+  );
+  if (!ipLimiet.toegestaan) return teVeelAanvragen(ipLimiet);
+  const emailLimiet = await beperk(
+    `registratie:email:${email}`,
+    LIMIETEN.registratiePerEmail,
+  );
+  if (!emailLimiet.toegestaan) return teVeelAanvragen(emailLimiet);
 
   if (!mailIsIngesteld() && !uitgezonderd) {
     return Response.json(

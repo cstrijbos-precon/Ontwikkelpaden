@@ -65,7 +65,11 @@ export function LoginForm() {
     });
 
     if (res?.error) {
-      setError("Onjuist wachtwoord.");
+      setError(
+        res.code === "te_veel_pogingen"
+          ? "Te veel mislukte pogingen. Probeer het over een kwartier opnieuw."
+          : "Onjuist wachtwoord.",
+      );
       return false;
     }
     router.push("/");

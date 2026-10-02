@@ -14,8 +14,16 @@ vi.mock("@/lib/parse-gesprek-pdf", () => ({
   parseGesprekPdf: vi.fn(),
 }));
 
+vi.mock("@/lib/rate-limit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/rate-limit")>()),
+  beperk: vi
+    .fn()
+    .mockResolvedValue({ toegestaan: true, opnieuwOverSeconden: 0 }),
+}));
+
 import { parseGesprekDocx } from "@/lib/parse-gesprek-docx";
 import { parseGesprekPdf } from "@/lib/parse-gesprek-pdf";
+import { beperk } from "@/lib/rate-limit";
 
 /**
  * Bouwt een minimale Request-stub met een échte FormData: `new Request(url, {
@@ -64,6 +72,20 @@ describe("POST /api/gesprekken/import-docx", () => {
     mockAuth(null);
     const res = await POST(requestWithFile(fakeDocxFile(1)));
     expect(res.status).toBe(401);
+  });
+
+  it("weigert met 429 als de gebruiker te vaak heeft geüpload, zonder het bestand te lezen", async () => {
+    mockAuthUser();
+    vi.mocked(beperk).mockResolvedValueOnce({
+      toegestaan: false,
+      opnieuwOverSeconden: 90,
+    });
+
+    const res = await POST(requestWithFile(fakeDocxFile(1)));
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("90");
+    expect(parseGesprekDocx).not.toHaveBeenCalled();
   });
 
   it("returns 400 when no file is sent", async () => {
