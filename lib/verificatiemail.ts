@@ -2,12 +2,19 @@ import { maakVerificatieToken } from "@/lib/email-verificatie";
 import { verstuurMail } from "@/lib/mailer";
 
 /**
- * Het adres waar de app op draait. Vercel zet VERCEL_URL zonder protocol; op
- * productie is een vaste APP_URL beter, want VERCEL_URL wijst bij elke deploy
- * naar een andere unieke URL.
+ * Het adres waar de app op draait, voor links in mails.
+ *
+ * Voorkeur: een vaste APP_URL. Is die niet gezet, dan het vaste
+ * productiedomein van het Vercel-project. VERCEL_URL is het laatste redmiddel:
+ * dat wijst naar de unieke URL van één specifieke deploy en verandert bij
+ * elke release, dus een link in een mail zou na een volgende deploy naar een
+ * oude of beschermde preview kunnen wijzen.
  */
 export function appUrl(): string {
   if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }
