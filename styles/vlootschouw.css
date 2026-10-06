@@ -154,3 +154,116 @@
   line-height: 1.3;
   max-width: 90%;
 }
+
+/* Invulbaar framework (tabblad Strategische personeelsplanning) */
+.plan-grid {
+  display: grid;
+  grid-template-columns: 28px repeat(4, minmax(150px, 1fr));
+  gap: 8px;
+  min-width: 700px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--grijs-lijn);
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.plan-niv-lbl {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--grijs-licht);
+}
+
+.plan-pad-kop {
+  width: auto;
+  margin-bottom: 0;
+}
+
+.plan-cel,
+.plan-totaal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--grijs-lijn);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.plan-totaal {
+  background: #f6f7f9;
+  border-style: dashed;
+}
+
+.plan-totaal-kop {
+  font-size: 10.5px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--grijs-licht);
+}
+
+.plan-rol {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--grijs);
+}
+
+.plan-rij {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--grijs);
+}
+
+.plan-rij input[type="number"] {
+  width: 56px;
+  border: 1.5px solid var(--grijs-lijn);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12.5px;
+  text-align: right;
+}
+
+.plan-aanwezig {
+  color: var(--oranje);
+}
+
+.plan-status {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: bold;
+}
+
+.plan-status-tekort {
+  background: #fbeaea;
+  color: var(--rood);
+}
+
+.plan-status-op-sterkte {
+  background: #eaf6e5;
+  color: var(--groen);
+}
+
+.plan-status-overschot {
+  background: #eef1f5;
+  color: var(--grijs);
+}
+
+.plan-hint {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fff6ea;
+  border: 1px solid #f5d9b0;
+  font-size: 12.5px;
+  color: var(--grijs);
+}

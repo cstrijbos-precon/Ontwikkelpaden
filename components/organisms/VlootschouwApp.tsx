@@ -4,80 +4,24 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { useState } from "react";
 import { VlootschouwFrameworkGrid } from "@/components/organisms/VlootschouwFrameworkGrid";
+import { VlootschouwPlanningGrid } from "@/components/organisms/VlootschouwPlanningGrid";
 import { useVlootschouw } from "@/hooks/useVlootschouw";
 import { PADEN } from "@/lib/data/paden";
-import { WERELDEN, type Wereld } from "@/lib/data/werelden";
+import { WERELDEN } from "@/lib/data/werelden";
 import { getPadColor } from "@/lib/pad-colors";
-import { groepeerPerPadEnWereld } from "@/lib/vlootschouw/aggregatie";
-import type { RolRij } from "@/lib/vlootschouw/types";
+import {
+  groepeerPerPadEnWereld,
+  type WereldFilter,
+} from "@/lib/vlootschouw/aggregatie";
 
 type Tab = "vlootschouw" | "planning";
-
-function PlanningInput({
-  waarde,
-  onCommit,
-}: {
-  waarde: number;
-  onCommit: (nieuweWaarde: number) => void;
-}) {
-  const [draft, setDraft] = useState(String(waarde));
-
-  return (
-    <input
-      type="number"
-      min={0}
-      value={draft}
-      style={{ width: 60 }}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => {
-        const nieuw = Number(draft);
-        if (Number.isFinite(nieuw) && nieuw >= 0 && nieuw !== waarde) {
-          onCommit(Math.round(nieuw));
-        } else {
-          setDraft(String(waarde));
-        }
-      }}
-    />
-  );
-}
-
-function RolRijEditor({
-  rij,
-  onWijzig,
-}: {
-  rij: RolRij;
-  onWijzig: (patch: { nodigNu?: number; nodigStraks?: number }) => void;
-}) {
-  return (
-    <tr>
-      <td style={{ color: getPadColor(rij.padId), fontWeight: "bold" }}>
-        {PADEN[rij.padId].label}
-      </td>
-      <td>{rij.rolNaam}</td>
-      <td>{rij.wereld}</td>
-      <td>{rij.aanwezig}</td>
-      <td>
-        <PlanningInput
-          waarde={rij.nodigNu}
-          onCommit={(nodigNu) => onWijzig({ nodigNu })}
-        />
-      </td>
-      <td>
-        <PlanningInput
-          waarde={rij.nodigStraks}
-          onCommit={(nodigStraks) => onWijzig({ nodigStraks })}
-        />
-      </td>
-    </tr>
-  );
-}
 
 export default function VlootschouwApp() {
   const { data: session } = useSession();
   const { overzicht, hydrated, loadError, saveError, wijzigPlanningCel } =
     useVlootschouw();
   const [tab, setTab] = useState<Tab>("vlootschouw");
-  const [wereldFilter, setWereldFilter] = useState<Wereld | "totaal">("totaal");
+  const [wereldFilter, setWereldFilter] = useState<WereldFilter>("totaal");
 
   if (!hydrated) {
     return (
@@ -95,7 +39,9 @@ export default function VlootschouwApp() {
     );
   }
 
-  const padWereldRijen = groepeerPerPadEnWereld(overzicht.rollen);
+  const padWereldRijen = groepeerPerPadEnWereld(overzicht.rollen).filter(
+    (rij) => wereldFilter === "totaal" || rij.wereld === wereldFilter,
+  );
 
   return (
     <>
@@ -198,17 +144,25 @@ export default function VlootschouwApp() {
           <div className="scherm">
             <div className="scherm-titel">Wat hebben we nodig?</div>
             <div className="scherm-sub">
-              Grijze bol = nodig nu, oranje bol = nu aanwezig (zelfde als bij
-              Vlootschouw), overlappend in één overzicht. Een zichtbare grijze
-              rand betekent een tekort; oranje die de grijze bol volledig bedekt
-              betekent voldoende of een overschot. Vul de cijfers aan in de
-              tabel hieronder.
+              Per positie op het pad zie je hoeveel mensen er nu zijn (live uit
+              de FG-gesprekken) en vul je in hoeveel er nu en straks nodig zijn.
             </div>
+            {wereldFilter === "totaal" ? (
+              <p className="plan-hint">
+                Je ziet nu de totalen over alle werelden. Kies hierboven een
+                wereld om cijfers in te vullen.
+              </p>
+            ) : (
+              <p className="plan-hint">
+                Je vult de cijfers in voor <strong>{wereldFilter}</strong>.
+                Wijzigingen worden direct opgeslagen.
+              </p>
+            )}
             <div style={{ overflowX: "auto" }}>
-              <VlootschouwFrameworkGrid
+              <VlootschouwPlanningGrid
                 rollen={overzicht.rollen}
                 wereldFilter={wereldFilter}
-                metric="beide"
+                onWijzig={wijzigPlanningCel}
               />
             </div>
           </div>
@@ -250,47 +204,6 @@ export default function VlootschouwApp() {
                   <tr>
                     <td colSpan={5} style={{ color: "var(--grijs-licht)" }}>
                       Nog geen gegevens.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="scherm">
-            <div className="sk">Aantallen per rol</div>
-            <table className="venn-tabel">
-              <thead>
-                <tr>
-                  <th>Pad</th>
-                  <th>Rol</th>
-                  <th>Wereld</th>
-                  <th>Aanwezig</th>
-                  <th>Nodig nu</th>
-                  <th>Nodig straks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overzicht.rollen.map((rij) => (
-                  <RolRijEditor
-                    key={`${rij.padId}-${rij.niveau}-${rij.wereld}`}
-                    rij={rij}
-                    onWijzig={(patch) =>
-                      wijzigPlanningCel({
-                        padId: rij.padId,
-                        niveau: rij.niveau,
-                        wereld: rij.wereld,
-                        nodigNu: patch.nodigNu ?? rij.nodigNu,
-                        nodigStraks: patch.nodigStraks ?? rij.nodigStraks,
-                      })
-                    }
-                  />
-                ))}
-                {overzicht.rollen.length === 0 && (
-                  <tr>
-                    <td colSpan={6} style={{ color: "var(--grijs-licht)" }}>
-                      Nog geen gegevens — vul op scherm 1 van een FG-gesprek de
-                      "Wereld" in, of voer hieronder normcijfers in.
                     </td>
                   </tr>
                 )}
