@@ -111,3 +111,54 @@ describe("tussentekst boven Jouw profiel", () => {
     expect(state.profiel).toBe("Inhoudelijk sterk.");
   });
 });
+
+describe("scores die niet te lezen zijn", () => {
+  const maarTwee = [
+    "4. Inschalen",
+    "Beinvloedingskracht: ★★☆☆",
+    "Klantgerichtheid: ★★★☆",
+    "5. Ontwikkelpaden",
+  ];
+
+  it("meldt per competentie waarvan de score ontbreekt dat die handmatig moet", () => {
+    const { warnings } = parseGesprekParagrafen(maarTwee, {
+      regelScheiding: "\n",
+    });
+
+    expect(warnings).toContain(
+      'Score voor "Ondernemerschap" niet gevonden in het bestand — vul deze handmatig in.',
+    );
+    expect(warnings).toContain(
+      'Score voor "Organisatievermogen" niet gevonden in het bestand — vul deze handmatig in.',
+    );
+    expect(warnings).toContain(
+      'Score voor "Training en coaching" niet gevonden in het bestand — vul deze handmatig in.',
+    );
+    expect(warnings.join(" ")).not.toContain("Klantgerichtheid");
+  });
+
+  it("meldt een onduidelijke score maar één keer", () => {
+    const { warnings } = parseGesprekParagrafen(
+      ["4. Inschalen", "Beinvloedingskracht: ★★ ★★★", "5. Ontwikkelpaden"],
+      { regelScheiding: "\n" },
+    );
+
+    const overBeinvloeding = warnings.filter(
+      (w) =>
+        w.includes("Beïnvloedingskracht") || w.includes("Beinvloedingskracht"),
+    );
+    expect(overBeinvloeding.length).toBeLessThanOrEqual(1);
+  });
+
+  it("levert een resultaat op dat zonder fout in een gesprek past (regressie)", async () => {
+    // Dit gaf bij een collega een ruwe lijst validatiefouten ("expected number,
+    // received NaN") in plaats van een gesprek met de gelezen scores.
+    const { mergeWithInitialState } = await import("@/lib/initial-state");
+    const { state } = parseGesprekParagrafen(maarTwee, {
+      regelScheiding: "\n",
+    });
+
+    const gesprek = mergeWithInitialState(state);
+    expect(gesprek.scores).toEqual({ b: 2, k: 3, o: 0, org: 0, t: 0 });
+  });
+});

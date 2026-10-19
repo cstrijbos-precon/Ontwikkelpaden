@@ -112,6 +112,14 @@ const COMP_LABELS: { id: CompId; pattern: RegExp }[] = [
   { id: "t", pattern: /^Training en coaching\s*:?\s*(.*)$/i },
 ];
 
+const COMP_NAMEN: { id: CompId; label: string }[] = [
+  { id: "b", label: "Beïnvloedingskracht" },
+  { id: "k", label: "Klantgerichtheid" },
+  { id: "o", label: "Ondernemerschap" },
+  { id: "org", label: "Organisatievermogen" },
+  { id: "t", label: "Training en coaching" },
+];
+
 interface SterrenUitslag {
   score: number | null;
   /** Twee losse groepen sterren op één regel: iemand twijfelde, niet geraden. */
@@ -368,6 +376,7 @@ export function parseGesprekParagrafen(
   }
 
   const scores: Partial<Record<CompId, number>> = {};
+  const gewaarschuwd = new Set<CompId>();
   for (const { id, pattern } of COMP_LABELS) {
     for (const regel of inschalenLines) {
       const m = regel.match(pattern);
@@ -377,10 +386,24 @@ export function parseGesprekParagrafen(
         warnings.push(
           `Score voor "${regel.split(":")[0]?.trim()}" is niet eenduidig ("${regel}") — vul deze handmatig in.`,
         );
+        gewaarschuwd.add(id);
       } else if (score !== null) {
         scores[id] = score;
       }
       break;
+    }
+  }
+
+  // Een score die we niet konden lezen blijft op 0 staan. Zeg dat erbij, anders
+  // lijkt "geen sterren" een bewuste keuze van de medewerker. Zonder
+  // "Inschalen"-blok meldt het ontbrekende hoofdstuk dit al.
+  if (inschalenLines.length > 0) {
+    for (const { id, label } of COMP_NAMEN) {
+      if (scores[id] === undefined && !gewaarschuwd.has(id)) {
+        warnings.push(
+          `Score voor "${label}" niet gevonden in het bestand — vul deze handmatig in.`,
+        );
+      }
     }
   }
 

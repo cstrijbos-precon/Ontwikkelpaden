@@ -65,19 +65,57 @@ const STATE_KEYS = Object.keys(
   createInitialState(),
 ) as (keyof OntwikkelpadenState)[];
 
+function isGewoonObject(waarde: unknown): waarde is Record<string, unknown> {
+  return (
+    typeof waarde === "object" && waarde !== null && !Array.isArray(waarde)
+  );
+}
+
+/**
+ * Legt `bovenop` over `basis` heen. Geneste lijsten met vaste sleutels
+ * (scores, opmerkingen, vorig jaar, ambities, ...) worden per sleutel
+ * samengevoegd in plaats van vervangen: een import die maar twee van de vijf
+ * competentiescores kon lezen, mag de overige drie niet laten verdwijnen.
+ */
+function leggeOver(
+  basis: Record<string, unknown>,
+  bovenop: Record<string, unknown>,
+): Record<string, unknown> {
+  const uitkomst: Record<string, unknown> = { ...basis };
+  for (const key of STATE_KEYS) {
+    if (!(key in bovenop)) continue;
+    const nieuw = bovenop[key];
+    const oud = basis[key];
+    uitkomst[key] =
+      isGewoonObject(oud) && isGewoonObject(nieuw)
+        ? { ...oud, ...nieuw }
+        : nieuw;
+  }
+  return uitkomst;
+}
+
 export function mergeWithInitialState(input: unknown): OntwikkelpadenState {
-  const base = createInitialState();
-  if (typeof input !== "object" || input === null) {
+  const base = createInitialState() as unknown as Record<string, unknown>;
+  if (!isGewoonObject(input)) {
     return ontwikkelpadenStateSchema.parse(base);
   }
+  return ontwikkelpadenStateSchema.parse(leggeOver(base, input));
+}
 
-  const partial = input as Record<string, unknown>;
-  const picked: Record<string, unknown> = { ...base };
-  for (const key of STATE_KEYS) {
-    if (key in partial) {
-      picked[key] = partial[key];
-    }
-  }
-
-  return ontwikkelpadenStateSchema.parse(picked);
+/**
+ * Voegt het resultaat van een import samen met het gesprek waar je al in zit.
+ * Wat de import niet kon lezen blijft zoals het was; geneste lijsten worden
+ * per sleutel aangevuld, zodat een gedeeltelijke score-lijst de bestaande
+ * scores niet wegvaagt.
+ */
+export function mergeImportIntoState(
+  huidig: OntwikkelpadenState,
+  geimporteerd: Partial<OntwikkelpadenState>,
+): OntwikkelpadenState {
+  return ontwikkelpadenStateSchema.parse(
+    leggeOver(
+      huidig as unknown as Record<string, unknown>,
+      geimporteerd as unknown as Record<string, unknown>,
+    ),
+  );
 }

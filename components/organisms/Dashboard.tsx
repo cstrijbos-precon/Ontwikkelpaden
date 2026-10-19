@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { AccountBeheer } from "@/components/organisms/AccountBeheer";
 import { GoedkeuringPopup } from "@/components/organisms/GoedkeuringPopup";
+import { importFoutmelding } from "@/lib/import-foutmelding";
 import { mergeWithInitialState } from "@/lib/initial-state";
 import {
   createGesprek,
@@ -204,9 +205,7 @@ export function Dashboard() {
       });
       await laad();
     } catch (error) {
-      setFoutmelding(
-        error instanceof Error ? error.message : "Importeren mislukt",
-      );
+      setFoutmelding(importFoutmelding(error));
     } finally {
       setImportBezig(false);
     }

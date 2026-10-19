@@ -8,7 +8,12 @@ import { useTrainingslijnReflecties } from "@/hooks/useTrainingslijnReflecties";
 import { exportWord } from "@/lib/export-word";
 import { clampPadNiveau, clampScore } from "@/lib/field-format";
 import { wachtendeKoppelingen } from "@/lib/gesprekken-access";
-import { createInitialState, mergeWithInitialState } from "@/lib/initial-state";
+import { importFoutmelding } from "@/lib/import-foutmelding";
+import {
+  createInitialState,
+  mergeImportIntoState,
+  mergeWithInitialState,
+} from "@/lib/initial-state";
 import { loadActiveGesprek } from "@/lib/load-active-gesprek";
 import {
   fetchGesprek,
@@ -363,14 +368,12 @@ export function useOntwikkelpaden(gesprekIdParam?: string) {
     async (file: File) => {
       try {
         const result = await importGesprekDocx(file);
-        const samengevoegd = { ...state, ...result.state };
+        const samengevoegd = mergeImportIntoState(state, result.state);
         setState(samengevoegd);
         setImportWarnings(result.warnings);
         await save(samengevoegd);
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Import mislukt";
-        setImportWarnings([message]);
+        setImportWarnings([importFoutmelding(error)]);
       }
     },
     [state, save],
