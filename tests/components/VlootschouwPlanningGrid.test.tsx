@@ -123,46 +123,115 @@ describe("VlootschouwPlanningGrid", () => {
     expect(veld).toHaveValue(5); // teruggezet
   });
 
-  it("meldt een tekort bij te weinig mensen en een overschot bij te veel", () => {
+  it("toont per niveau het aandeel nu en het gewenste aandeel", () => {
     render(
       <VlootschouwPlanningGrid
         rollen={[
-          ...ROLLEN,
-          rij({
-            padId: "leider",
-            niveau: 2,
-            wereld: "QA",
-            aanwezig: 1,
-            nodigNu: 4,
-          }),
-          rij({
-            padId: "trainer",
-            niveau: 3,
-            wereld: "QA",
-            aanwezig: 5,
-            nodigNu: 2,
-          }),
+          rij({ niveau: 1, wereld: "RA", aanwezig: 0, nodigNu: 10 }),
+          rij({ niveau: 2, wereld: "RA", aanwezig: 1, nodigNu: 30 }),
         ]}
-        wereldFilter="QA"
+        wereldFilter="RA"
         onWijzig={vi.fn()}
       />,
     );
 
-    // Eén positie per pad met gegevens: de status staat in de cel én in het
-    // padtotaal, dus elk twee keer.
-    expect(screen.getAllByText("3 tekort")).toHaveLength(2);
-    expect(screen.getAllByText("3 over")).toHaveLength(2);
+    // Niveau 2 van Vakexpert: de ene ingeschaalde persoon zit hier (100%),
+    // terwijl 30 van de 40 gewenste mensen (75%) hier hoort.
+    const cel = screen
+      .getByLabelText("Vakexpert niveau 2, nu nodig")
+      .closest(".plan-cel") as HTMLElement;
+    expect(within(cel).getByText("100%")).toBeInTheDocument();
+    expect(within(cel).getByText("75%")).toBeInTheDocument();
+    expect(within(cel).getByText("25 pp boven gewenst")).toBeInTheDocument();
   });
 
-  it("toont geen status voor een positie zonder norm", () => {
+  it("meldt per niveau of het onder, op of boven de gewenste verdeling zit", () => {
     render(
       <VlootschouwPlanningGrid
-        rollen={[rij({ aanwezig: 4, nodigNu: 0 })]}
+        rollen={[
+          rij({ niveau: 1, wereld: "RA", aanwezig: 1, nodigNu: 6 }),
+          rij({ niveau: 2, wereld: "RA", aanwezig: 3, nodigNu: 4 }),
+          rij({ niveau: 3, wereld: "RA", aanwezig: 6, nodigNu: 0 }),
+        ]}
+        wereldFilter="RA"
+        onWijzig={vi.fn()}
+      />,
+    );
+
+    // Aanwezig 10: 10% / 30% / 60%. Gewenst 10: 60% / 40% / 0%.
+    expect(screen.getByText("50 pp onder gewenst")).toBeInTheDocument();
+    expect(screen.getByText("10 pp onder gewenst")).toBeInTheDocument();
+    expect(screen.getByText("60 pp boven gewenst")).toBeInTheDocument();
+  });
+
+  it("toont in het padtotaal hoeveel van de populatie is ingeschaald", () => {
+    render(
+      <VlootschouwPlanningGrid
+        rollen={[
+          rij({ niveau: 1, wereld: "RA", aanwezig: 0, nodigNu: 10 }),
+          rij({ niveau: 2, wereld: "RA", aanwezig: 1, nodigNu: 30 }),
+        ]}
+        wereldFilter="RA"
+        onWijzig={vi.fn()}
+      />,
+    );
+
+    expect(
+      within(screen.getByTestId("totaal-vakexpert")).getByText(
+        "1 van 40 ingeschaald (3%)",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("zegt dat er nog geen norm is als die ontbreekt", () => {
+    render(
+      <VlootschouwPlanningGrid
+        rollen={[rij({ aanwezig: 2, nodigNu: 0 })]}
         wereldFilter="QA"
         onWijzig={vi.fn()}
       />,
     );
 
-    expect(screen.queryByText(/tekort|over|op sterkte/)).toBeNull();
+    expect(
+      within(screen.getByTestId("totaal-vakexpert")).getByText(
+        "Nog geen norm ingevuld",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/pp (onder|boven) gewenst/)).toBeNull();
+  });
+
+  it("toont geen verschil als nog niemand is ingeschaald", () => {
+    render(
+      <VlootschouwPlanningGrid
+        rollen={[rij({ aanwezig: 0, nodigNu: 5 })]}
+        wereldFilter="QA"
+        onWijzig={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/pp (onder|boven) gewenst|op niveau/)).toBeNull();
+  });
+
+  it("meldt niets bij een niveau waar niemand zit en niemand hoort te zitten", () => {
+    render(
+      <VlootschouwPlanningGrid
+        rollen={[
+          rij({ niveau: 1, wereld: "RA", aanwezig: 2, nodigNu: 4 }),
+          rij({ niveau: 2, wereld: "RA", aanwezig: 0, nodigNu: 0 }),
+        ]}
+        wereldFilter="RA"
+        onWijzig={vi.fn()}
+      />,
+    );
+
+    const leeg = screen
+      .getByLabelText("Vakexpert niveau 2, nu nodig")
+      .closest(".plan-cel") as HTMLElement;
+    expect(within(leeg).queryByText(/op niveau|pp (onder|boven)/)).toBeNull();
+    // Een niveau mét gegevens meldt het wel.
+    const gevuld = screen
+      .getByLabelText("Vakexpert niveau 1, nu nodig")
+      .closest(".plan-cel") as HTMLElement;
+    expect(within(gevuld).getByText("op niveau")).toBeInTheDocument();
   });
 });

@@ -243,17 +243,17 @@
   font-weight: bold;
 }
 
-.plan-status-tekort {
+.plan-status-onder {
   background: #fbeaea;
   color: var(--rood);
 }
 
-.plan-status-op-sterkte {
+.plan-status-op-niveau {
   background: #eaf6e5;
   color: var(--groen);
 }
 
-.plan-status-overschot {
+.plan-status-boven {
   background: #eef1f5;
   color: var(--grijs);
 }
@@ -266,4 +266,24 @@
   border: 1px solid #f5d9b0;
   font-size: 12.5px;
   color: var(--grijs);
+}
+
+.plan-waarde {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-pct {
+  min-width: 34px;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: bold;
+  color: var(--grijs);
+}
+
+.plan-reactie {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--grijs-licht);
 }

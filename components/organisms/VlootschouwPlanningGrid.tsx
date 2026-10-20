@@ -2,9 +2,10 @@ import { useState } from "react";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import {
   type Aantallen,
-  somPerCel,
+  reactiePerPad,
   somPerPad,
-  vervullingStatus,
+  verdelingPerCel,
+  verdelingStatus,
   type WereldFilter,
 } from "@/lib/vlootschouw/aggregatie";
 import type { UpsertPlanningInput } from "@/lib/vlootschouw/planning";
@@ -48,25 +49,30 @@ function PlanningInput({
   );
 }
 
-function StatusLabel({
-  aanwezig,
-  nodigNu,
-}: Pick<Aantallen, "aanwezig" | "nodigNu">) {
-  const { soort, verschil } = vervullingStatus(aanwezig, nodigNu);
-  if (soort === "geen-norm") return null;
+function Percentage({ waarde }: { waarde: number | null }) {
+  return (
+    <span className="plan-pct">{waarde === null ? "—" : `${waarde}%`}</span>
+  );
+}
+
+function VerdelingLabel({ verschilPunten }: { verschilPunten: number | null }) {
+  const soort = verdelingStatus(verschilPunten);
+  if (soort === "geen-data" || verschilPunten === null) return null;
   const tekst =
-    soort === "tekort"
-      ? `${Math.abs(verschil)} tekort`
-      : soort === "overschot"
-        ? `${verschil} over`
-        : "op sterkte";
+    soort === "op-niveau"
+      ? "op niveau"
+      : soort === "onder"
+        ? `${Math.abs(verschilPunten)} pp onder gewenst`
+        : `${verschilPunten} pp boven gewenst`;
   return <span className={`plan-status plan-status-${soort}`}>{tekst}</span>;
 }
 
 /**
  * Het framework (pad × niveau) als invulformulier. Per positie staat hoeveel
  * mensen er zijn (uit de gesprekken, niet te wijzigen) en hoeveel er nu en
- * straks nodig zijn.
+ * straks nodig zijn, elk met het aandeel binnen het pad. Het verschil tussen
+ * die twee aandelen (in procentpunten) laat zien waar de verdeling afwijkt
+ * van de norm.
  *
  * Invullen kan alleen met een wereld gekozen: de norm-cijfers worden per
  * (pad, niveau, wereld) bewaard. Bij "totaal" zie je de optelsom, die je niet
@@ -107,6 +113,7 @@ export function VlootschouwPlanningGrid({
       {PAD_IDS.map((padId) => {
         const pad = PADEN[padId];
         const totaal = somPerPad(rollen, padId, wereldFilter);
+        const reactie = reactiePerPad(rollen, padId, wereldFilter);
         return (
           <div
             key={padId}
@@ -126,7 +133,11 @@ export function VlootschouwPlanningGrid({
               <span>Straks nodig</span>
               <strong>{totaal.nodigStraks}</strong>
             </div>
-            <StatusLabel aanwezig={totaal.aanwezig} nodigNu={totaal.nodigNu} />
+            <div className="plan-reactie">
+              {reactie.pct === null
+                ? "Nog geen norm ingevuld"
+                : `${reactie.ingeschaald} van ${reactie.nodig} ingeschaald (${reactie.pct}%)`}
+            </div>
           </div>
         );
       })}
@@ -152,7 +163,7 @@ function PlanningRij({
       <div className="plan-niv-lbl">{niveau}</div>
       {PAD_IDS.map((padId) => {
         const pad = PADEN[padId];
-        const cel = somPerCel(rollen, padId, niveau, wereldFilter);
+        const cel = verdelingPerCel(rollen, padId, niveau, wereldFilter);
         const naam = `${pad.label} niveau ${niveau}`;
 
         function bewaar(patch: Partial<Aantallen>) {
@@ -171,20 +182,26 @@ function PlanningRij({
             <div className="plan-rol">{pad.rollen[niveau - 1] ?? ""}</div>
             <div className="plan-rij">
               <span>Aanwezig</span>
-              <strong className="plan-aanwezig">{cel.aanwezig}</strong>
+              <span className="plan-waarde">
+                <strong className="plan-aanwezig">{cel.aanwezig}</strong>
+                <Percentage waarde={cel.aanwezigPct} />
+              </span>
             </div>
             <div className="plan-rij">
               <span>Nu nodig</span>
-              {bewerkbaar ? (
-                <PlanningInput
-                  key={`${wereldFilter}-nu-${cel.nodigNu}`}
-                  label={`${naam}, nu nodig`}
-                  waarde={cel.nodigNu}
-                  onCommit={(nodigNu) => bewaar({ nodigNu })}
-                />
-              ) : (
-                <strong>{cel.nodigNu}</strong>
-              )}
+              <span className="plan-waarde">
+                {bewerkbaar ? (
+                  <PlanningInput
+                    key={`${wereldFilter}-nu-${cel.nodigNu}`}
+                    label={`${naam}, nu nodig`}
+                    waarde={cel.nodigNu}
+                    onCommit={(nodigNu) => bewaar({ nodigNu })}
+                  />
+                ) : (
+                  <strong>{cel.nodigNu}</strong>
+                )}
+                <Percentage waarde={cel.gewenstPct} />
+              </span>
             </div>
             <div className="plan-rij">
               <span>Straks nodig</span>
@@ -199,7 +216,10 @@ function PlanningRij({
                 <strong>{cel.nodigStraks}</strong>
               )}
             </div>
-            <StatusLabel aanwezig={cel.aanwezig} nodigNu={cel.nodigNu} />
+            {/* Een niveau zonder mensen en zonder norm heeft niets om te melden. */}
+            {!(cel.aanwezigPct === 0 && cel.gewenstPct === 0) && (
+              <VerdelingLabel verschilPunten={cel.verschilPunten} />
+            )}
           </div>
         );
       })}

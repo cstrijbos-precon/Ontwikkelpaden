@@ -30,15 +30,6 @@ export interface PadOverzicht {
   vennCategorie: VennCategorie;
 }
 
-export interface PadWereldOverzicht {
-  padId: PadId;
-  wereld: Wereld;
-  aanwezig: number;
-  nodigNu: number;
-  nodigStraks: number;
-  vervullingPercentage: number | null;
-}
-
 export interface VlootschouwOverzicht {
   paden: PadOverzicht[];
   rollen: RolRij[];

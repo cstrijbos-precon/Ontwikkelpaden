@@ -6,13 +6,9 @@ import { useState } from "react";
 import { VlootschouwFrameworkGrid } from "@/components/organisms/VlootschouwFrameworkGrid";
 import { VlootschouwPlanningGrid } from "@/components/organisms/VlootschouwPlanningGrid";
 import { useVlootschouw } from "@/hooks/useVlootschouw";
-import { PADEN } from "@/lib/data/paden";
+import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { WERELDEN } from "@/lib/data/werelden";
-import { getPadColor } from "@/lib/pad-colors";
-import {
-  groepeerPerPadEnWereld,
-  type WereldFilter,
-} from "@/lib/vlootschouw/aggregatie";
+import { reactiePerPad, type WereldFilter } from "@/lib/vlootschouw/aggregatie";
 
 type Tab = "vlootschouw" | "planning";
 
@@ -39,8 +35,16 @@ export default function VlootschouwApp() {
     );
   }
 
-  const padWereldRijen = groepeerPerPadEnWereld(overzicht.rollen).filter(
-    (rij) => wereldFilter === "totaal" || rij.wereld === wereldFilter,
+  // Hoe groter het deel van de populatie dat al is ingeschaald, hoe meer de
+  // verdeling zegt. Bij een lage reactie is het een indicatie, geen uitkomst.
+  const reacties = PAD_IDS.map((padId) => ({
+    padId,
+    ...reactiePerPad(overzicht.rollen, padId, wereldFilter),
+  })).filter((r) => r.pct !== null);
+  const laagsteReactie = reacties.reduce<(typeof reacties)[number] | null>(
+    (laagste, r) =>
+      laagste === null || (r.pct ?? 0) < (laagste.pct ?? 0) ? r : laagste,
+    null,
   );
 
   return (
@@ -140,77 +144,42 @@ export default function VlootschouwApp() {
       )}
 
       {tab === "planning" && (
-        <>
-          <div className="scherm">
-            <div className="scherm-titel">Wat hebben we nodig?</div>
-            <div className="scherm-sub">
-              Per positie op het pad zie je hoeveel mensen er nu zijn (live uit
-              de FG-gesprekken) en vul je in hoeveel er nu en straks nodig zijn.
-            </div>
-            {wereldFilter === "totaal" ? (
-              <p className="plan-hint">
-                Je ziet nu de totalen over alle werelden. Kies hierboven een
-                wereld om cijfers in te vullen.
-              </p>
-            ) : (
-              <p className="plan-hint">
-                Je vult de cijfers in voor <strong>{wereldFilter}</strong>.
-                Wijzigingen worden direct opgeslagen.
-              </p>
-            )}
-            <div style={{ overflowX: "auto" }}>
-              <VlootschouwPlanningGrid
-                rollen={overzicht.rollen}
-                wereldFilter={wereldFilter}
-                onWijzig={wijzigPlanningCel}
-              />
-            </div>
+        <div className="scherm">
+          <div className="scherm-titel">Wat hebben we nodig?</div>
+          <div className="scherm-sub">
+            Per niveau zie je welk deel van de ingeschaalde mensen daar nu zit
+            (live uit de FG-gesprekken), naast het deel dat er volgens jouw norm
+            zou moeten zitten. Zo vergelijk je de verdeling, ook als nog niet
+            iedereen een gesprek heeft ingevuld. Vul in hoeveel er nu en straks
+            nodig zijn.
           </div>
-
-          <div className="scherm">
-            <div className="sk">Percentages per pad en wereld</div>
-            <table className="venn-tabel">
-              <thead>
-                <tr>
-                  <th>Pad</th>
-                  <th>Wereld</th>
-                  <th>Aanwezig</th>
-                  <th>Nodig nu</th>
-                  <th>Vervulling</th>
-                </tr>
-              </thead>
-              <tbody>
-                {padWereldRijen.map((rij) => (
-                  <tr key={`${rij.padId}-${rij.wereld}`}>
-                    <td
-                      style={{
-                        color: getPadColor(rij.padId),
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {PADEN[rij.padId].label}
-                    </td>
-                    <td>{rij.wereld}</td>
-                    <td>{rij.aanwezig}</td>
-                    <td>{rij.nodigNu}</td>
-                    <td>
-                      {rij.vervullingPercentage === null
-                        ? "—"
-                        : `${rij.vervullingPercentage}%`}
-                    </td>
-                  </tr>
-                ))}
-                {padWereldRijen.length === 0 && (
-                  <tr>
-                    <td colSpan={5} style={{ color: "var(--grijs-licht)" }}>
-                      Nog geen gegevens.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          {wereldFilter === "totaal" ? (
+            <p className="plan-hint">
+              Je ziet nu de totalen over alle werelden. Kies hierboven een
+              wereld om cijfers in te vullen.
+            </p>
+          ) : (
+            <p className="plan-hint">
+              Je vult de cijfers in voor <strong>{wereldFilter}</strong>.
+              Wijzigingen worden direct opgeslagen.
+            </p>
+          )}
+          {laagsteReactie !== null && (laagsteReactie.pct ?? 100) < 50 && (
+            <p className="plan-hint">
+              Let op: bij {PADEN[laagsteReactie.padId].label} is pas{" "}
+              {laagsteReactie.pct}% van de populatie ingeschaald (
+              {laagsteReactie.ingeschaald} van {laagsteReactie.nodig}). Lees de
+              verdeling daarom als indicatie.
+            </p>
+          )}
+          <div style={{ overflowX: "auto" }}>
+            <VlootschouwPlanningGrid
+              rollen={overzicht.rollen}
+              wereldFilter={wereldFilter}
+              onWijzig={wijzigPlanningCel}
+            />
           </div>
-        </>
+        </div>
       )}
     </>
   );
