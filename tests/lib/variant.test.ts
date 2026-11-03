@@ -131,3 +131,39 @@ describe("senioriteit bij Support", () => {
     );
   });
 });
+
+describe("competentieteksten Support", () => {
+  const support = compsVoor("support");
+  const standaard = compsVoor("standaard");
+  const vind = (lijst: typeof support, id: string) =>
+    lijst.find((c) => c.id === id);
+
+  it("heeft bij elke competentie vier sterren met tekst en gedragspunten", () => {
+    for (const comp of support) {
+      expect(comp.sterren).toHaveLength(4);
+      for (const ster of comp.sterren) {
+        expect(ster.intro.length).toBeGreaterThan(20);
+        expect(ster.gedrag.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("gebruikt voor Klantgerichtheid de interne en externe klant", () => {
+    expect(vind(support, "k")?.definitie).toContain("interne en externe klant");
+    expect(vind(standaard, "k")?.definitie).not.toContain("interne en externe");
+    expect(vind(support, "k")?.sterren[3]?.kaderTitel).toContain(
+      "interne en externe klanten",
+    );
+  });
+
+  it("laat bij Beïnvloedingskracht de presentaties buiten de organisatie weg", () => {
+    expect(vind(standaard, "b")?.sterren[1]?.gedrag).toHaveLength(6);
+    expect(vind(support, "b")?.sterren[1]?.gedrag).toHaveLength(5);
+  });
+
+  it("laat de standaardtekst staan waar de gids niet afwijkt", () => {
+    expect(vind(support, "b")?.sterren[0]).toEqual(
+      vind(standaard, "b")?.sterren[0],
+    );
+  });
+});

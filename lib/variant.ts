@@ -1,4 +1,5 @@
 import { COMPS } from "@/lib/data/competenties";
+import { COMPS_SUPPORT } from "@/lib/data/competenties-support";
 import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { PAD_IDS_SUPPORT, PADEN_SUPPORT } from "@/lib/data/paden-support";
 import type { Competentie, Pad, PadId } from "@/types/ontwikkelpaden";
@@ -30,7 +31,7 @@ export function padIdsVoor(variant: Variant): PadId[] {
 
 /** De competenties van deze variant: Support kent geen Training en coaching. */
 export function compsVoor(variant: Variant): Competentie[] {
-  return variant === "support" ? COMPS.filter((c) => c.id !== "t") : COMPS;
+  return variant === "support" ? COMPS_SUPPORT : COMPS;
 }
 
 /** Hoeveel niveaus heeft dit pad in deze variant? */
