@@ -5,6 +5,7 @@ import { NiveauCorrectieBlok } from "@/components/organisms/NiveauCorrectieBlok"
 import { PadenGrid } from "@/components/organisms/PadenGrid";
 import { SenioriteitBlok } from "@/components/organisms/SenioriteitBlok";
 import { TProfielGrid } from "@/components/organisms/TProfielGrid";
+import { variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
 interface ScreenOntwikkelpadenProps {
@@ -29,8 +30,9 @@ export function ScreenOntwikkelpaden({
     <>
       <div className="scherm-titel">Ontwikkelpaden</div>
       <div className="scherm-sub">
-        Jouw positie op de vier paden, berekend op basis van je
-        competentiescores
+        Jouw positie op de{" "}
+        {variantVan(state.wereld) === "support" ? "drie" : "vier"} paden,
+        berekend op basis van je competentiescores
       </div>
       <ScoreBox state={state} />
       <div className="tip-box">
@@ -69,6 +71,14 @@ export function ScreenOntwikkelpaden({
       >
         Oranje = T-profiel ingevuld
       </div>
+      <FormField label="Toelichting op je T-profiel">
+        <textarea
+          rows={2}
+          placeholder="Licht je T-profiel kort toe"
+          value={state.tToelichting}
+          onChange={(e) => onUpdate("tToelichting", e.target.value)}
+        />
+      </FormField>
       <div className="form-rij" style={{ marginTop: 12 }}>
         <FormField label="Diepte: expertise in">
           <textarea

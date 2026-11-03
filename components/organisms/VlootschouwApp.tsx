@@ -6,8 +6,8 @@ import { useState } from "react";
 import { VlootschouwFrameworkGrid } from "@/components/organisms/VlootschouwFrameworkGrid";
 import { VlootschouwPlanningGrid } from "@/components/organisms/VlootschouwPlanningGrid";
 import { useVlootschouw } from "@/hooks/useVlootschouw";
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { WERELDEN } from "@/lib/data/werelden";
+import { padenVoor, padIdsVoor, variantVan } from "@/lib/variant";
 import { reactiePerPad, type WereldFilter } from "@/lib/vlootschouw/aggregatie";
 
 type Tab = "vlootschouw" | "planning";
@@ -37,10 +37,13 @@ export default function VlootschouwApp() {
 
   // Hoe groter het deel van de populatie dat al is ingeschaald, hoe meer de
   // verdeling zegt. Bij een lage reactie is het een indicatie, geen uitkomst.
-  const reacties = PAD_IDS.map((padId) => ({
-    padId,
-    ...reactiePerPad(overzicht.rollen, padId, wereldFilter),
-  })).filter((r) => r.pct !== null);
+  const variant = variantVan(wereldFilter);
+  const reacties = padIdsVoor(variant)
+    .map((padId) => ({
+      padId,
+      ...reactiePerPad(overzicht.rollen, padId, wereldFilter),
+    }))
+    .filter((r) => r.pct !== null);
   const laagsteReactie = reacties.reduce<(typeof reacties)[number] | null>(
     (laagste, r) =>
       laagste === null || (r.pct ?? 0) < (laagste.pct ?? 0) ? r : laagste,
@@ -166,8 +169,8 @@ export default function VlootschouwApp() {
           )}
           {laagsteReactie !== null && (laagsteReactie.pct ?? 100) < 50 && (
             <p className="plan-hint">
-              Let op: bij {PADEN[laagsteReactie.padId].label} is pas{" "}
-              {laagsteReactie.pct}% van de populatie ingeschaald (
+              Let op: bij {padenVoor(variant)[laagsteReactie.padId].label} is
+              pas {laagsteReactie.pct}% van de populatie ingeschaald (
               {laagsteReactie.ingeschaald} van {laagsteReactie.nodig}). Lees de
               verdeling daarom als indicatie.
             </p>

@@ -82,8 +82,46 @@ describe("getVlootschouwOverzicht", () => {
     expect(vakexpertPad?.nodigStraks).toBe(1);
     expect(vakexpertPad?.vennCategorie).toBe("key-players");
 
-    // alle (pad, niveau, wereld)-combinaties bestaan, ook zonder data
-    expect(overzicht.rollen).toHaveLength(4 * 5 * 5);
+    // alle (pad, niveau, wereld)-combinaties bestaan, ook zonder data:
+    // vijf werelden met vier paden van vijf niveaus, plus Support met
+    // 3 + 4 + 5 niveaus.
+    expect(overzicht.rollen).toHaveLength(5 * 4 * 5 + (3 + 4 + 5));
+  });
+
+  it("geeft Support eigen paden en telt het niet mee in het totaal", async () => {
+    sqlMock
+      .mockResolvedValueOnce([
+        { pad_id: "adviseur", wereld: "Support", huidig_niveau: 2, aantal: 4 },
+        { pad_id: "adviseur", wereld: "QA", huidig_niveau: 2, aantal: 1 },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const overzicht = await getVlootschouwOverzicht();
+
+    const supportRij = overzicht.rollen.find(
+      (r) => r.padId === "adviseur" && r.niveau === 2 && r.wereld === "Support",
+    );
+    expect(supportRij).toMatchObject({
+      aanwezig: 4,
+      rolNaam: "Support specialist",
+    });
+
+    // Vakexpert heeft bij Support maar drie niveaus.
+    expect(
+      overzicht.rollen.some(
+        (r) =>
+          r.padId === "vakexpert" && r.wereld === "Support" && r.niveau > 3,
+      ),
+    ).toBe(false);
+    expect(
+      overzicht.rollen.some(
+        (r) => r.padId === "trainer" && r.wereld === "Support",
+      ),
+    ).toBe(false);
+
+    expect(overzicht.paden.find((p) => p.padId === "adviseur")?.aanwezig).toBe(
+      1,
+    );
   });
 
   it("geeft geen-data terug voor paden zonder enige informatie", async () => {

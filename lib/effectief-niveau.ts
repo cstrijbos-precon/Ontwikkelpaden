@@ -1,5 +1,5 @@
 import { berekenNiveau } from "@/lib/bereken-niveau";
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
+import { padenVoor, padIdsVoor, variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
 /**
@@ -10,7 +10,13 @@ export function effectiefNiveau(
   padId: PadId,
   state: OntwikkelpadenState,
 ): number {
-  return state.niveauCorrectie[padId] ?? berekenNiveau(padId, state.scores);
+  const variant = variantVan(state.wereld);
+  // Een pad dat deze variant niet kent (Trainer bij Support) telt niet mee,
+  // ook niet als er van een eerdere wereld nog een correctie in de state staat.
+  if (!padIdsVoor(variant).includes(padId)) return 0;
+  return (
+    state.niveauCorrectie[padId] ?? berekenNiveau(padId, state.scores, variant)
+  );
 }
 
 export function effectieveNiveaus(
@@ -35,20 +41,22 @@ export interface Correctie {
 /** Alleen de paden waar het bolletje daadwerkelijk is verschoven. */
 export function actieveCorrecties(state: OntwikkelpadenState): Correctie[] {
   const correcties: Correctie[] = [];
+  const variant = variantVan(state.wereld);
+  const paden = padenVoor(variant);
 
-  for (const padId of PAD_IDS) {
+  for (const padId of padIdsVoor(variant)) {
     const gecorrigeerd = state.niveauCorrectie[padId];
     if (gecorrigeerd === null) continue;
 
-    const berekend = berekenNiveau(padId, state.scores);
+    const berekend = berekenNiveau(padId, state.scores, variant);
     if (gecorrigeerd === berekend) continue;
 
     correcties.push({
       padId,
-      padLabel: PADEN[padId].label,
+      padLabel: paden[padId].label,
       berekend,
       gecorrigeerd,
-      rol: PADEN[padId].rollen[gecorrigeerd - 1] ?? "Niet ingeschaald",
+      rol: paden[padId].rollen[gecorrigeerd - 1] ?? "Niet ingeschaald",
     });
   }
 

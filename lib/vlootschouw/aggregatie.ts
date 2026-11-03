@@ -1,4 +1,5 @@
 import type { Wereld } from "@/lib/data/werelden";
+import { SUPPORT_WERELD } from "@/lib/variant";
 import type { RolRij } from "@/lib/vlootschouw/types";
 import type { PadId } from "@/types/ontwikkelpaden";
 
@@ -25,8 +26,14 @@ function somVan(rijen: RolRij[]): Aantallen {
   };
 }
 
+/**
+ * Support werkt met eigen paden en telt daarom niet mee in het totaal; het
+ * is alleen zichtbaar als je die wereld zelf kiest.
+ */
 function inFilter(rij: RolRij, filter: WereldFilter): boolean {
-  return filter === "totaal" || rij.wereld === filter;
+  return filter === "totaal"
+    ? rij.wereld !== SUPPORT_WERELD
+    : rij.wereld === filter;
 }
 
 /** Aantallen voor één positie op het pad (pad × niveau), over de gekozen wereld(en). */

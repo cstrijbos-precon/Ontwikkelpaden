@@ -2,9 +2,8 @@ import Link from "next/link";
 import { FormField } from "@/components/molecules/FormField";
 import { ReflectieItem } from "@/components/molecules/ReflectieItem";
 import { TrainingslijnReflectieBlok } from "@/components/organisms/TrainingslijnReflectieBlok";
-import { COMPS } from "@/lib/data/competenties";
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { effectiefNiveau } from "@/lib/effectief-niveau";
+import { compsVoor, padenVoor, padIdsVoor, variantVan } from "@/lib/variant";
 import type { GesprekStatus } from "@/types/gesprekken";
 import type {
   OntwikkelpadenState,
@@ -107,7 +106,9 @@ export function ScreenPop({
   onUpdateTrainingslijnReflectie,
   onStartNewCycle,
 }: ScreenPopProps) {
-  const actief = PAD_IDS.filter(
+  const variant = variantVan(state.wereld);
+  const PADEN = padenVoor(variant);
+  const actief = padIdsVoor(variant).filter(
     (padId) => state.ambities[padId] || effectiefNiveau(padId, state) > 0,
   );
 
@@ -121,7 +122,7 @@ export function ScreenPop({
         const pad = PADEN[padId];
         const n = effectiefNiveau(padId, state);
         const heeftAmbitie = state.ambities[padId];
-        const doelN = heeftAmbitie && n < 5 ? n + 1 : null;
+        const doelN = heeftAmbitie && n < pad.rollen.length ? n + 1 : null;
         const vereist = doelN ? pad.vereisten[doelN - 1] : null;
         const toolbox = doelN ? pad.toolboxen[doelN] : null;
         const popId = `pb-${padId}`;
@@ -160,25 +161,25 @@ export function ScreenPop({
                   >
                     Vereiste competenties voor niveau {doelN}:
                   </p>
-                  {COMPS.filter(
-                    (c) => !c.trainerOnly || padId === "trainer",
-                  ).map((c) => {
-                    const vSter = vereist[c.id] ?? 0;
-                    const hSter = state.scores[c.id] ?? 0;
-                    const ok = hSter >= vSter;
-                    return (
-                      <div
-                        key={c.id}
-                        className={`comp-status ${ok ? "ok" : "nog"}`}
-                      >
-                        <div className={`cdot ${ok ? "ok" : "nog"}`} />
-                        {c.label}: {"★".repeat(vSter)} vereist{" "}
-                        {ok
-                          ? "✓ behaald"
-                          : `(nog ${vSter - hSter} ster${vSter - hSter > 1 ? "ren" : ""} te gaan)`}
-                      </div>
-                    );
-                  })}
+                  {compsVoor(variant)
+                    .filter((c) => !c.trainerOnly || padId === "trainer")
+                    .map((c) => {
+                      const vSter = vereist[c.id] ?? 0;
+                      const hSter = state.scores[c.id] ?? 0;
+                      const ok = hSter >= vSter;
+                      return (
+                        <div
+                          key={c.id}
+                          className={`comp-status ${ok ? "ok" : "nog"}`}
+                        >
+                          <div className={`cdot ${ok ? "ok" : "nog"}`} />
+                          {c.label}: {"★".repeat(vSter)} vereist{" "}
+                          {ok
+                            ? "✓ behaald"
+                            : `(nog ${vSter - hSter} ster${vSter - hSter > 1 ? "ren" : ""} te gaan)`}
+                        </div>
+                      );
+                    })}
                   {toolbox && (
                     <ToolboxPanel
                       doelN={doelN}
@@ -197,7 +198,7 @@ export function ScreenPop({
                     padding: "4px 0",
                   }}
                 >
-                  {n >= 5
+                  {n >= pad.rollen.length
                     ? "✓ Hoogste niveau bereikt!"
                     : "Selecteer ambitie in scherm 7 om de toolbox te zien."}
                 </div>

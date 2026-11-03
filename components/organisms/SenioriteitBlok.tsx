@@ -9,6 +9,7 @@ import {
   leesTProfiel,
   SENIORITEIT_LABEL,
 } from "@/lib/senioriteit";
+import { variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface SenioriteitBlokProps {
@@ -22,6 +23,7 @@ export function SenioriteitBlok({ state, onUpdate }: SenioriteitBlokProps) {
   const advies = bepaalSenioriteit(
     effectieveNiveaus(state),
     leesTProfiel(state),
+    variantVan(state.wereld),
   );
   const label = SENIORITEIT_LABEL[advies.suggestie];
   const isOvergenomen =
@@ -84,7 +86,12 @@ export function SenioriteitBlok({ state, onUpdate }: SenioriteitBlokProps) {
         </button>
       )}
 
-      {gidsOpen && <GidsUitlegModal onClose={() => setGidsOpen(false)} />}
+      {gidsOpen && (
+        <GidsUitlegModal
+          onClose={() => setGidsOpen(false)}
+          variant={variantVan(state.wereld)}
+        />
+      )}
     </div>
   );
 }

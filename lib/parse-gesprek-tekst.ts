@@ -1,4 +1,5 @@
 import { clampScore, enforceDate } from "@/lib/field-format";
+import { compsVoor, SUPPORT_WERELD } from "@/lib/variant";
 import type { CompId, OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 export interface ParsedGesprek {
@@ -112,13 +113,12 @@ const COMP_LABELS: { id: CompId; pattern: RegExp }[] = [
   { id: "t", pattern: /^Training en coaching\s*:?\s*(.*)$/i },
 ];
 
-const COMP_NAMEN: { id: CompId; label: string }[] = [
-  { id: "b", label: "Beïnvloedingskracht" },
-  { id: "k", label: "Klantgerichtheid" },
-  { id: "o", label: "Ondernemerschap" },
-  { id: "org", label: "Organisatievermogen" },
-  { id: "t", label: "Training en coaching" },
-];
+/**
+ * Het Support-formulier (F-19) verwijst in de instructies naar de "Précon
+ * Ontwikkelpadengids Support" (A-06-2). Er staat geen formuliercode in het
+ * bestand zelf, dus dit is het enige betrouwbare kenmerk.
+ */
+const SUPPORT_FORMULIER = /ontwikkelpadengids support|\bA-06-2\b/i;
 
 interface SterrenUitslag {
   score: number | null;
@@ -147,6 +147,10 @@ function leesSterren(waarde: string): SterrenUitslag {
 type SectionTarget =
   | { kind: "field"; key: keyof OntwikkelpadenState }
   | { kind: "situatie"; index: number }
+  /** Kop "T-profiel": vanaf hier hoort een "Toelichting:" bij het T-profiel. */
+  | { kind: "tProfielKop" }
+  /** "Toelichting:" komt twee keer voor; alleen die onder het T-profiel telt. */
+  | { kind: "toelichting" }
   | { kind: "skip" };
 
 interface Marker {
@@ -154,6 +158,12 @@ interface Marker {
   target: SectionTarget;
   /** Waarde staat direct ná deze regel i.p.v. erna verzameld te worden (label/waarde-paar). */
   inline?: boolean;
+  /**
+   * Het patroon heeft één groep die de rest van de regel vangt. Wie op
+   * "Diepte:" doorstaat en daar zijn tekst typt, schrijft label én antwoord
+   * in dezelfde alinea; die tekst hoort bij het veld, niet in de prullenbak.
+   */
+  metRest?: boolean;
 }
 
 const MARKERS: Marker[] = [
@@ -196,8 +206,9 @@ const MARKERS: Marker[] = [
     target: { kind: "field", key: "hoeGaatHet" },
   },
   {
-    pattern: /^werkdruk en ervaren belasting/i,
+    pattern: /^werkdruk en ervaren belasting\s*:?\s*(.*)$/i,
     target: { kind: "field", key: "werkdruk" },
+    metRest: true,
   },
   { pattern: /^kernwaarden$/i, target: { kind: "field", key: "kernwaarden" } },
   {
@@ -216,10 +227,15 @@ const MARKERS: Marker[] = [
     target: { kind: "field", key: "declarabiliteit" },
   },
   {
-    pattern: /^overige afspraken uit vorige? gesprek$/i,
+    // F-19 (Support) noemt dit "Afspraken uit het vorige gesprek".
+    pattern: /^(overige )?afspraken uit (het )?vorige? gesprek$/i,
     target: { kind: "field", key: "afspraken" },
   },
-  { pattern: /^overige checks$/i, target: { kind: "field", key: "checks" } },
+  {
+    // F-19 (Support) heeft "Overig" in plaats van "Overige checks".
+    pattern: /^overige checks$|^overig:?$/i,
+    target: { kind: "field", key: "checks" },
+  },
   {
     // Vaste tussentekst boven "3. Jouw profiel" op het formulier. Zonder deze
     // skip blijft hij aan het veld ervoor plakken (Overige checks).
@@ -231,15 +247,28 @@ const MARKERS: Marker[] = [
     target: { kind: "field", key: "profiel" },
   },
   { pattern: /^4\.\s*inschalen/i, target: { kind: "skip" } },
+  { pattern: /^t-profiel$/i, target: { kind: "tProfielKop" } },
   {
-    pattern: /^diepte:?$/i,
-    target: { kind: "field", key: "tDiepte" },
-    inline: true,
+    // Vaste instructietekst onder de kop "T-profiel".
+    pattern: /^teken met oranje blokjes het t-profiel/i,
+    target: { kind: "skip" },
   },
   {
-    pattern: /^breedte:?$/i,
+    pattern: /^toelichting\s*:?\s*(.*)$/i,
+    target: { kind: "toelichting" },
+    metRest: true,
+  },
+  // Diepte en breedte zijn vrije tekst en lopen dus door tot het volgende
+  // kopje, ook als iemand over meerdere alinea's schrijft.
+  {
+    pattern: /^diepte\s*:?\s*(.*)$/i,
+    target: { kind: "field", key: "tDiepte" },
+    metRest: true,
+  },
+  {
+    pattern: /^breedte\s*:?\s*(.*)$/i,
     target: { kind: "field", key: "tBreedte" },
-    inline: true,
+    metRest: true,
   },
   { pattern: /^5\.\s*ontwikkelpaden/i, target: { kind: "skip" } },
   {
@@ -248,9 +277,9 @@ const MARKERS: Marker[] = [
   },
   { pattern: /^7\.\s*ontwikkeling$/i, target: { kind: "skip" } },
   {
-    pattern: /^t-profiel ontwikkeling:?$/i,
+    pattern: /^t-profiel ontwikkeling\s*:?\s*(.*)$/i,
     target: { kind: "field", key: "tProfielOntwikkeling" },
-    inline: true,
+    metRest: true,
   },
   {
     pattern: /^welke zaken uit de toolbox/i,
@@ -309,11 +338,13 @@ export function parseGesprekParagrafen(
   opties: ParseOpties,
 ): ParsedGesprek {
   const warnings: string[] = [];
+  const isSupport = paragraphs.some((t) => SUPPORT_FORMULIER.test(t));
 
   const textFields: Partial<Record<keyof OntwikkelpadenState, string[]>> = {};
   const situaties: string[][] = [[], [], []];
   let current: SectionTarget = { kind: "skip" };
   let inlineNextIsValue: keyof OntwikkelpadenState | null = null;
+  let inTProfiel = false;
   const inschalenLines: string[] = [];
   const foundSections = new Set<string>();
 
@@ -322,9 +353,25 @@ export function parseGesprekParagrafen(
 
     if (marker) {
       if (inlineNextIsValue) inlineNextIsValue = null;
-      current = marker.target;
+      if (marker.target.kind === "tProfielKop") inTProfiel = true;
+      // De "Toelichting:" onder de competenties (stap 4) hoort nergens bij;
+      // die onder het T-profiel heeft een eigen veld.
+      current =
+        marker.target.kind === "toelichting"
+          ? inTProfiel
+            ? { kind: "field", key: "tToelichting" }
+            : { kind: "skip" }
+          : marker.target.kind === "tProfielKop"
+            ? { kind: "skip" }
+            : marker.target;
       if (marker.target.kind === "field" && marker.inline) {
         inlineNextIsValue = marker.target.key;
+      }
+      const rest = marker.metRest
+        ? marker.pattern.exec(text)?.[1]?.trim()
+        : undefined;
+      if (rest && current.kind === "field") {
+        textFields[current.key] = [...(textFields[current.key] ?? []), rest];
       }
       for (const label of REQUIRED_SECTION_LABELS) {
         if (marker.pattern.test(label)) foundSections.add(label);
@@ -398,7 +445,9 @@ export function parseGesprekParagrafen(
   // lijkt "geen sterren" een bewuste keuze van de medewerker. Zonder
   // "Inschalen"-blok meldt het ontbrekende hoofdstuk dit al.
   if (inschalenLines.length > 0) {
-    for (const { id, label } of COMP_NAMEN) {
+    // Support kent geen Training en coaching; die ontbreekt daar bewust.
+    const verwacht = compsVoor(isSupport ? "support" : "standaard");
+    for (const { id, label } of verwacht) {
       if (scores[id] === undefined && !gewaarschuwd.has(id)) {
         warnings.push(
           `Score voor "${label}" niet gevonden in het bestand — vul deze handmatig in.`,
@@ -433,6 +482,12 @@ export function parseGesprekParagrafen(
   }
   if (!state.datum && ondertekeningDatum) {
     state.datum = ondertekeningDatum;
+  }
+  if (isSupport) {
+    state.wereld = SUPPORT_WERELD;
+    warnings.push(
+      "Dit is het Support-formulier (F-19); de wereld is op Support gezet, zodat de Support-ontwikkelpaden gelden.",
+    );
   }
 
   for (const label of REQUIRED_SECTION_LABELS) {

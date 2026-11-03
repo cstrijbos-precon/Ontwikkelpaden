@@ -1,5 +1,5 @@
-import { COMPS } from "@/lib/data/competenties";
 import { sterDisplay } from "@/lib/star-display";
+import { compsVoor, variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface ScoreBoxProps {
@@ -14,7 +14,7 @@ export function ScoreBox({
   return (
     <div className="score-box">
       <h4>{title}</h4>
-      {COMPS.map((c) => {
+      {compsVoor(variantVan(state.wereld)).map((c) => {
         const score = state.scores[c.id];
         const stars = sterDisplay(score);
         return (

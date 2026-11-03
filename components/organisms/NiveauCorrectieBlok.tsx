@@ -1,11 +1,11 @@
 "use client";
 
-import { PADEN } from "@/lib/data/paden";
 import {
   actieveCorrecties,
   toelichtingOntbreekt,
 } from "@/lib/effectief-niveau";
 import { getPadColor } from "@/lib/pad-colors";
+import { padenVoor, variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
 interface NiveauCorrectieBlokProps {
@@ -23,6 +23,7 @@ export function NiveauCorrectieBlok({
   if (correcties.length === 0) return null;
 
   const ontbreekt = toelichtingOntbreekt(state);
+  const PADEN = padenVoor(variantVan(state.wereld));
 
   return (
     <div className={`correctie-blok${ontbreekt ? " onaf" : ""}`}>

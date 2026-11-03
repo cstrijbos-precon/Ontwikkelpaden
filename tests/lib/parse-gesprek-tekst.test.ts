@@ -162,3 +162,114 @@ describe("scores die niet te lezen zijn", () => {
     expect(gesprek.scores).toEqual({ b: 2, k: 3, o: 0, org: 0, t: 0 });
   });
 });
+
+describe("T-profiel", () => {
+  const opties = { regelScheiding: "\n\n" };
+  const formulier = (midden: string[]) => [
+    "4. Inschalen",
+    "Toelichting:",
+    "Toelichting bij de competenties",
+    "T-profiel",
+    "Teken met oranje blokjes het T-profiel in zoals het nu is.",
+    ...midden,
+    "5. Ontwikkelpaden",
+  ];
+
+  it("neemt een diepte over meerdere alinea's volledig mee", () => {
+    const { state } = parseGesprekParagrafen(
+      formulier([
+        "Diepte:",
+        "Belastingrecht",
+        "En ook jaarrekeningen",
+        "Breedte:",
+        "HR en sales",
+      ]),
+      opties,
+    );
+    expect(state.tDiepte).toBe("Belastingrecht\n\nEn ook jaarrekeningen");
+    expect(state.tBreedte).toBe("HR en sales");
+  });
+
+  it("leest tekst die op dezelfde regel als het label staat", () => {
+    const { state } = parseGesprekParagrafen(
+      formulier(["Diepte: Belastingrecht", "Breedte: HR en sales"]),
+      opties,
+    );
+    expect(state.tDiepte).toBe("Belastingrecht");
+    expect(state.tBreedte).toBe("HR en sales");
+  });
+
+  it("neemt de toelichting onder het T-profiel mee, niet die onder de competenties", () => {
+    const { state } = parseGesprekParagrafen(
+      formulier(["Toelichting:", "Ik ben T-vormig", "Diepte:", "Recht"]),
+      opties,
+    );
+    expect(state.tToelichting).toBe("Ik ben T-vormig");
+    expect(state.tDiepte).toBe("Recht");
+  });
+
+  it("neemt T-profiel ontwikkeling over meerdere alinea's mee", () => {
+    const { state } = parseGesprekParagrafen(
+      [
+        "7. Ontwikkeling",
+        "T-profiel ontwikkeling:",
+        "Meer breedte in sales",
+        "En verdieping in recht",
+        "Welke zaken uit de toolbox(en) ga jij doen?",
+      ],
+      opties,
+    );
+    expect(state.tProfielOntwikkeling).toBe(
+      "Meer breedte in sales\n\nEn verdieping in recht",
+    );
+  });
+});
+
+describe("Support-formulier (F-19)", () => {
+  const opties = { regelScheiding: "\n\n" };
+  const support = [
+    "Kerncompetenties: Gebruik de “Précon Ontwikkelpadengids Support” (A-06-2) ter ondersteuning",
+    "2. Reflecteren op praktijksituaties",
+    "Situatie 3",
+    "Dit was de derde situatie",
+    "Afspraken uit het vorige gesprek",
+    "Cursus afgerond",
+    "Overig",
+    "Inwerkschema afgerond en opgestuurd naar Esther van Kouwen?",
+    "Ja, verstuurd",
+    "3. Jouw profiel",
+    "4. Inschalen",
+    "Beïnvloedingskracht: **",
+    "Klantgerichtheid: ***",
+    "Ondernemerschap: *",
+    "Organisatievermogen: **",
+    "5. Ontwikkelpaden",
+  ];
+
+  it("herkent het formulier en zet de wereld op Support", () => {
+    const { state, warnings } = parseGesprekParagrafen(support, opties);
+    expect(state.wereld).toBe("Support");
+    expect(warnings.join(" ")).toContain("Support-formulier");
+  });
+
+  it("leest afspraken en overig in eigen veld, niet als deel van situatie 3", () => {
+    const { state } = parseGesprekParagrafen(support, opties);
+    expect(state.situaties?.[2]).toBe("Dit was de derde situatie");
+    expect(state.afspraken).toBe("Cursus afgerond");
+    expect(state.checks).toContain("Ja, verstuurd");
+  });
+
+  it("meldt geen ontbrekende score voor Training en coaching", () => {
+    const { state, warnings } = parseGesprekParagrafen(support, opties);
+    expect(state.scores).toMatchObject({ b: 2, k: 3, o: 1, org: 2 });
+    expect(warnings.join(" ")).not.toContain("Training en coaching");
+  });
+
+  it("laat de wereld met rust bij het standaardformulier", () => {
+    const { state } = parseGesprekParagrafen(
+      ["4. Inschalen", "Klantgerichtheid: **", "5. Ontwikkelpaden"],
+      opties,
+    );
+    expect(state.wereld).toBeUndefined();
+  });
+});

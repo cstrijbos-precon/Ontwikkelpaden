@@ -3,10 +3,10 @@ import { useState } from "react";
 import { DateInput } from "@/components/atoms/DateInput";
 import { FormField } from "@/components/molecules/FormField";
 import { ScoreBox } from "@/components/molecules/ScoreBox";
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { effectiefNiveau } from "@/lib/effectief-niveau";
 import { exportWord } from "@/lib/export-word";
 import { getPadColor } from "@/lib/pad-colors";
+import { padenVoor, padIdsVoor, variantVan } from "@/lib/variant";
 import type { GesprekStatus } from "@/types/gesprekken";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
@@ -153,8 +153,8 @@ export function ScreenAfronding({
       <ScoreBox state={state} />
       <div className="score-box score-box-ambitie">
         <h4>Positie op de ontwikkelpaden</h4>
-        {PAD_IDS.map((padId) => {
-          const pad = PADEN[padId];
+        {padIdsVoor(variantVan(state.wereld)).map((padId) => {
+          const pad = padenVoor(variantVan(state.wereld))[padId];
           const n = effectiefNiveau(padId, state);
           const amb = state.ambities[padId];
           const tg = state.trainingsgroepen[padId];
@@ -168,7 +168,7 @@ export function ScreenAfronding({
                 {n > 0
                   ? `Niveau ${n} – ${pad.rollen[n - 1]}`
                   : "Niet ingeschaald"}
-                {amb && n < 5
+                {amb && n < pad.rollen.length
                   ? ` → Ambitie: niveau ${n + 1} – ${pad.rollen[n]}`
                   : ""}
                 {tg && (

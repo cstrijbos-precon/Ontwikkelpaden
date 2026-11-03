@@ -91,6 +91,8 @@ export interface OntwikkelpadenState {
   tCellen: string[];
   tDiepte: string;
   tBreedte: string;
+  /** Vrije toelichting bij het T-profiel, boven diepte en breedte. */
+  tToelichting: string;
   vorigJaar: Record<PadId, number>;
   /** Handmatig verschoven niveau per pad; null = volg de berekening. */
   niveauCorrectie: Record<PadId, number | null>;

@@ -1,7 +1,13 @@
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import type { Wereld } from "@/lib/data/werelden";
 import { WERELDEN } from "@/lib/data/werelden";
 import { sql } from "@/lib/db";
+import {
+  aantalNiveaus,
+  padenVoor,
+  padIdsVoor,
+  SUPPORT_WERELD,
+  variantVan,
+} from "@/lib/variant";
 import type {
   PadOverzicht,
   RolRij,
@@ -50,6 +56,8 @@ export function classificeerPad(
   return "geen-data";
 }
 
+const ALLE_PADEN: PadId[] = padIdsVoor("standaard");
+
 function rolKey(padId: string, niveau: number, wereld: string): string {
   return `${padId}|${niveau}|${wereld}`;
 }
@@ -75,7 +83,7 @@ export async function getVlootschouwOverzicht(): Promise<VlootschouwOverzicht> {
       bestaand = {
         padId,
         niveau,
-        rolNaam: PADEN[padId].rollen[niveau - 1] ?? "",
+        rolNaam: padenVoor(variantVan(wereld))[padId].rollen[niveau - 1] ?? "",
         wereld,
         aanwezig: 0,
         nodigNu: 0,
@@ -88,9 +96,10 @@ export async function getVlootschouwOverzicht(): Promise<VlootschouwOverzicht> {
 
   // Alle (pad, niveau, wereld)-combinaties alvast aanmaken, zodat elke cel
   // ook zonder bestaande data invulbaar is in de detailtabel.
-  for (const padId of PAD_IDS) {
-    for (let niveau = 1; niveau <= 5; niveau++) {
-      for (const wereld of WERELDEN) {
+  for (const wereld of WERELDEN) {
+    const variant = variantVan(wereld);
+    for (const padId of padIdsVoor(variant)) {
+      for (let niveau = 1; niveau <= aantalNiveaus(variant, padId); niveau++) {
         rij(padId, niveau, wereld);
       }
     }
@@ -107,14 +116,17 @@ export async function getVlootschouwOverzicht(): Promise<VlootschouwOverzicht> {
 
   const rollen = [...rijMap.values()].sort((a, b) => {
     if (a.padId !== b.padId) {
-      return PAD_IDS.indexOf(a.padId) - PAD_IDS.indexOf(b.padId);
+      return ALLE_PADEN.indexOf(a.padId) - ALLE_PADEN.indexOf(b.padId);
     }
     if (a.niveau !== b.niveau) return a.niveau - b.niveau;
     return a.wereld.localeCompare(b.wereld);
   });
 
-  const paden: PadOverzicht[] = PAD_IDS.map((padId) => {
-    const rijenVoorPad = rollen.filter((r) => r.padId === padId);
+  // Support heeft eigen paden en telt niet mee in het totaal.
+  const paden: PadOverzicht[] = padIdsVoor("standaard").map((padId) => {
+    const rijenVoorPad = rollen.filter(
+      (r) => r.padId === padId && r.wereld !== SUPPORT_WERELD,
+    );
     const aanwezig = rijenVoorPad.reduce((sum, r) => sum + r.aanwezig, 0);
     const nodigNu = rijenVoorPad.reduce((sum, r) => sum + r.nodigNu, 0);
     const nodigStraks = rijenVoorPad.reduce((sum, r) => sum + r.nodigStraks, 0);

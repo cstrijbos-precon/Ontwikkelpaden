@@ -1,5 +1,3 @@
-import { COMPS } from "@/lib/data/competenties";
-import { PADEN } from "@/lib/data/paden";
 import {
   actieveCorrecties,
   effectiefNiveau,
@@ -12,6 +10,7 @@ import {
   SENIORITEIT_LABEL,
 } from "@/lib/senioriteit";
 import { sterSym } from "@/lib/star-display";
+import { compsVoor, padenVoor, padIdsVoor, variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
 function nl(text: string): string {
@@ -19,6 +18,8 @@ function nl(text: string): string {
 }
 
 export function exportWord(state: OntwikkelpadenState): void {
+  const variant = variantVan(state.wereld);
+  const PADEN = padenVoor(variant);
   const naam = state.naam || "Medewerker";
   const datum = state.datum || new Date().toLocaleDateString("nl-NL");
 
@@ -84,16 +85,19 @@ export function exportWord(state: OntwikkelpadenState): void {
 
   html += `<h2>Competentiescores</h2>
   <table><tr><th>Competentie</th><th>Score</th><th>Toelichting</th></tr>
-  ${COMPS.map(
-    (c) =>
-      `<tr><td>${c.label}</td><td>${sterSym(state.scores[c.id])}</td><td>${escapeHtml(state.opmerkingen[c.id]) || "—"}</td></tr>`,
-  ).join("")}
+  ${compsVoor(variant)
+    .map(
+      (c) =>
+        `<tr><td>${c.label}</td><td>${sterSym(state.scores[c.id])}</td><td>${escapeHtml(state.opmerkingen[c.id]) || "—"}</td></tr>`,
+    )
+    .join("")}
   </table>`;
 
   html += `<h2>Positie op de ontwikkelpaden</h2>
   <table><tr><th>Pad</th><th>Vorig jaar</th><th>Huidig niveau</th><th>Ambitie</th><th>Trainingsgroep</th></tr>
-  ${(Object.entries(PADEN) as [PadId, (typeof PADEN)[PadId]][])
-    .map(([padId, pad]) => {
+  ${padIdsVoor(variant)
+    .map((padId) => {
+      const pad = PADEN[padId];
       const n = effectiefNiveau(padId, state);
       const vj = state.vorigJaar[padId];
       const amb = state.ambities[padId];
@@ -102,7 +106,7 @@ export function exportWord(state: OntwikkelpadenState): void {
       <td class="${padId}"><strong>${pad.label}</strong></td>
       <td>${vj > 0 ? `Niveau ${vj} – ${pad.rollen[vj - 1]}` : "—"}</td>
       <td>${n > 0 ? `Niveau ${n} – ${pad.rollen[n - 1]}` : "Niet ingeschaald"}${handmatig ? " (handmatig aangepast)" : ""}</td>
-      <td>${amb && n < 5 ? `Niveau ${n + 1} – ${pad.rollen[n]}` : "—"}</td>
+      <td>${amb && n < pad.rollen.length ? `Niveau ${n + 1} – ${pad.rollen[n]}` : "—"}</td>
       <td>${escapeHtml(state.trainingsgroepen[padId]) || "—"}</td>
     </tr>`;
     })
@@ -127,17 +131,20 @@ export function exportWord(state: OntwikkelpadenState): void {
     }</p></div>`;
   }
 
-  if (state.tDiepte || state.tBreedte) {
+  if (state.tDiepte || state.tBreedte || state.tToelichting) {
     html += `<h2>T-profiel</h2>`;
+    if (state.tToelichting)
+      html += `<p><strong>Toelichting:</strong> ${nl(state.tToelichting)}</p>`;
     if (state.tDiepte)
-      html += `<p><strong>Diepte (expertise):</strong> ${escapeHtml(state.tDiepte)}</p>`;
+      html += `<p><strong>Diepte (expertise):</strong> ${nl(state.tDiepte)}</p>`;
     if (state.tBreedte)
-      html += `<p><strong>Breedte (kennis van):</strong> ${escapeHtml(state.tBreedte)}</p>`;
+      html += `<p><strong>Breedte (kennis van):</strong> ${nl(state.tBreedte)}</p>`;
   }
 
   const advies = bepaalSenioriteit(
     effectieveNiveaus(state),
     leesTProfiel(state),
+    variant,
   );
   html += `<h2>Junior, medior, senior</h2>
   <p><strong>Vastgestelde inschaling:</strong> ${escapeHtml(state.niveauInschaling) || "—"}</p>
@@ -147,29 +154,28 @@ export function exportWord(state: OntwikkelpadenState): void {
     html += `<h2>Ambitie</h2><div class="veld"><p>${nl(state.ambitieNotitie)}</p></div>`;
 
   html += `<h2>Ontwikkeling & POP</h2>`;
-  (Object.entries(PADEN) as [PadId, (typeof PADEN)[PadId]][]).forEach(
-    ([padId, pad]) => {
-      const n = effectiefNiveau(padId, state);
-      const amb = state.ambities[padId];
-      const doelN = amb && n < 5 ? n + 1 : null;
-      if (!amb && n === 0) return;
+  padIdsVoor(variant).forEach((padId) => {
+    const pad = PADEN[padId];
+    const n = effectiefNiveau(padId, state);
+    const amb = state.ambities[padId];
+    const doelN = amb && n < pad.rollen.length ? n + 1 : null;
+    if (!amb && n === 0) return;
 
-      html += `<h3 class="${padId}">${pad.label}${doelN ? ` → ambitie: niveau ${doelN} – ${pad.rollen[doelN - 1]}` : ""}</h3>`;
-      if (doelN && pad.toolboxen[doelN]) {
-        const tb = pad.toolboxen[doelN];
-        html += `<div class="kader"><div class="kader-titel">Toolbox voor niveau ${doelN}: ${pad.rollen[doelN - 1]}</div>`;
-        if (tb.vereist?.length)
-          html += `<p><strong>Vereist:</strong></p><ul>${tb.vereist.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
-        if (tb.zelfDoen?.length)
-          html += `<p><strong>Zelf doen:</strong></p><ul>${tb.zelfDoen.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
-        if (tb.collega?.length)
-          html += `<p><strong>Leren van collega's:</strong></p><ul>${tb.collega.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
-        if (tb.trainingen?.length)
-          html += `<p><strong>Trainingen:</strong></p><ul>${tb.trainingen.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
-        html += `</div>`;
-      }
-    },
-  );
+    html += `<h3 class="${padId}">${pad.label}${doelN ? ` → ambitie: niveau ${doelN} – ${pad.rollen[doelN - 1]}` : ""}</h3>`;
+    if (doelN && pad.toolboxen[doelN]) {
+      const tb = pad.toolboxen[doelN];
+      html += `<div class="kader"><div class="kader-titel">Toolbox voor niveau ${doelN}: ${pad.rollen[doelN - 1]}</div>`;
+      if (tb.vereist?.length)
+        html += `<p><strong>Vereist:</strong></p><ul>${tb.vereist.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+      if (tb.zelfDoen?.length)
+        html += `<p><strong>Zelf doen:</strong></p><ul>${tb.zelfDoen.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+      if (tb.collega?.length)
+        html += `<p><strong>Leren van collega's:</strong></p><ul>${tb.collega.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+      if (tb.trainingen?.length)
+        html += `<p><strong>Trainingen:</strong></p><ul>${tb.trainingen.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+      html += `</div>`;
+    }
+  });
 
   if (state.toolboxKeuze)
     html += `<h3>Wat ik ga doen</h3><div class="veld"><p>${nl(state.toolboxKeuze)}</p></div>`;

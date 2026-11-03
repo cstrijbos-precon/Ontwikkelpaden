@@ -24,6 +24,7 @@ export function createInitialState(): OntwikkelpadenState {
     tCellen: [],
     tDiepte: "",
     tBreedte: "",
+    tToelichting: "",
     vorigJaar: { vakexpert: 0, adviseur: 0, leider: 0, trainer: 0 },
     niveauCorrectie: {
       vakexpert: null,

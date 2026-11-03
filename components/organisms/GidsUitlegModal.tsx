@@ -3,14 +3,20 @@
 import { useEffect } from "react";
 import {
   GIDS_TOEPASSING,
+  GIDS_TOEPASSING_SUPPORT,
   SENIORITEIT_GIDS,
 } from "@/lib/data/ontwikkelpadengids";
+import type { Variant } from "@/lib/variant";
 
 interface GidsUitlegModalProps {
+  variant?: Variant;
   onClose: () => void;
 }
 
-export function GidsUitlegModal({ onClose }: GidsUitlegModalProps) {
+export function GidsUitlegModal({
+  onClose,
+  variant = "standaard",
+}: GidsUitlegModalProps) {
   useEffect(() => {
     const sluitOpEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -66,7 +72,7 @@ export function GidsUitlegModal({ onClose }: GidsUitlegModalProps) {
 
         <div className="gids-toepassing">
           <strong>Hoe deze tool rekent: </strong>
-          {GIDS_TOEPASSING}
+          {variant === "support" ? GIDS_TOEPASSING_SUPPORT : GIDS_TOEPASSING}
         </div>
       </dialog>
     </div>

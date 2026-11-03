@@ -1,8 +1,9 @@
-import { COMPS } from "@/lib/data/competenties";
 import { sterDisplay } from "@/lib/star-display";
+import { compsVoor, type Variant } from "@/lib/variant";
 import type { CompId } from "@/types/ontwikkelpaden";
 
 interface CompetencyListProps {
+  variant?: Variant;
   scores: Record<CompId, number>;
   opmerkingen: Record<CompId, string>;
   openComps: Set<string>;
@@ -14,6 +15,7 @@ interface CompetencyListProps {
 }
 
 export function CompetencyList({
+  variant = "standaard",
   scores,
   opmerkingen,
   openComps,
@@ -25,7 +27,7 @@ export function CompetencyList({
 }: CompetencyListProps) {
   return (
     <>
-      {COMPS.map((comp) => {
+      {compsVoor(variant).map((comp) => {
         const sc = scores[comp.id];
         const stars = sterDisplay(sc);
 

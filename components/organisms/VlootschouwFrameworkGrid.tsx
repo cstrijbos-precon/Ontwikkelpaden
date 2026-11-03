@@ -1,5 +1,10 @@
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import type { Wereld } from "@/lib/data/werelden";
+import {
+  padenVoor,
+  padIdsVoor,
+  SUPPORT_WERELD,
+  variantVan,
+} from "@/lib/variant";
 import type { RolRij } from "@/lib/vlootschouw/types";
 import type { PadId } from "@/types/ontwikkelpaden";
 
@@ -32,6 +37,10 @@ export function VlootschouwFrameworkGrid({
   wereldFilter,
   metric,
 }: VlootschouwFrameworkGridProps) {
+  const variant = variantVan(wereldFilter);
+  const PADEN = padenVoor(variant);
+  const PAD_IDS = padIdsVoor(variant);
+
   function somVoor(
     padId: PadId,
     niveau: number,
@@ -42,7 +51,9 @@ export function VlootschouwFrameworkGrid({
         (r) =>
           r.padId === padId &&
           r.niveau === niveau &&
-          (wereldFilter === "totaal" || r.wereld === wereldFilter),
+          (wereldFilter === "totaal"
+            ? r.wereld !== SUPPORT_WERELD
+            : r.wereld === wereldFilter),
       )
       .reduce((sum, r) => sum + r[veld], 0);
   }
@@ -63,7 +74,10 @@ export function VlootschouwFrameworkGrid({
   }
 
   return (
-    <div className="paden-grid">
+    <div
+      className="paden-grid"
+      style={{ "--pad-kolommen": PAD_IDS.length } as React.CSSProperties}
+    >
       <div className="niv-col">
         {NIVEAUS.map((n) => (
           <div key={n} className="niv-lbl">
@@ -77,6 +91,9 @@ export function VlootschouwFrameworkGrid({
           <div key={padId} className="pad-col">
             <div className={`pad-kop ${pad.kleur}`}>{pad.label}</div>
             {NIVEAUS.map((niveau) => {
+              if (niveau > pad.rollen.length) {
+                return <div key={niveau} className="niv-cel" />;
+              }
               const rol = pad.rollen[niveau - 1] ?? "";
               const aanwezig = somVoor(padId, niveau, "aanwezig");
               const nodigNu = somVoor(padId, niveau, "nodigNu");

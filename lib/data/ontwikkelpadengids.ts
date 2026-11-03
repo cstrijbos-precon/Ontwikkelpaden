@@ -56,5 +56,8 @@ export const SENIORITEIT_GIDS: {
  * De app rekent met vier ontwikkelpaden, de gidstekst met drie. Dat verschil
  * hoort zichtbaar te zijn voor wie de suggestie naast de gids legt.
  */
+export const GIDS_TOEPASSING_SUPPORT =
+  'In deze tool tellen alle drie de ontwikkelpaden van Support mee: waar de gids spreekt over "de twee anderen" of "de andere", lezen we alle overige paden. Het T-profiel telt niet mee in de berekening — dat staat er los bij als aandachtspunt voor het gesprek.';
+
 export const GIDS_TOEPASSING =
   'In deze tool tellen alle vier de ontwikkelpaden mee: waar de gids spreekt over "de twee anderen" of "de andere", lezen we alle overige paden. Het T-profiel telt niet mee in de berekening — dat staat er los bij als aandachtspunt voor het gesprek.';

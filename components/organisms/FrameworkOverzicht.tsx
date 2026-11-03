@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { COMPS } from "@/lib/data/competenties";
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { effectiefNiveau } from "@/lib/effectief-niveau";
 import { getPadColor } from "@/lib/pad-colors";
 import { sterSym } from "@/lib/star-display";
+import { compsVoor, padenVoor, padIdsVoor, variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface FrameworkOverzichtProps {
@@ -15,6 +14,8 @@ interface FrameworkOverzichtProps {
 export function FrameworkOverzicht({ state }: FrameworkOverzichtProps) {
   const [openPads, setOpenPads] = useState<Set<string>>(new Set());
   const [fwOpen, setFwOpen] = useState(false);
+  const variant = variantVan(state.wereld);
+  const PADEN = padenVoor(variant);
 
   const togglePad = (padId: string) => {
     setOpenPads((prev) => {
@@ -38,11 +39,11 @@ export function FrameworkOverzicht({ state }: FrameworkOverzichtProps) {
       </button>
       {fwOpen && (
         <div style={{ background: "#fff", padding: 0 }}>
-          {PAD_IDS.map((padId) => {
+          {padIdsVoor(variant).map((padId) => {
             const pad = PADEN[padId];
             const nHuidig = effectiefNiveau(padId, state);
             const padOpen = openPads.has(padId);
-            const relevantComps = COMPS.filter(
+            const relevantComps = compsVoor(variant).filter(
               (c) => !c.trainerOnly || padId === "trainer",
             );
 

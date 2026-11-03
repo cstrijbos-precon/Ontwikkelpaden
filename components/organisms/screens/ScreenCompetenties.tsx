@@ -1,4 +1,5 @@
 import { CompetencyList } from "@/components/organisms/CompetencyList";
+import { variantVan } from "@/lib/variant";
 import type { CompId, OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface ScreenCompetentiesProps {
@@ -33,6 +34,7 @@ export function ScreenCompetenties({
         praktijkvoorbeeld kunt geven.
       </div>
       <CompetencyList
+        variant={variantVan(state.wereld)}
         scores={state.scores}
         opmerkingen={state.opmerkingen}
         openComps={openComps}

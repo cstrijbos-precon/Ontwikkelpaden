@@ -4,6 +4,7 @@ import { DateInput } from "@/components/atoms/DateInput";
 import { FormField } from "@/components/molecules/FormField";
 import { WERELDEN } from "@/lib/data/werelden";
 import { isGeldigEmail } from "@/lib/registratie";
+import { variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface ScreenGegevensProps {
@@ -80,7 +81,9 @@ export function ScreenGegevens({
     <>
       <div className="scherm-titel">Basisgegevens</div>
       <div className="scherm-sub">
-        F-04 Functioneringsgesprek en POP · versie 02/04/2026
+        {variantVan(state.wereld) === "support"
+          ? "F-19 Functioneringsgesprek en POP Support"
+          : "F-04 Functioneringsgesprek en POP · versie 02/04/2026"}
       </div>
       <datalist id="bekende-accounts">
         {knownEmails.map((email) => (

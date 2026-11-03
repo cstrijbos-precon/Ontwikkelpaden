@@ -465,7 +465,7 @@ body {
 
 .paden-grid {
   display: grid;
-  grid-template-columns: 36px repeat(4, 1fr);
+  grid-template-columns: 36px repeat(var(--pad-kolommen, 4), 1fr);
   gap: 0;
   min-width: 580px;
   background: #fff;

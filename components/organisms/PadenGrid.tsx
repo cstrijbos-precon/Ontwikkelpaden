@@ -1,12 +1,11 @@
 "use client";
 
 import { useNiveauSleep } from "@/hooks/useNiveauSleep";
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
 import { effectiefNiveau } from "@/lib/effectief-niveau";
+import { padenVoor, padIdsVoor, variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
 const NIVEAUS = [5, 4, 3, 2, 1] as const;
-const MAX_NIVEAU = 5;
 const MIN_NIVEAU = 1;
 
 interface PadenGridProps {
@@ -20,11 +19,23 @@ export function PadenGrid({
   onSetVorigJaar,
   onSetNiveauCorrectie,
 }: PadenGridProps) {
-  const { sleep, registreerBaan, startSleep } =
-    useNiveauSleep(onSetNiveauCorrectie);
+  const variant = variantVan(state.wereld);
+  const PADEN = padenVoor(variant);
+  // Een pad kan korter zijn dan vijf niveaus (Vakexpert bij Support heeft er
+  // drie); de bol mag niet boven het hoogste niveau van het pad landen.
+  const hoogste = (padId: PadId) => PADEN[padId].rollen.length;
+  const { sleep, registreerBaan, startSleep } = useNiveauSleep(
+    (padId, niveau) =>
+      onSetNiveauCorrectie(padId, Math.min(niveau, hoogste(padId))),
+  );
 
   return (
-    <div className="paden-grid">
+    <div
+      className="paden-grid"
+      style={
+        { "--pad-kolommen": padIdsVoor(variant).length } as React.CSSProperties
+      }
+    >
       <div className="niv-col">
         {NIVEAUS.map((n) => (
           <div key={n} className="niv-lbl">
@@ -32,20 +43,21 @@ export function PadenGrid({
           </div>
         ))}
       </div>
-      {PAD_IDS.map((padId) => {
+      {padIdsVoor(variant).map((padId) => {
         const pad = PADEN[padId];
+        const maxNiveau = hoogste(padId);
         const n = effectiefNiveau(padId, state);
         const vj = state.vorigJaar[padId];
         const heeftAmb = state.ambities[padId];
-        const ambNiv = heeftAmb && n < 5 ? n + 1 : null;
+        const ambNiv = heeftAmb && n < maxNiveau ? n + 1 : null;
         const isVerschoven = state.niveauCorrectie[padId] !== null;
 
         const sleeptHier = sleep?.padId === padId;
-        const toonNiveau = sleeptHier ? sleep.niveau : n;
+        const toonNiveau = sleeptHier ? Math.min(sleep.niveau, maxNiveau) : n;
 
         const verplaats = (richting: 1 | -1) => {
           const doel = Math.min(
-            MAX_NIVEAU,
+            maxNiveau,
             Math.max(MIN_NIVEAU, (n || MIN_NIVEAU) + richting),
           );
           onSetNiveauCorrectie(padId, doel);
@@ -58,6 +70,9 @@ export function PadenGrid({
             <div className="niv-baan" ref={registreerBaan(padId)}>
               {NIVEAUS.map((niv) => {
                 const rol = pad.rollen[niv - 1] ?? "";
+                if (niv > maxNiveau) {
+                  return <div key={niv} className="niv-cel" />;
+                }
                 const isH = niv === toonNiveau;
                 const isV = niv === vj && niv !== toonNiveau;
                 const isA = ambNiv !== null && niv === ambNiv && !sleeptHier;
@@ -181,11 +196,13 @@ export function PadenGrid({
                 }
               >
                 <option value={0}>Vorig jaar —</option>
-                {[1, 2, 3, 4, 5].map((nv) => (
-                  <option key={nv} value={nv}>
-                    {nv} – {pad.rollen[nv - 1]}
-                  </option>
-                ))}
+                {Array.from({ length: maxNiveau }, (_, i) => i + 1).map(
+                  (nv) => (
+                    <option key={nv} value={nv}>
+                      {nv} – {pad.rollen[nv - 1]}
+                    </option>
+                  ),
+                )}
               </select>
             </div>
           </div>

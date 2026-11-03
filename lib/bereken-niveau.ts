@@ -1,4 +1,4 @@
-import { PADEN } from "@/lib/data/paden";
+import { padenVoor, type Variant, variantVan } from "@/lib/variant";
 import type {
   CompId,
   OntwikkelpadenState,
@@ -8,11 +8,12 @@ import type {
 export function berekenNiveau(
   padId: PadId,
   scores: Record<CompId, number>,
+  variant: Variant = "standaard",
 ): number {
-  const pad = PADEN[padId];
+  const pad = padenVoor(variant)[padId];
   let niveau = 0;
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < pad.vereisten.length; i++) {
     const vereist = pad.vereisten[i];
     if (!vereist) continue;
 
@@ -32,10 +33,11 @@ export function berekenNiveau(
 export function berekenAlleNiveaus(
   state: OntwikkelpadenState,
 ): Record<PadId, number> {
+  const variant = variantVan(state.wereld);
   return {
-    vakexpert: berekenNiveau("vakexpert", state.scores),
-    adviseur: berekenNiveau("adviseur", state.scores),
-    leider: berekenNiveau("leider", state.scores),
-    trainer: berekenNiveau("trainer", state.scores),
+    vakexpert: berekenNiveau("vakexpert", state.scores, variant),
+    adviseur: berekenNiveau("adviseur", state.scores, variant),
+    leider: berekenNiveau("leider", state.scores, variant),
+    trainer: berekenNiveau("trainer", state.scores, variant),
   };
 }

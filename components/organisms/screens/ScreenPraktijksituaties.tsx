@@ -1,4 +1,5 @@
 import { FormField } from "@/components/molecules/FormField";
+import { variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState } from "@/types/ontwikkelpaden";
 
 interface ScreenPraktijksituatiesProps {
@@ -15,6 +16,7 @@ export function ScreenPraktijksituaties({
   onUpdate,
   onUpdateSituatie,
 }: ScreenPraktijksituatiesProps) {
+  const support = variantVan(state.wereld) === "support";
   return (
     <>
       <div className="scherm-titel">Praktijksituaties</div>
@@ -39,35 +41,56 @@ export function ScreenPraktijksituaties({
         </FormField>
       ))}
       <div className="sk">Resultaten en overig</div>
-      <FormField label="Overige resultaten en impactverbetering">
-        <textarea
-          rows={3}
-          placeholder="Welk effect had het project? Bijdrage aan impactverbetering bij de klant?"
-          value={state.impact}
-          onChange={(e) => onUpdate("impact", e.target.value)}
-        />
-      </FormField>
-      <FormField label="Declarabiliteit gepland en gerealiseerd">
-        <textarea
-          rows={2}
-          value={state.declarabiliteit}
-          onChange={(e) => onUpdate("declarabiliteit", e.target.value)}
-        />
-      </FormField>
-      <FormField label="Overige afspraken uit vorig gesprek">
-        <textarea
-          rows={2}
-          value={state.afspraken}
-          onChange={(e) => onUpdate("afspraken", e.target.value)}
-        />
-      </FormField>
-      <FormField label="Overige checks (inwerkschema, CV, portfolio)">
-        <textarea
-          rows={2}
-          value={state.checks}
-          onChange={(e) => onUpdate("checks", e.target.value)}
-        />
-      </FormField>
+      {support ? (
+        <>
+          <FormField label="Afspraken uit het vorige gesprek">
+            <textarea
+              rows={2}
+              value={state.afspraken}
+              onChange={(e) => onUpdate("afspraken", e.target.value)}
+            />
+          </FormField>
+          <FormField label="Overig (bijv. inwerkschema afgerond en opgestuurd naar Esther van Kouwen?)">
+            <textarea
+              rows={2}
+              value={state.checks}
+              onChange={(e) => onUpdate("checks", e.target.value)}
+            />
+          </FormField>
+        </>
+      ) : (
+        <>
+          <FormField label="Overige resultaten en impactverbetering">
+            <textarea
+              rows={3}
+              placeholder="Welk effect had het project? Bijdrage aan impactverbetering bij de klant?"
+              value={state.impact}
+              onChange={(e) => onUpdate("impact", e.target.value)}
+            />
+          </FormField>
+          <FormField label="Declarabiliteit gepland en gerealiseerd">
+            <textarea
+              rows={2}
+              value={state.declarabiliteit}
+              onChange={(e) => onUpdate("declarabiliteit", e.target.value)}
+            />
+          </FormField>
+          <FormField label="Overige afspraken uit vorig gesprek">
+            <textarea
+              rows={2}
+              value={state.afspraken}
+              onChange={(e) => onUpdate("afspraken", e.target.value)}
+            />
+          </FormField>
+          <FormField label="Overige checks (inwerkschema, CV, portfolio)">
+            <textarea
+              rows={2}
+              value={state.checks}
+              onChange={(e) => onUpdate("checks", e.target.value)}
+            />
+          </FormField>
+        </>
+      )}
     </>
   );
 }

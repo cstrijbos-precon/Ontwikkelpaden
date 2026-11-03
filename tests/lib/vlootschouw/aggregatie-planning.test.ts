@@ -191,3 +191,25 @@ describe("reactiePerPad", () => {
     expect(reactiePerPad(zonderNorm, "vakexpert", "RA").pct).toBeNull();
   });
 });
+
+describe("Support in het totaal", () => {
+  const rij = (wereld: RolRij["wereld"], aanwezig: number): RolRij => ({
+    padId: "adviseur",
+    niveau: 2,
+    rolNaam: "",
+    wereld,
+    aanwezig,
+    nodigNu: aanwezig,
+    nodigStraks: 0,
+  });
+  const rollen = [rij("QA", 1), rij("Support", 4)];
+
+  it("laat Support weg uit het totaal", () => {
+    expect(somPerCel(rollen, "adviseur", 2, "totaal").aanwezig).toBe(1);
+    expect(somPerPad(rollen, "adviseur", "totaal").aanwezig).toBe(1);
+  });
+
+  it("toont Support wel als je die wereld kiest", () => {
+    expect(somPerCel(rollen, "adviseur", 2, "Support").aanwezig).toBe(4);
+  });
+});

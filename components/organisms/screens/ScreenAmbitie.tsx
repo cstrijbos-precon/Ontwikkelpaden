@@ -1,9 +1,9 @@
 import { FormField } from "@/components/molecules/FormField";
 import { ScoreBox } from "@/components/molecules/ScoreBox";
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
-import { TRAININGSGROEPEN } from "@/lib/data/training-groups";
+import { trainingsgroepenVoor } from "@/lib/data/training-groups";
 import { effectiefNiveau } from "@/lib/effectief-niveau";
 import { getPadColor } from "@/lib/pad-colors";
+import { padenVoor, padIdsVoor, variantVan } from "@/lib/variant";
 import type { OntwikkelpadenState, PadId } from "@/types/ontwikkelpaden";
 
 interface ScreenAmbitieProps {
@@ -22,6 +22,9 @@ export function ScreenAmbitie({
   onToggleAmbitie,
   onSetTrainingsgroep,
 }: ScreenAmbitieProps) {
+  const variant = variantVan(state.wereld);
+  const PADEN = padenVoor(variant);
+  const trainingsgroepen = trainingsgroepenVoor(variant);
   return (
     <>
       <div className="scherm-titel">Ambitie</div>
@@ -36,11 +39,12 @@ export function ScreenAmbitie({
       <ScoreBox state={state} />
       <div className="sk">Kies je ambitie per pad</div>
       <div className="ambitie-grid">
-        {PAD_IDS.map((padId) => {
+        {padIdsVoor(variant).map((padId) => {
           const pad = PADEN[padId];
           const n = effectiefNiveau(padId, state);
           const heeftAmbitie = state.ambities[padId];
-          const volg = n < 5 ? n + 1 : null;
+          const maxNiveau = pad.rollen.length;
+          const volg = n < maxNiveau ? n + 1 : null;
 
           return (
             <div
@@ -52,7 +56,7 @@ export function ScreenAmbitie({
                   type="checkbox"
                   id={`amb-${padId}`}
                   checked={heeftAmbitie}
-                  disabled={n >= 5}
+                  disabled={n >= maxNiveau}
                   onChange={() => onToggleAmbitie(padId)}
                 />
                 <label
@@ -115,7 +119,7 @@ export function ScreenAmbitie({
                   }}
                 >
                   <option value="">— Kies trainingsgroep —</option>
-                  {TRAININGSGROEPEN[padId].map((tg) => (
+                  {trainingsgroepen[padId].map((tg) => (
                     <option key={tg.id} value={tg.id}>
                       {tg.label}
                     </option>

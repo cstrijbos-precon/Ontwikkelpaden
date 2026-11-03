@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PAD_IDS, PADEN } from "@/lib/data/paden";
+import { padenVoor, padIdsVoor, type Variant, variantVan } from "@/lib/variant";
 import {
   type Aantallen,
   reactiePerPad,
@@ -84,9 +84,15 @@ export function VlootschouwPlanningGrid({
   onWijzig,
 }: VlootschouwPlanningGridProps) {
   const bewerkbaar = wereldFilter !== "totaal";
+  const variant = variantVan(wereldFilter);
+  const PADEN = padenVoor(variant);
+  const PAD_IDS = padIdsVoor(variant);
 
   return (
-    <div className="plan-grid">
+    <div
+      className="plan-grid"
+      style={{ "--pad-kolommen": PAD_IDS.length } as React.CSSProperties}
+    >
       {/* Rij voor rij, zodat de niveau-labels en alle cellen vanzelf uitlijnen. */}
       <div />
       {PAD_IDS.map((padId) => (
@@ -106,6 +112,7 @@ export function VlootschouwPlanningGrid({
           wereldFilter={wereldFilter}
           bewerkbaar={bewerkbaar}
           onWijzig={onWijzig}
+          variant={variant}
         />
       ))}
 
@@ -151,7 +158,9 @@ function PlanningRij({
   wereldFilter,
   bewerkbaar,
   onWijzig,
+  variant,
 }: {
+  variant: Variant;
   niveau: number;
   rollen: RolRij[];
   wereldFilter: WereldFilter;
@@ -161,8 +170,9 @@ function PlanningRij({
   return (
     <>
       <div className="plan-niv-lbl">{niveau}</div>
-      {PAD_IDS.map((padId) => {
-        const pad = PADEN[padId];
+      {padIdsVoor(variant).map((padId) => {
+        const pad = padenVoor(variant)[padId];
+        if (niveau > pad.rollen.length) return <div key={padId} />;
         const cel = verdelingPerCel(rollen, padId, niveau, wereldFilter);
         const naam = `${pad.label} niveau ${niveau}`;
 
