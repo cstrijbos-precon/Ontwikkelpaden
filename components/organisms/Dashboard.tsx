@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { AccountBeheer } from "@/components/organisms/AccountBeheer";
 import { GoedkeuringPopup } from "@/components/organisms/GoedkeuringPopup";
+import { statusWeergave } from "@/lib/gesprek-status";
 import { importFoutmelding } from "@/lib/import-foutmelding";
 import { mergeWithInitialState } from "@/lib/initial-state";
 import {
@@ -22,12 +23,6 @@ import type {
   DashboardOverzicht,
   GesprekListItem,
 } from "@/types/gesprekken";
-
-const STATUS_LABEL: Record<GesprekListItem["status"], string> = {
-  draft: "Concept",
-  completed: "Afgerond",
-  archived: "Gearchiveerd",
-};
 
 interface RubriekProps {
   titel: string;
@@ -62,6 +57,7 @@ function Rubriek({
         const wachtend = statusVeld
           ? item[statusVeld] === "in_afwachting"
           : false;
+        const weergave = statusWeergave(item.status, item.aantalGetekend);
         const label = `${item.medewerkerNaam || item.medewerkerEmail || "onbekend"} — ${item.gesprekDatum ?? "geen datum"}`;
         const href =
           item.status === "archived"
@@ -74,9 +70,18 @@ function Rubriek({
                 laat zien dat de medewerker nog moet bevestigen. */}
             <Link href={href}>{label}</Link>
             <span style={{ display: "flex", gap: 6 }}>
-              <span className="badge">{STATUS_LABEL[item.status]}</span>
+              <span
+                className={`badge${weergave.soort === "ondertekenen" ? " badge-ondertekenen" : ""}`}
+              >
+                {weergave.label}
+              </span>
               {wachtend && (
-                <span className="badge badge-wacht">In afwachting</span>
+                <span
+                  className="badge badge-wacht"
+                  title="De medewerker moet de koppeling met jou als beoordelaar nog bevestigen. Dit gaat niet over de handtekeningen."
+                >
+                  Koppeling wacht op bevestiging
+                </span>
               )}
             </span>
           </div>

@@ -51,6 +51,8 @@ interface GesprekListRow {
   hoofdbeoordelaar_status: BeoordelaarStatus;
   medebeoordelaar: string;
   medebeoordelaar_status: BeoordelaarStatus;
+  /** Hoeveel van de drie rollen (professional, hoofd-, medebeoordelaar) al getekend hebben. */
+  aantal_getekend: number;
   updated_at: string;
 }
 
@@ -88,6 +90,7 @@ function mapListRow(row: GesprekListRow): GesprekListItem {
     hoofdbeoordelaarStatus: row.hoofdbeoordelaar_status,
     medebeoordelaar: row.medebeoordelaar,
     medebeoordelaarStatus: row.medebeoordelaar_status,
+    aantalGetekend: row.aantal_getekend,
     updatedAt: row.updated_at,
   };
 }
@@ -177,7 +180,7 @@ export async function listGesprekken(
       ? await sql`
         SELECT id, medewerker_naam, medewerker_email, gesprek_datum, status,
                hoofdbeoordelaar, hoofdbeoordelaar_status,
-               medebeoordelaar, medebeoordelaar_status, updated_at
+               medebeoordelaar, medebeoordelaar_status, (CASE WHEN state->>'akkoordProfessional' = 'true' THEN 1 ELSE 0 END + CASE WHEN state->>'akkoordHoofdbeoordelaar' = 'true' THEN 1 ELSE 0 END + CASE WHEN state->>'akkoordMedebeoordelaar' = 'true' THEN 1 ELSE 0 END)::int AS aantal_getekend, updated_at
         FROM gesprekken
         ORDER BY updated_at DESC
       `
@@ -192,7 +195,7 @@ export async function listGesprekken(
         )
         SELECT g.id, g.medewerker_naam, g.medewerker_email, g.gesprek_datum, g.status,
                g.hoofdbeoordelaar, g.hoofdbeoordelaar_status,
-               g.medebeoordelaar, g.medebeoordelaar_status, g.updated_at
+               g.medebeoordelaar, g.medebeoordelaar_status, (CASE WHEN g.state->>'akkoordProfessional' = 'true' THEN 1 ELSE 0 END + CASE WHEN g.state->>'akkoordHoofdbeoordelaar' = 'true' THEN 1 ELSE 0 END + CASE WHEN g.state->>'akkoordMedebeoordelaar' = 'true' THEN 1 ELSE 0 END)::int AS aantal_getekend, g.updated_at
         FROM gesprekken g
         LEFT JOIN cyclus c ON c.id = g.id
         WHERE (
@@ -617,7 +620,7 @@ export async function getPendingGoedkeuringen(
   const rows = (await sql`
     SELECT id, medewerker_naam, medewerker_email, gesprek_datum, status,
            hoofdbeoordelaar, hoofdbeoordelaar_status,
-           medebeoordelaar, medebeoordelaar_status, updated_at
+           medebeoordelaar, medebeoordelaar_status, (CASE WHEN state->>'akkoordProfessional' = 'true' THEN 1 ELSE 0 END + CASE WHEN state->>'akkoordHoofdbeoordelaar' = 'true' THEN 1 ELSE 0 END + CASE WHEN state->>'akkoordMedebeoordelaar' = 'true' THEN 1 ELSE 0 END)::int AS aantal_getekend, updated_at
     FROM gesprekken
     WHERE LOWER(medewerker_email) = LOWER(${userEmail})
       AND (hoofdbeoordelaar_status = 'in_afwachting' OR medebeoordelaar_status = 'in_afwachting')

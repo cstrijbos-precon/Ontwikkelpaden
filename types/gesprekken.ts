@@ -38,6 +38,8 @@ export interface GesprekListItem {
   hoofdbeoordelaarStatus: BeoordelaarStatus;
   medebeoordelaar: string;
   medebeoordelaarStatus: BeoordelaarStatus;
+  /** Hoeveel van de drie handtekeningen al gezet zijn (0 tot 3). */
+  aantalGetekend: number;
   updatedAt: string;
 }
 

@@ -26,6 +26,7 @@ function medebeoordelaarItem(
     hoofdbeoordelaarStatus: "toegestaan",
     medebeoordelaar: "mede@precon.nl",
     medebeoordelaarStatus: "in_afwachting",
+    aantalGetekend: 0,
     updatedAt: "2026-01-01",
     ...overrides,
   };

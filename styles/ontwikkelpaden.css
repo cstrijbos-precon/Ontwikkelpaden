@@ -1010,6 +1010,11 @@ body {
 }
 
 .badge-wacht {
+  background: var(--grijs-bg);
+  color: var(--grijs);
+}
+
+.badge-ondertekenen {
   background: var(--oranje-licht);
   color: var(--oranje);
 }
