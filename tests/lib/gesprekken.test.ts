@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  BeoordelaarAlGekoppeldError,
   createGesprek,
   GeenToegangError,
   GesprekNotCompletedError,
@@ -737,7 +736,10 @@ describe("requestBeoordelaarKoppeling", () => {
 
   it("wacht op akkoord als de medewerker al een account heeft", async () => {
     process.env.APP_USERS = `jan@precon.nl:${hash}`;
-    const row = gesprekRow({ hoofdbeoordelaar: "" });
+    const row = gesprekRow({
+      hoofdbeoordelaar: "",
+      created_by: "beoordelaar@precon.nl",
+    });
     sqlMock.mockResolvedValueOnce([row]).mockResolvedValueOnce([
       {
         ...row,
@@ -762,7 +764,10 @@ describe("requestBeoordelaarKoppeling", () => {
     // Zodat deze persoon niet alleen dit gesprek ziet, maar al het werk van
     // deze medewerker — nu en volgend jaar.
     process.env.APP_USERS = `jan@precon.nl:${hash}`;
-    const row = gesprekRow({ hoofdbeoordelaar: "" });
+    const row = gesprekRow({
+      hoofdbeoordelaar: "",
+      created_by: "beoordelaar@precon.nl",
+    });
     sqlMock
       .mockResolvedValueOnce([row])
       .mockResolvedValueOnce([
@@ -783,7 +788,10 @@ describe("requestBeoordelaarKoppeling", () => {
   });
 
   it("zet géén doorlopende koppeling voor een medebeoordelaar", async () => {
-    const row = gesprekRow({ medebeoordelaar: "" });
+    const row = gesprekRow({
+      medebeoordelaar: "",
+      created_by: "beoordelaar@precon.nl",
+    });
     sqlMock
       .mockResolvedValueOnce([row])
       .mockResolvedValueOnce([
@@ -803,7 +811,10 @@ describe("requestBeoordelaarKoppeling", () => {
     // Het formulier op scherm Gegevens leest uit state. Blijft die leeg, dan
     // schrijft de eerstvolgende autosave de koppeling weer weg.
     process.env.APP_USERS = `jan@precon.nl:${hash}`;
-    const row = gesprekRow({ medebeoordelaar: "" });
+    const row = gesprekRow({
+      medebeoordelaar: "",
+      created_by: "beoordelaar@precon.nl",
+    });
     sqlMock.mockResolvedValueOnce([row]).mockResolvedValueOnce([
       {
         ...row,
@@ -830,7 +841,10 @@ describe("requestBeoordelaarKoppeling", () => {
     // Anders kon wie dan ook een nog niet geregistreerde collega blijvend
     // claimen, zonder dat er ooit iemand toestemming voor gaf. De koppeling
     // wacht nu gewoon tot die medewerker voor het eerst inlogt.
-    const row = gesprekRow({ hoofdbeoordelaar: "" });
+    const row = gesprekRow({
+      hoofdbeoordelaar: "",
+      created_by: "beoordelaar@precon.nl",
+    });
     sqlMock.mockResolvedValueOnce([row]).mockResolvedValueOnce([
       {
         ...row,
@@ -899,17 +913,127 @@ describe("requestBeoordelaarKoppeling", () => {
     expect(gesprek.medebeoordelaarStatus).toBe("toegestaan");
   });
 
-  it("gooit BeoordelaarAlGekoppeldError als het rol-veld al gevuld is", async () => {
-    sqlMock.mockResolvedValueOnce([
-      gesprekRow({ hoofdbeoordelaar: "al-iemand@precon.nl" }),
-    ]);
-    await expect(
-      requestBeoordelaarKoppeling(
+  describe("een formulier om meteen in te werken", () => {
+    const queryRouter = (bestaand: unknown[]) => {
+      const nieuweRow = gesprekRow({
+        id: "gesprek-nieuw",
+        medebeoordelaar: "",
+        created_by: "notulist@precon.nl",
+      });
+      sqlMock.mockImplementation((strings: TemplateStringsArray) => {
+        const query = strings.join(" ");
+        if (query.includes("SELECT * FROM gesprekken"))
+          return Promise.resolve(bestaand);
+        if (query.includes("INSERT INTO gesprekken"))
+          return Promise.resolve([nieuweRow]);
+        if (query.includes("UPDATE gesprekken SET"))
+          return Promise.resolve([
+            {
+              ...nieuweRow,
+              medebeoordelaar: "notulist@precon.nl",
+              medebeoordelaar_status: "in_afwachting",
+            },
+          ]);
+        return Promise.resolve([]);
+      });
+    };
+    const aantalQueries = (deel: string) =>
+      sqlMock.mock.calls.filter((call) =>
+        (call[0] as TemplateStringsArray).join(" ").includes(deel),
+      ).length;
+
+    it("start een eigen concept als je nog niet bij het gesprek van de medewerker mag", async () => {
+      // Het gesprek van Jan is van Jan (en zijn aanmaker); een medebeoordelaar
+      // komt er pas in na akkoord. Zonder eigen concept stond je voor een
+      // dichte deur terwijl je notulen wilde beginnen.
+      queryRouter([gesprekRow({ created_by: "jan@precon.nl" })]);
+
+      const gesprek = await requestBeoordelaarKoppeling(
         "jan@precon.nl",
-        "hoofdbeoordelaar",
-        "nieuw@precon.nl",
-      ),
-    ).rejects.toThrow(BeoordelaarAlGekoppeldError);
+        "medebeoordelaar",
+        "notulist@precon.nl",
+      );
+
+      expect(gesprek.id).toBe("gesprek-nieuw");
+      expect(aantalQueries("INSERT INTO gesprekken")).toBe(1);
+      expect(gesprek.medebeoordelaarStatus).toBe("in_afwachting");
+    });
+
+    it("hergebruikt een lopend concept waar je al bij mag", async () => {
+      queryRouter([
+        gesprekRow({
+          id: "gesprek-eigen",
+          created_by: "notulist@precon.nl",
+          medebeoordelaar: "",
+        }),
+      ]);
+
+      await requestBeoordelaarKoppeling(
+        "jan@precon.nl",
+        "medebeoordelaar",
+        "notulist@precon.nl",
+      );
+
+      expect(aantalQueries("INSERT INTO gesprekken")).toBe(0);
+      expect(aantalQueries("UPDATE gesprekken SET")).toBe(1);
+    });
+
+    it("geeft je gesprek terug zonder opnieuw te koppelen als je die beoordelaar al bent", async () => {
+      queryRouter([
+        gesprekRow({
+          id: "gesprek-eigen",
+          created_by: "notulist@precon.nl",
+          medebeoordelaar: "Notulist@Precon.nl",
+          medebeoordelaar_status: "in_afwachting",
+        }),
+      ]);
+
+      const gesprek = await requestBeoordelaarKoppeling(
+        "jan@precon.nl",
+        "medebeoordelaar",
+        "notulist@precon.nl",
+      );
+
+      expect(gesprek.id).toBe("gesprek-eigen");
+      expect(aantalQueries("INSERT INTO gesprekken")).toBe(0);
+      expect(aantalQueries("UPDATE gesprekken SET")).toBe(0);
+    });
+
+    it("start een nieuw concept naast een afgerond gesprek", async () => {
+      queryRouter([
+        gesprekRow({
+          status: "completed",
+          created_by: "notulist@precon.nl",
+          medebeoordelaar: "",
+        }),
+      ]);
+
+      const gesprek = await requestBeoordelaarKoppeling(
+        "jan@precon.nl",
+        "medebeoordelaar",
+        "notulist@precon.nl",
+      );
+
+      expect(gesprek.id).toBe("gesprek-nieuw");
+      expect(aantalQueries("INSERT INTO gesprekken")).toBe(1);
+    });
+
+    it("start een eigen concept als de rol in jouw concept al van een ander is", async () => {
+      queryRouter([
+        gesprekRow({
+          created_by: "notulist@precon.nl",
+          medebeoordelaar: "ander@precon.nl",
+        }),
+      ]);
+
+      const gesprek = await requestBeoordelaarKoppeling(
+        "jan@precon.nl",
+        "medebeoordelaar",
+        "notulist@precon.nl",
+      );
+
+      expect(gesprek.id).toBe("gesprek-nieuw");
+    });
   });
 });
 

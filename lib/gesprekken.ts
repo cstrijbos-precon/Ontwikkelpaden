@@ -673,9 +673,12 @@ export async function getDashboardOverzicht(
  * maar de koppeling zelf geeft pas toegang zodra de medewerker akkoord geeft
  * (zie canAccessGesprek); tot die tijd staat er alleen een aanvraag klaar.
  *
- * Heeft de medewerker nog geen enkel gesprek, dan start deze actie er meteen
- * een als concept; wie 'm aanmaakt blijft daar via created_by toegang tot
- * houden, dus wachten op goedkeuring blokkeert niemand.
+ * Wie dit doet, krijgt altijd een formulier om meteen in te werken. Er is
+ * geen toegang tot het gesprek van de medewerker zelf vóór die akkoord geeft,
+ * dus tenzij je al bij een lopend concept mag, start deze actie een eigen
+ * concept (leeg, alleen met het adres van de medewerker). Wie 'm aanmaakt
+ * blijft daar via created_by toegang tot houden, dus wachten op goedkeuring
+ * blokkeert niemand: de medewerker keurt de koppeling achteraf goed.
  *
  * Heeft de medewerker nog geen account, dan blijft de koppeling gewoon
  * 'in_afwachting' tot die collega voor het eerst inlogt — dan ziet diegene
@@ -685,30 +688,43 @@ export async function requestBeoordelaarKoppeling(
   medewerkerEmail: string,
   rol: BeoordelaarRol,
   beoordelaarEmail: string,
+  isAdmin = false,
 ): Promise<Gesprek> {
   const rows = (await sql`
     SELECT * FROM gesprekken
     WHERE LOWER(medewerker_email) = LOWER(${medewerkerEmail})
     ORDER BY updated_at DESC
-    LIMIT 1
+    LIMIT 20
   `) as GesprekRow[];
-  const row = rows[0];
+  const bestaande = rows.map(mapRow);
 
   // Een typefout mag geen gesprek opleveren op een adres dat nooit kan
   // inloggen. Het domein is nu de grens, niet het bestaan van een account.
-  if (!row && !domeinIsToegestaan(medewerkerEmail)) {
+  if (bestaande.length === 0 && !domeinIsToegestaan(medewerkerEmail)) {
     throw new MedewerkerNietGevondenError();
   }
 
   const nieuweStatus: BeoordelaarStatus = "in_afwachting";
+  const eigenEmail = beoordelaarEmail.toLowerCase();
+  const waardeVoorRol = (g: Gesprek) =>
+    rol === "hoofdbeoordelaar" ? g.hoofdbeoordelaar : g.medebeoordelaar;
 
-  const existing = row
-    ? mapRow(row)
-    : await createGesprek(beoordelaarEmail, undefined, medewerkerEmail);
-  const huidigeWaarde =
-    rol === "hoofdbeoordelaar"
-      ? existing.hoofdbeoordelaar
-      : existing.medebeoordelaar;
+  // Alleen een lopend concept waar je al bij mag en waar je rol nog vrij is
+  // (of al van jou is) kun je hergebruiken. Het gesprek van de medewerker zelf
+  // blijft dicht tot die akkoord geeft.
+  const werkbaar = bestaande.find((g) => {
+    if (g.status !== "draft") return false;
+    if (!canAccessGesprek(g, beoordelaarEmail, isAdmin)) return false;
+    const huidig = waardeVoorRol(g).trim().toLowerCase();
+    return huidig === "" || huidig === eigenEmail;
+  });
+
+  const existing =
+    werkbaar ??
+    (await createGesprek(beoordelaarEmail, undefined, medewerkerEmail));
+  const huidigeWaarde = waardeVoorRol(existing);
+  // Je stond hier al als beoordelaar: niets te koppelen, wel het formulier.
+  if (huidigeWaarde.trim().toLowerCase() === eigenEmail) return existing;
   if (huidigeWaarde.trim() !== "") throw new BeoordelaarAlGekoppeldError();
 
   /**

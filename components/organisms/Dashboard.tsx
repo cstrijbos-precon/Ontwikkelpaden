@@ -143,11 +143,11 @@ function Rubriek({
               marginTop: 6,
             }}
           >
-            Heeft de collega nog geen gesprek, dan wordt er meteen een concept
-            aangemaakt. Heeft diegene nog nooit ingelogd, dan kun je er direct
-            in werken; zodra hij of zij zelf een account maakt, staat het
-            gesprek klaar. Bestaat het account al, dan moet de koppeling nog
-            worden goedgekeurd.
+            Er opent meteen een formulier waarin je kunt beginnen, ook voordat
+            de medewerker de koppeling heeft goedgekeurd. Dat doet diegene
+            achteraf; tot die tijd zie je alleen wat je zelf invult. Heeft de
+            collega nog nooit ingelogd, dan staat het gesprek klaar zodra hij of
+            zij een account maakt.
           </p>
         </>
       )}
@@ -216,9 +216,10 @@ export function Dashboard() {
     }
   }
 
+  /** Koppelt je als beoordelaar en opent meteen het formulier om in te werken. */
   async function koppel(rol: BeoordelaarRol, email: string) {
-    await koppelBeoordelaar(email, rol);
-    await laad();
+    const gesprek = await koppelBeoordelaar(email, rol);
+    router.push(`/gesprekken/${gesprek.id}/bewerken`);
   }
 
   /**

@@ -6,6 +6,7 @@ import {
   requestBeoordelaarKoppeling,
 } from "@/lib/gesprekken";
 import { koppelBeoordelaarBodySchema } from "@/lib/gesprekken-schema";
+import { isAdmin } from "@/lib/is-admin";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
       parsed.data.medewerkerEmail,
       parsed.data.rol,
       session.user.email,
+      isAdmin(session.user.email),
     );
     return Response.json(gesprek, { status: 201 });
   } catch (error) {
